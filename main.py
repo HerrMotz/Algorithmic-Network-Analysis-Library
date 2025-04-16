@@ -40,6 +40,6 @@ if __name__ == "__main__":
     print("3 und 4 sind Nachbarn: ", graph2.is_neighbor(3, 4))
 
     # speichern des Ergebnisses von graph2 als Metris und Kantenliste
-    write_metis_list("exampleGraphs/metis_tiny_01_out.graph", graph2)
+    write_metis_list("exampleGraphs/metis_edge_01_out.graph", graph2)
     write_edge_list("exampleGraphs/edge_01_out.graph", graph2)
     print("Graph gespeichert.")
