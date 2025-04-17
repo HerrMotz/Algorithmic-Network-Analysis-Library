@@ -1,4 +1,4 @@
-from graphlib.io import read_metis_list, read_edge_list, write_edge_list, write_metis_list  # Assuming io.py has a function named read_graph
+from graphlib.io import read_metis_list, read_edge_list, write_edge_list, write_metis_list
 
 if __name__ == "__main__":
     # Test 1 
