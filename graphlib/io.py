@@ -20,6 +20,7 @@ def read_edge_list(filepath):
                 raise ValueError(f"Ungültige Zeile in Kantenliste: '{line}'")
 
             u, v = map(int, parts)
+            # print(f"Adding edge: {u} - {v}")
             g.add_edge(u, v)
 
     return g
@@ -48,6 +49,7 @@ def read_metis_list(filepath):
 
             neighbors = map(int, line.split())
             for neighbor in neighbors:
+                # print(f"Adding edge: {current_node} - {neighbor}")
                 g.add_edge(current_node, neighbor)
 
             current_node += 1
@@ -65,7 +67,7 @@ def write_edge_list(filepath, g):
     written_edges = set()
 
     with open(filepath, 'w') as f:
-        for u in range(1, g.get_num_nodes() + 1):
+        for u in range(g.get_num_nodes()):
             for v in g.neighbors(u):
                 edge = tuple(sorted((u, v)))
                 if edge not in written_edges:
@@ -79,10 +81,10 @@ def write_metis_list(filepath, g):
     Jede nachfolgende Zeile listet die Nachbarn eines Knotens (1-basiert).
     """
     num_nodes = g.get_num_nodes()
-    num_edges = sum(len(g.neighbors(u)) for u in range(1, num_nodes + 1)) // 2
+    num_edges = sum(len(g.neighbors(u)) for u in range(num_nodes)) // 2
 
     with open(filepath, 'w') as f:
         f.write(f"{num_nodes} {num_edges}\n")
-        for u in range(1, num_nodes + 1):
+        for u in range(num_nodes):
             neighbors = g.neighbors(u)
             f.write(" ".join(map(str, neighbors)) + "\n")
