@@ -12,7 +12,7 @@ class Graph:
         if node < self.num_nodes:
             return
 
-        new_size = node
+        new_size = node + 1
         growth = new_size - self.num_nodes
 
         for row in self.admat:
@@ -29,9 +29,6 @@ class Graph:
         if v >= self.num_nodes:
             self.add_node(v)
 
-        u -= 1
-        v -= 1
-
         self.admat[u][v] = 1
         self.admat[v][u] = 1
 
@@ -40,17 +37,12 @@ class Graph:
         if u > self.num_nodes or v >= self.num_nodes:
             raise IndexError("Knoten existiert nicht.")
 
-        u -= 1
-        v -= 1
-
         self.admat[u][v] = 0
         self.admat[v][u] = 0
 
     def remove_node(self, node):
         if node > self.num_nodes:
             raise IndexError("Knoten existiert nicht.")
-
-        node -= 1
 
         self.admat.pop(node)
         for row in self.admat:
@@ -63,15 +55,12 @@ class Graph:
         if node > self.num_nodes:
             raise IndexError("Knoten existiert nicht.")
 
-        node -= 1
-        return [i + 1 for i, val in enumerate(self.admat[node]) if val == 1]
+        return [i for i, val in enumerate(self.admat[node]) if val == 1]
 
     def is_neighbor(self, u, v):
         if u > self.num_nodes or v > self.num_nodes:
             raise IndexError("Knoten existiert nicht.")
 
-        u -= 1
-        v -= 1
         return self.admat[u][v] == 1
 
     # Get node degree
@@ -88,7 +77,7 @@ class Graph:
     def get_num_edges(self):
         num_edges = 0
         for i in range(self.num_nodes):
-            for j in range(i + 1, self.num_nodes):
+            for j in range(i, self.num_nodes):
                 if self.admat[i][j] == 1:
                     num_edges += 1
         return num_edges
