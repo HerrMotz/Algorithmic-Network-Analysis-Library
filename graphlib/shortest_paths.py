@@ -25,14 +25,10 @@ def create_dag(G: Graph, root: int):
     return parent, children, distance
 
 
-def single_source_shortest_paths(G: Graph, root: int):
-    parent, children, distance = create_dag(G, root)
+if __name__ == "__main__":
+    graph = read_edge_list("../exampleGraphs/edge_01.graph")
+    parent, children, distance = create_dag(graph, 1)
     print(parent)
     print(children)
     print(distance)
     print("Finish")
-
-
-if __name__ == "__main__":
-    graph = read_edge_list("../exampleGraphs/edge_01.graph")
-    single_source_shortest_paths(graph, 1)
