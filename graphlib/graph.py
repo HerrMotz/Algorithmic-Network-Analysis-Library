@@ -59,7 +59,7 @@ class Graph:
             raise IndexError("Knoten existiert nicht.")
 
         # get the index
-        id_node = self.node_to_index(node)
+        id_node = self.node_to_index[node]
 
         self.admat.pop(id_node)
         for row in self.admat:
@@ -67,8 +67,7 @@ class Graph:
 
         self.indexlist.pop(id_node)
         # pop the node from the node_to_index
-        self.node_to_index.pop(node)
-        # self.node_to_index = {n: i for i, n in enumerate(self.indexlist)}
+        self.node_to_index = {n: i for i, n in enumerate(self.indexlist)}
 
     # Get Infos about node
     def neighbors(self, node):
