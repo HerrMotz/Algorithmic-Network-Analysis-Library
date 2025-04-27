@@ -1,85 +1,112 @@
 class Graph:
     def __init__(self):
         self.admat = []
-        self.num_nodes = 0
+        self.indexlist = []
 
     # Utility
     def check_node_exists(self, node):
-        return node < self.num_nodes
+        return node in self.indexlist
 
     # Add Functions
     def add_node(self, node):
-        if node < self.num_nodes:
+        if node in self.indexlist:
             return
 
-        new_size = node + 1
-        growth = new_size - self.num_nodes
+        self.indexlist.append(node)
+        new_size = len(self.indexlist)
 
         for row in self.admat:
-            row.extend([0] * growth)
+            row.append(0)
 
-        for _ in range(growth):
-            self.admat.append([0] * new_size)
+        self.admat.append([0] * new_size)
 
-        self.num_nodes = new_size
 
-    def add_edge(self, u, v):
-        if u >= self.num_nodes:
+    def add_edge(self, u, v, directed=False):
+        # if node is not known jet, add it
+        if u not in self.indexlist:
             self.add_node(u)
-        if v >= self.num_nodes:
+        if v not in self.indexlist:
             self.add_node(v)
 
-        self.admat[u][v] = 1
-        self.admat[v][u] = 1
+        # The position of the node in the indexlist is the index in the adjacency matrix
+        id_u = self.indexlist.index(u)
+        id_v = self.indexlist.index(v)
+
+        # Add the edge
+        self.admat[id_u][id_v] = 1
+        if directed is False:
+            self.admat[id_v][id_u] = 1
+
 
     # Remove Functions
-    def remove_edge(self, u, v):
-        if u > self.num_nodes or v >= self.num_nodes:
-            raise IndexError("Knoten existiert nicht.")
+    def remove_edge(self, u, v, directed=False):
+        if u not in self.indexlist or v not in self.indexlist:
+            raise IndexError("Node does not exist.")
 
-        self.admat[u][v] = 0
-        self.admat[v][u] = 0
+        # get the index
+        id_u = self.indexlist.index(u)
+        id_v = self.indexlist.index(v)
+
+        # remove the edge
+        self.admat[id_u][id_v] = 0
+        if directed is False:
+            self.admat[id_v][id_u] = 0
 
     def remove_node(self, node):
-        if node > self.num_nodes:
+        if node not in self.indexlist:
             raise IndexError("Knoten existiert nicht.")
 
-        self.admat.pop(node)
-        for row in self.admat:
-            row.pop(node)
+        # get the index
+        id_node = self.indexlist.index(node)
 
-        self.num_nodes -= 1
+        self.admat.pop(id_node)
+        for row in self.admat:
+            row.pop(id_node)
+
+        self.indexlist.pop(id_node)
 
     # Get Infos about node
     def neighbors(self, node):
-        if node > self.num_nodes:
+        if node not in self.indexlist:
             raise IndexError("Knoten existiert nicht.")
-
-        return [i for i, val in enumerate(self.admat[node]) if val == 1]
+    
+        id_node = self.indexlist.index(node)
+        return [self.indexlist[i] for i, val in enumerate(self.admat[id_node]) if val == 1]
+    
 
     def is_neighbor(self, u, v):
-        if u > self.num_nodes or v > self.num_nodes:
+        if u not in self.indexlist or v not in self.indexlist:
             raise IndexError("Knoten existiert nicht.")
 
-        return self.admat[u][v] == 1
+        # get the index
+        id_u = self.indexlist.index(u)
+        id_v = self.indexlist.index(v)
+
+        return self.admat[id_u][id_v] == 1
 
     # Get node degree
     def get_node_degree(self, node):
-        if node > self.num_nodes:
+        if node not in self.indexlist:
             raise IndexError("Knoten existiert nicht.")
-
-        return len(self.neighbors(node))
+    
+        id_node = self.indexlist.index(node)
+        return sum(self.admat[id_node])
 
     # Other functions
     def get_num_nodes(self):
-        return self.num_nodes
+        return len(self.indexlist)
     
-    def get_num_edges(self):
+    def get_num_edges(self, directed=False):
         num_edges = 0
-        for i in range(self.num_nodes):
-            for j in range(i, self.num_nodes):
-                if self.admat[i][j] == 1:
-                    num_edges += 1
+        num_nodes = len(self.indexlist)
+
+        for i in range(num_nodes):
+            if directed:
+                num_edges += sum(self.admat[i])
+            else:
+                for j in range(i, num_nodes):
+                    if self.admat[i][j] == 1:
+                        num_edges += 1
         return num_edges
 
     def print_graph(self):

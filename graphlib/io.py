@@ -67,7 +67,7 @@ def write_edge_list(filepath, g):
     written_edges = set()
 
     with open(filepath, 'w') as f:
-        for u in range(g.get_num_nodes()):
+        for u in g.indexlist:
             for v in g.neighbors(u):
                 edge = tuple(sorted((u, v)))
                 if edge not in written_edges:
@@ -75,16 +75,17 @@ def write_edge_list(filepath, g):
                     written_edges.add(edge)
 
 
-def write_metis_list(filepath, g):
+def write_metis_list(filepath, g, directed=False):
     """
     Schreibt den Graphen im METIS-Format mit Header-Zeile.
     Jede nachfolgende Zeile listet die Nachbarn eines Knotens (1-basiert).
     """
     num_nodes = g.get_num_nodes()
-    num_edges = sum(len(g.neighbors(u)) for u in range(num_nodes)) // 2
+    num_edges = g.get_num_edges() 
 
     with open(filepath, 'w') as f:
         f.write(f"{num_nodes} {num_edges}\n")
-        for u in range(num_nodes):
+        for u in g.indexlist:
             neighbors = g.neighbors(u)
-            f.write(" ".join(map(str, neighbors)) + "\n")
+            neighbor_str = " ".join(str(v) for v in neighbors)
+            f.write(neighbor_str + "\n")
