@@ -8,10 +8,10 @@ def create_dag(G: Graph, root: int):
     Creates a directed acyclic graph (DAG) from the given graph G starting from the root node.
     """
     Q = Queue()
-    explored = [False] * G.num_nodes
-    parent = [None] * G.num_nodes
-    children = [set()] * G.num_nodes
-    distance = [float('inf')] * G.num_nodes
+    explored = [False] * G.get_num_nodes()
+    parent = [None] * G.get_num_nodes()
+    children = [set()] * G.get_num_nodes()
+    distance = [float('inf')] * G.get_num_nodes()
     Q.put(root)
     distance[root] = 0
     explored[root] = True
@@ -33,8 +33,8 @@ def single_source_shortest_path(G: Graph, root: int):
     Computes the shortest path from a source node to all other nodes in the graph.
     """
     Q = Queue()
-    explored = [False] * G.num_nodes
-    distance = [float('inf')] * G.num_nodes
+    explored = [False] * G.get_num_nodes()
+    distance = [float('inf')] * G.get_num_nodes()
     Q.put(root)
     distance[root] = 0
 
@@ -53,11 +53,11 @@ def all_pairs_shortest_path(G: Graph):
     Computes the shortest paths between all pairs of nodes in the graph.
     """
     all_pairs = []
-    for u in range(G.num_nodes):
+    for u in range(G.get_num_nodes()):
         Q = Queue()
-        explored = [False] * G.num_nodes
-        parent = [None] * G.num_nodes
-        distance = [float('inf')] * G.num_nodes
+        explored = [False] * G.get_num_nodes()
+        parent = [None] * G.get_num_nodes()
+        distance = [float('inf')] * G.get_num_nodes()
 
         Q.put(u)
         distance[u] = 0
@@ -98,10 +98,10 @@ def connected_components(G: Graph):
     """
     Computes the connected components of the graph.
     """
-    explored = [False] * G.num_nodes
+    explored = [False] * G.get_num_nodes()
     components = []
 
-    for u in range(G.num_nodes):
+    for u in range(G.get_num_nodes()):
         if not explored[u]:
             component = []
             Q = Queue()

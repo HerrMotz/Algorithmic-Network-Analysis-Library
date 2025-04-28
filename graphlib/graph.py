@@ -24,7 +24,7 @@ class Graph:
 
 
     def add_edge(self, u, v, directed=False):
-        # if node is not known jet, add it
+        # if node is not known yet, add it
         if u not in self.node_to_index:
             self.add_node(u)
         if v not in self.node_to_index:
@@ -70,31 +70,43 @@ class Graph:
         self.node_to_index = {n: i for i, n in enumerate(self.indexlist)}
 
     # Get Infos about node
-    def neighbors(self, node):
-        if node not in self.node_to_index:
-            raise IndexError("Knoten existiert nicht.")
-    
-        id_node = self.node_to_index[node]
-        return [self.indexlist[i] for i, val in enumerate(self.admat[id_node]) if val == 1]
+    def neighbors(self, node, convert_to_original_index=False):
+        if convert_to_original_index:
+            if node not in self.node_to_index:
+                raise IndexError("Knoten existiert nicht.")
+            id_node = self.node_to_index[node]
+            return [self.indexlist[i] for i, val in enumerate(self.admat[id_node]) if val == 1]
+
+        else:
+            if node > self.get_num_nodes():
+                raise IndexError("Knoten existiert nicht.")
+            return [i for i, val in enumerate(self.admat[node]) if val == 1]
+
+
     
 
-    def is_neighbor(self, u, v):
+    def is_neighbor(self, u, v, convert_to_original_index=False):
         if u not in self.node_to_index or v not in self.node_to_index:
             raise IndexError("Knoten existiert nicht.")
 
-        # get the index
-        id_u = self.node_to_index[u]
-        id_v = self.node_to_index[v]
+        if convert_to_original_index:
+            # get the index
+            id_u = self.node_to_index[u]
+            id_v = self.node_to_index[v]
+            return self.admat[id_u][id_v] == 1
 
-        return self.admat[id_u][id_v] == 1
+        return self.admat[u][v] == 1
 
     # Get node degree
-    def get_node_degree(self, node):
+    def get_node_degree(self, node, convert_to_original_index=False):
         if node not in self.node_to_index:
             raise IndexError("Knoten existiert nicht.")
-    
-        id_node = self.node_to_index[node]
-        return sum(self.admat[id_node])
+
+        if convert_to_original_index:
+            id_node = self.node_to_index[node]
+            return sum(self.admat[id_node])
+        else:
+            return sum(self.admat[node])
 
     # Other functions
     def get_num_nodes(self):
