@@ -1,3 +1,4 @@
+import random
 from math import ceil, floor
 from random import randint, sample
 from typing import Any
@@ -7,7 +8,7 @@ from numpy import ndarray, dtype, floating
 from numpy._typing import _64Bit
 
 
-def generate_random_graph_faster(n: int, rho: float, loops: bool = False, directed: bool = False) -> tuple[
+def generate_random_graph_faster(n: int, rho: float, loops: bool = False, directed: bool = False, seed: int = 42) -> tuple[
     ndarray[Any, dtype[floating[_64Bit]]], list[tuple[int, int]]]:
     """
     Create the adjacency matrix of a random graph of desired size and density.
@@ -37,6 +38,7 @@ def generate_random_graph_faster(n: int, rho: float, loops: bool = False, direct
         else:
             possible_edges = [(x, y) for x in range(n) for y in range(n) if x < y]
 
+    random.seed(seed)
     selected_edges = sample(possible_edges, k=m)
     print(f"Number of edges: {len(selected_edges)}")
 
