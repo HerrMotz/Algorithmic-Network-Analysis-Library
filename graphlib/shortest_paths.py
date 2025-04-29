@@ -1,3 +1,4 @@
+import random
 from queue import Queue
 from time import perf_counter
 
@@ -165,6 +166,8 @@ def _example():
     print(f"Total time: {f2 - a1:.4f} seconds")
 
 def _benchmark():
+    random.seed(42)
+
     # ask for a number of nodes and density
     n = int(input("Enter the number of nodes: "))
     rho = float(input("Enter the density (0-1): "))
