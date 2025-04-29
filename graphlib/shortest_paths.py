@@ -94,24 +94,24 @@ def connected_components(G: Graph):
     Computes the connected components of the graph.
     """
     explored = [False] * G.get_num_nodes()
-    components = []
+    components = set()
 
     for u in range(G.get_num_nodes()):
         if not explored[u]:
-            component = []
+            component = set()
             Q = Queue()
             Q.put(u)
             explored[u] = True
 
             while not Q.empty():
                 v = Q.get()
-                component.append(v)
+                component.add(v)
                 for w in G.neighbors(v):
                     if not explored[w]:
                         explored[w] = True
                         Q.put(w)
 
-            components.append(component)
+            components.add(frozenset(component))
 
     return components
 
