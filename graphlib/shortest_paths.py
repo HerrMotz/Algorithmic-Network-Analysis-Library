@@ -166,10 +166,20 @@ def _example():
     print(f"Total time: {f2 - a1:.4f} seconds")
 
 def _benchmark():
-    n = 2000
-    rho = 0.5
+    # ask for a number of nodes and density
+    n = int(input("Enter the number of nodes: "))
+    rho = float(input("Enter the density (0-1): "))
+
+    # check if the density is between 0 and 1
+    if rho < 0 or rho > 1:
+        print("Density must be between 0 and 1.")
+        return
+
+    # n = 500
+    # rho = 0.5
+
     # generate a random graph with n nodes and density rho
-    A, m = generate_random_graph_faster(n, 0.5, loops=False, directed=False)
+    A, m = generate_random_graph_faster(n, rho, loops=False, directed=False)
 
     G = nx.Graph(A)
     path = f"../exampleGraphs/random_graph_{n}_{rho}.txt"
