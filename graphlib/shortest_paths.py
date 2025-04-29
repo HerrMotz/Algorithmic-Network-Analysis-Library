@@ -77,16 +77,15 @@ def shortest_s_t_path(G: Graph, s: int, t: int):
     """
     parent, _, distance = create_dag(G, s)
     # check if t is reachable from s
-    if distance[t] == float('inf'):
+    if distance[t] == float('inf') or type(distance[t]) == float:
         return None, float('inf')
 
     # reconstruct the path that leads to t from s
-    path = []
+    path = [None] * (int(distance[t]) + 1)
     current = t
     while current is not None:
-        path.append(current)
+        path[int(distance[current])] = current
         current = parent[current]
-    path.reverse()
     return path, distance[t]
 
 def connected_components(G: Graph):
@@ -143,7 +142,7 @@ def _example():
 
     e1 = perf_counter()
     print("\nShortest s-t path")
-    s, t = 1, 2
+    s, t = 0, 4
     p, d = shortest_s_t_path(g, s, t)
     print(f"Path: {p}, Distance: {d}")
     e2 = perf_counter()
