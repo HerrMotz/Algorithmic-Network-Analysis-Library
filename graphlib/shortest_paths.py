@@ -39,9 +39,10 @@ def single_source_shortest_path(G: Graph, root: int):
     """
     Q = Queue()
     explored = [False] * G.get_num_nodes()
+    explored[root] = True
     distance = [float('inf')] * G.get_num_nodes()
-    Q.put(root)
     distance[root] = 0
+    Q.put(root)
 
     while not Q.empty():
         u = Q.get()
@@ -64,17 +65,9 @@ def all_pairs_shortest_path(G: Graph):
         explored = [False] * G.get_num_nodes()
 
         Q.put(u)
-        distance_matrix[u][u] = 0
         explored[u] = True
-
-        while not Q.empty():
-            v = Q.get()
-            for w in G.neighbors(v):
-                if not explored[w]:
-                    explored[w] = True
-                    distance_matrix[w][v] = distance_matrix[u][v] + 1
-                    distance_matrix[v][w] = distance_matrix[u][v] + 1
-                    Q.put(w)
+        distance = single_source_shortest_path(G, u)
+        distance_matrix[u] = distance
 
     return distance_matrix
 
