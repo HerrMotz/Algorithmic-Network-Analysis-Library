@@ -68,7 +68,7 @@ def write_edge_list(filepath, g):
 
     with open(filepath, 'w') as f:
         for u in g.node_to_index:
-            for v in g.neighbors(u):
+            for v in g.neighbors(u, convert_to_original_index=True):
                 edge = tuple(sorted((u, v)))
                 if edge not in written_edges:
                     f.write(f"{edge[0]} {edge[1]}\n")
@@ -86,6 +86,6 @@ def write_metis_list(filepath, g, directed=False):
     with open(filepath, 'w') as f:
         f.write(f"{num_nodes} {num_edges}\n")
         for u in g.node_to_index:
-            neighbors = g.neighbors(u)
+            neighbors = g.neighbors(u, convert_to_original_index=True)
             neighbor_str = " ".join(str(v) for v in neighbors)
             f.write(neighbor_str + "\n")
