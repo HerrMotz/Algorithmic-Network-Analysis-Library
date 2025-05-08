@@ -112,7 +112,7 @@ func readEdgeList(r *bufio.Reader, directed bool) (*CSRAdjMatrix, error) {
 	}
 
 	n := maxID + 1
-	return InitializeCSRAdjMat(n, edges, directed)
+	return InitializeCSRAdjMat(n, edges)
 }
 
 // readMetis parses the (unweighted) METIS graph format.  Comments start
@@ -184,5 +184,5 @@ func readMetis(r *bufio.Reader, firstLine string, directed bool) (*CSRAdjMatrix,
 		return nil, fmt.Errorf("METIS: expected %d adjacency lines, got %d", n, v)
 	}
 
-	return InitializeCSRAdjMat(n, edges, directed)
+	return InitializeCSRAdjMat(n, edges)
 }

@@ -35,8 +35,24 @@ func TestAdjMatrix_HasEdge(t *testing.T) {
 	}
 }
 
+func TestCSR_NeighboursInvalidInput(t *testing.T) {
+	csr, _ := InitializeCSRAdjMat(4, nil)
+
+	// Test für negative Indizes
+	got := csr.Neighbours(-1)
+	if len(got) != 0 {
+		t.Errorf("Neighbours(-1) sollte leeres Slice zurückgeben, bekam %v", got)
+	}
+
+	// Test für zu große Indizes
+	got = csr.Neighbours(4)
+	if len(got) != 0 {
+		t.Errorf("Neighbours(4) sollte leeres Slice zurückgeben, bekam %v", got)
+	}
+}
+
 func TestCSR_Neighbours(t *testing.T) {
-	csr, _ := InitializeCSRAdjMat(4, nil, false)
+	csr, _ := InitializeCSRAdjMat(4, nil)
 	csr.AddEdge(0, 3)
 	csr.AddEdge(0, 2)
 
@@ -72,16 +88,16 @@ func TestLookupTable(t *testing.T) {
 // Allocation‑aware benchmarks
 // ----------------------------
 
-// edgeDensity controls approximately how many undirected edges each vertex will
+// numberOfEdges controls approximately how many undirected edges each vertex will
 // receive in the benchmark graphs. A density of 4 means every vertex obtains
 // ~4 undirected edges in total (8 *directed* insertions).
-const edgeDensity = 4
+const numberOfEdges = 4
 
 // populateGraph adds a repeatable pseudo‑random set of edges with the requested
 // density to the graph described by addEdge(u, v).
 func populateGraph(size int, addEdge func(u, v int)) {
 	r := rand.New(rand.NewSource(1)) // deterministic
-	edgeInsertions := size * edgeDensity
+	edgeInsertions := size * numberOfEdges
 	for i := 0; i < edgeInsertions; i++ {
 		u := r.Intn(size)
 		v := r.Intn(size)
@@ -102,7 +118,7 @@ func benchAdjMatrixAlloc(b *testing.B, size int) {
 func benchCSRAlloc(b *testing.B, size int) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		csr, _ := InitializeCSRAdjMat(size, nil, false)
+		csr, _ := InitializeCSRAdjMat(size, nil)
 		populateGraph(size, csr.AddEdge)
 	}
 }
@@ -160,7 +176,7 @@ func TestPeakHeapUsage(t *testing.T) {
 	})
 
 	peakCSR := capturePeakHeap(func() {
-		csr, _ := InitializeCSRAdjMat(size, nil, false)
+		csr, _ := InitializeCSRAdjMat(size, nil)
 		populateGraph(size, csr.AddEdge)
 	})
 
