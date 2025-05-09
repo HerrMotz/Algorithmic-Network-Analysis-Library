@@ -93,7 +93,7 @@ func benchAdjListAlloc(b *testing.B, size int) {
 func BenchmarkGraphAllocations(b *testing.B) {
 	sizes := []int{128, 512, 2048, 8192}
 	for _, n := range sizes {
-		b.Run(fmt.Sprintf("AdjMatrix/%d", n), func(b *testing.B) {
+		b.Run(fmt.Sprintf("AdjMatDense/%d", n), func(b *testing.B) {
 			benchAdjMatrixAlloc(b, n)
 		})
 		b.Run(fmt.Sprintf("AdjList/%d", n), func(b *testing.B) {
@@ -136,7 +136,7 @@ func TestPeakHeapUsage(t *testing.T) {
 		populateGraph(size, l.AddEdge)
 	})
 
-	t.Logf("Peak heap usage @%d vertices —  AdjMatrix: %d KB | AdjList: %d KB",
+	t.Logf("Peak heap usage @%d vertices —  AdjMatDense: %d KB | AdjList: %d KB",
 		size,
 		peakAdjMat/1024, peakAdjList/1024,
 	)
