@@ -19,8 +19,8 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	mat.SetEdge(0, 1)
-	mat.SetEdge(1, 2)
+	mat.AddEdge(0, 1)
+	mat.AddEdge(1, 2)
 
 	fmt.Println("Adjacency matrix contains edge (0,1):", mat.HasEdge(0, 1))
 	fmt.Println("Adjacency matrix contains edge (2,3):", mat.HasEdge(2, 3))
@@ -38,7 +38,7 @@ func main() {
 	//  Adjacency list structure
 	// --------------------------
 	adj, _ := graphlib.InitializeAdjList(4)
-	adj.AddEdge(1, 3)
+	adj.AddArc(1, 3)
 
 	// The adjacency list currently keeps the internal slice unexported; we
 	// therefore just demonstrate adding an edge. (You could expose a

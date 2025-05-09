@@ -8,7 +8,7 @@ import "errors"
 
 type AdjList struct {
 	size int
-	list [][]int // list[u] are neighbours of u
+	list []map[int]bool // list[u] are neighbours of u
 }
 
 // InitializeAdjList creates an adjacency list with *size* isolated vertices.
@@ -18,13 +18,26 @@ func InitializeAdjList(size int) (*AdjList, error) {
 	}
 	l := &AdjList{
 		size: size,
-		list: make([][]int, size),
+		list: make([]map[int]bool, size),
 	}
+
+	for i := 0; i < size; i++ {
+		l.list[i] = make(map[int]bool)
+	}
+
 	return l, nil
 }
 
-// AddEdge appends v to u and u to v.
-func (l *AdjList) AddEdge(u, v int) {
-	l.list[u] = append(l.list[u], v)
-	l.list[v] = append(l.list[v], u)
+// AddArc adds an arc (u,v) to the graph.
+func (l *AdjList) AddArc(arc Arc) {
+	if arc.From != arc.To {
+		l.list[arc.From][arc.To] = true
+	}
+}
+
+func (l *AdjList) AddEdge(edge Edge) {
+	if edge.u != edge.v {
+		l.list[edge.u][edge.v] = true
+		l.list[edge.v][edge.u] = true
+	}
 }

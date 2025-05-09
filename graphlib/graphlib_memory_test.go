@@ -24,8 +24,8 @@ func TestAdjMatrix_HasEdge(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	m.SetEdge(0, 1)
-	m.SetEdge(1, 2)
+	m.AddEdge(Edge{0, 1})
+	m.AddEdge(Edge{1, 2})
 
 	if !m.HasEdge(0, 1) {
 		t.Errorf("expected edge (0,1) to exist")
@@ -35,42 +35,9 @@ func TestAdjMatrix_HasEdge(t *testing.T) {
 	}
 }
 
-func TestCSR_NeighboursInvalidInput(t *testing.T) {
-	csr, _ := InitializeCSRAdjMat(4, nil)
-
-	// Test für negative Indizes
-	got := csr.Neighbours(-1)
-	if len(got) != 0 {
-		t.Errorf("Neighbours(-1) sollte leeres Slice zurückgeben, bekam %v", got)
-	}
-
-	// Test für zu große Indizes
-	got = csr.Neighbours(4)
-	if len(got) != 0 {
-		t.Errorf("Neighbours(4) sollte leeres Slice zurückgeben, bekam %v", got)
-	}
-}
-
-func TestCSR_Neighbours(t *testing.T) {
-	csr, _ := InitializeCSRAdjMat(4, nil)
-	csr.AddEdge(0, 3)
-	csr.AddEdge(0, 2)
-
-	got := csr.Neighbours(0)
-	want := map[int]bool{2: true, 3: true}
-	if len(got) != len(want) {
-		t.Fatalf("want %d neighbours, got %d", len(want), len(got))
-	}
-	for _, v := range got {
-		if !want[v] {
-			t.Fatalf("unexpected neighbour %d", v)
-		}
-	}
-}
-
 func TestAdjList_InternalConsistency(t *testing.T) {
 	adj, _ := InitializeAdjList(4)
-	adj.AddEdge(1, 3)
+	adj.AddEdge(Edge{1, 3})
 	if len(adj.list[1]) != 1 || len(adj.list[3]) != 1 {
 		t.Fatalf("edge (1,3) not inserted symmetrically")
 	}
@@ -95,14 +62,14 @@ const numberOfEdges = 4
 
 // populateGraph adds a repeatable pseudo‑random set of edges with the requested
 // density to the graph described by addEdge(u, v).
-func populateGraph(size int, addEdge func(u, v int)) {
-	r := rand.New(rand.NewSource(1)) // deterministic
+func populateGraph(size int, addEdge func(Edge)) {
+	r := rand.New(rand.NewSource(42)) // deterministic
 	edgeInsertions := size * numberOfEdges
 	for i := 0; i < edgeInsertions; i++ {
 		u := r.Intn(size)
 		v := r.Intn(size)
 		if u != v {
-			addEdge(u, v)
+			addEdge(Edge{u, v})
 		}
 	}
 }
@@ -111,15 +78,7 @@ func benchAdjMatrixAlloc(b *testing.B, size int) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
 		m, _ := InitializeAdjMat(size)
-		populateGraph(size, m.SetEdge)
-	}
-}
-
-func benchCSRAlloc(b *testing.B, size int) {
-	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
-		csr, _ := InitializeCSRAdjMat(size, nil)
-		populateGraph(size, csr.AddEdge)
+		populateGraph(size, m.AddEdge)
 	}
 }
 
@@ -136,9 +95,6 @@ func BenchmarkGraphAllocations(b *testing.B) {
 	for _, n := range sizes {
 		b.Run(fmt.Sprintf("AdjMatrix/%d", n), func(b *testing.B) {
 			benchAdjMatrixAlloc(b, n)
-		})
-		b.Run(fmt.Sprintf("CSR/%d", n), func(b *testing.B) {
-			benchCSRAlloc(b, n)
 		})
 		b.Run(fmt.Sprintf("AdjList/%d", n), func(b *testing.B) {
 			benchAdjListAlloc(b, n)
@@ -172,12 +128,7 @@ func TestPeakHeapUsage(t *testing.T) {
 
 	peakAdjMat := capturePeakHeap(func() {
 		m, _ := InitializeAdjMat(size)
-		populateGraph(size, m.SetEdge)
-	})
-
-	peakCSR := capturePeakHeap(func() {
-		csr, _ := InitializeCSRAdjMat(size, nil)
-		populateGraph(size, csr.AddEdge)
+		populateGraph(size, m.AddEdge)
 	})
 
 	peakAdjList := capturePeakHeap(func() {
@@ -185,8 +136,8 @@ func TestPeakHeapUsage(t *testing.T) {
 		populateGraph(size, l.AddEdge)
 	})
 
-	t.Logf("Peak heap usage @%d vertices —  AdjMatrix: %d KB | CSR: %d KB | AdjList: %d KB",
+	t.Logf("Peak heap usage @%d vertices —  AdjMatrix: %d KB | AdjList: %d KB",
 		size,
-		peakAdjMat/1024, peakCSR/1024, peakAdjList/1024,
+		peakAdjMat/1024, peakAdjList/1024,
 	)
 }

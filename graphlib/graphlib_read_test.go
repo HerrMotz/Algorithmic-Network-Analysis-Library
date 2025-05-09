@@ -5,41 +5,53 @@ import (
 	"testing"
 )
 
-var (
-	wantRowPtr = []int{0, 2, 4, 6}
-	wantColInd = []int{1, 2, 0, 2, 0, 1}
-)
+var wantAdj = []map[int]bool{
+	{1: true, 2: true, 4: true},
+	{0: true, 2: true, 3: true},
+	{4: true, 3: true, 1: true, 0: true},
+	{1: true, 2: true, 5: true, 6: true},
+	{0: true, 2: true, 5: true},
+	{4: true, 3: true, 6: true},
+	{5: true, 3: true},
+}
+
+// -------------------------------------------------------------------------
+// tests
+// -------------------------------------------------------------------------
 
 func TestReadGraph_EdgeList(t *testing.T) {
-	csr, err := ReadGraph("../exampleGraphs/edge_01.graph", false)
+	adj, err := ReadGraph("../exampleGraphs/tiny_01.graph", false)
 	if err != nil {
 		t.Fatalf("ReadGraph(edge list) returned error: %v", err)
 	}
-	checkCSR(t, csr)
+	checkAdjList(t, adj)
 }
 
 func TestReadGraph_METIS(t *testing.T) {
-	csr, err := ReadGraph("../exampleGraphs/metis_edge_01_out.graph", false)
+	adj, err := ReadGraph("../exampleGraphs/metis_tiny_01.mgraph", false)
 	if err != nil {
 		t.Fatalf("ReadGraph(METIS) returned error: %v", err)
 	}
-	checkCSR(t, csr)
+	checkAdjList(t, adj)
 }
 
 // -------------------------------------------------------------------------
 // helpers
 // -------------------------------------------------------------------------
 
-func checkCSR(t *testing.T, got *CSRAdjMatrix) {
+func checkAdjList(t *testing.T, got *AdjList) {
 	t.Helper()
 
-	if !reflect.DeepEqual(got.rowPtr, wantRowPtr) {
-		t.Errorf("rowPtr mismatch\n  got : %v\n  want: %v", got.rowPtr, wantRowPtr)
+	if got.size != len(wantAdj) {
+		t.Fatalf("size = %d, want %d", got.size, len(wantAdj))
 	}
-	if !reflect.DeepEqual(got.colInd, wantColInd) {
-		t.Errorf("colInd mismatch\n  got : %v\n  want: %v", got.colInd, wantColInd)
-	}
-	if got.size != 8 {
-		t.Errorf("size = %d, want 3", got.size)
+
+	for v, gotNbrs := range got.list {
+		wantNbrs := wantAdj[v]
+
+		if !reflect.DeepEqual(gotNbrs, wantNbrs) {
+			t.Errorf("neighbours of %d mismatch\n  got : %v\n  want: %v",
+				v, gotNbrs, wantNbrs)
+		}
 	}
 }

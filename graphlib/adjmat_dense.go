@@ -33,10 +33,20 @@ func InitializeAdjMat(size int) (*AdjMatrix, error) {
 	return m, nil
 }
 
-// SetEdge adds an undirected edge (u,v).
-func (m *AdjMatrix) SetEdge(u, v int) {
+// AddEdge adds an undirected edge (u,v).
+func (m *AdjMatrix) AddEdge(edge Edge) {
+	var u, v = edge.u, edge.v
 	idx := u*m.size + v
 	jdx := v*m.size + u
+	m.data[jdx], m.data[idx] = true, true
+	m.data[idx], m.data[jdx] = true, true
+}
+
+func (m *AdjMatrix) AddArc(arc Arc) {
+	var u, v = arc.From, arc.To
+	idx := u*m.size + v
+	jdx := v*m.size + u
+	m.data[jdx], m.data[idx] = true, true
 	m.data[idx], m.data[jdx] = true, true
 }
 
