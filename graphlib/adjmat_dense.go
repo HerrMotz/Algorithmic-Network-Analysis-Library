@@ -52,6 +52,6 @@ func (m *AdjMatDense) AddArc(arc Arc) {
 }
 
 // HasEdge reports whether (u,v) exists.
-func (m *AdjMatDense) HasEdge(u, v int) bool {
-	return m.data[u*m.size+v]
+func (m *AdjMatDense) HasEdge(edge Edge) bool {
+	return m.data[edge.u*m.size+edge.v]
 }

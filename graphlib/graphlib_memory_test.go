@@ -27,10 +27,10 @@ func TestAdjMatrix_HasEdge(t *testing.T) {
 	m.AddEdge(Edge{0, 1})
 	m.AddEdge(Edge{1, 2})
 
-	if !m.HasEdge(0, 1) {
+	if !m.HasEdge(Edge{0, 1}) {
 		t.Errorf("expected edge (0,1) to exist")
 	}
-	if m.HasEdge(2, 3) {
+	if m.HasEdge(Edge{2, 3}) {
 		t.Errorf("edge (2,3) should not exist")
 	}
 }
