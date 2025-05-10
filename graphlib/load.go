@@ -100,7 +100,7 @@ func readEdgeList(r *bufio.Reader, directed bool) (*AdjList, error) {
 		if directed {
 			arcs = append(arcs, Arc{From: u - 1, To: v - 1}) // assumes the list is 1-indexed
 		} else {
-			edges = append(edges, Edge{u: u - 1, v: v - 1}) // assumes the list is 1-indexed
+			edges = append(edges, Edge{U: u - 1, V: v - 1}) // assumes the list is 1-indexed
 		}
 		maxID = max(maxID, u, v)
 	}
@@ -182,7 +182,7 @@ func readMetis(r *bufio.Reader, directed bool) (*AdjList, error) {
 			if directed {
 				adj.AddArc(Arc{From: v, To: w})
 			} else {
-				adj.AddEdge(Edge{u: v, v: w})
+				adj.AddEdge(Edge{U: v, V: w})
 			}
 		}
 		v++

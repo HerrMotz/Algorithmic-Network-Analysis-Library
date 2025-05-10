@@ -42,11 +42,11 @@ func TestReadGraph_METIS(t *testing.T) {
 func checkAdjList(t *testing.T, got *AdjList) {
 	t.Helper()
 
-	if got.size != len(wantAdj) {
-		t.Fatalf("size = %d, want %d", got.size, len(wantAdj))
+	if got.Size != len(wantAdj) {
+		t.Fatalf("size = %d, want %d", got.Size, len(wantAdj))
 	}
 
-	for v, gotNbrs := range got.list {
+	for v, gotNbrs := range got.List {
 		wantNbrs := wantAdj[v]
 
 		if !reflect.DeepEqual(gotNbrs, wantNbrs) {

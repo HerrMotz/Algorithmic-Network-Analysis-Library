@@ -16,8 +16,8 @@ import "errors"
 //
 
 type AdjMatDense struct {
-	size int
-	data []bool
+	Size int    `json:"size,omitempty"`
+	Data []bool `json:"data,omitempty"`
 }
 
 // InitializeAdjMat returns a zero‑filled symmetric adjacency matrix able to
@@ -27,31 +27,31 @@ func InitializeAdjMat(size int) (*AdjMatDense, error) {
 		return nil, errors.New("size must be > 0")
 	}
 	m := &AdjMatDense{
-		size: size,
-		data: make([]bool, size*size),
+		Size: size,
+		Data: make([]bool, size*size),
 	}
 	return m, nil
 }
 
 // AddEdge adds an (undirected) edge (u,v).
 func (m *AdjMatDense) AddEdge(edge Edge) {
-	var u, v = edge.u, edge.v
-	idx := u*m.size + v
-	jdx := v*m.size + u
-	m.data[jdx], m.data[idx] = true, true
-	m.data[idx], m.data[jdx] = true, true
+	var u, v = edge.U, edge.V
+	idx := u*m.Size + v
+	jdx := v*m.Size + u
+	m.Data[jdx], m.Data[idx] = true, true
+	m.Data[idx], m.Data[jdx] = true, true
 }
 
 // AddArc adds a(n) (directed) arc (u,v).
 func (m *AdjMatDense) AddArc(arc Arc) {
 	var u, v = arc.From, arc.To
-	idx := u*m.size + v
-	jdx := v*m.size + u
-	m.data[jdx], m.data[idx] = true, true
-	m.data[idx], m.data[jdx] = true, true
+	idx := u*m.Size + v
+	jdx := v*m.Size + u
+	m.Data[jdx], m.Data[idx] = true, true
+	m.Data[idx], m.Data[jdx] = true, true
 }
 
 // HasEdge reports whether (u,v) exists.
 func (m *AdjMatDense) HasEdge(edge Edge) bool {
-	return m.data[edge.u*m.size+edge.v]
+	return m.Data[edge.U*m.Size+edge.V]
 }

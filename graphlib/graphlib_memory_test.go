@@ -38,7 +38,7 @@ func TestAdjMatrix_HasEdge(t *testing.T) {
 func TestAdjList_InternalConsistency(t *testing.T) {
 	adj, _ := InitializeAdjList(4)
 	adj.AddEdge(Edge{1, 3})
-	if len(adj.list[1]) != 1 || len(adj.list[3]) != 1 {
+	if len(adj.List[1]) != 1 || len(adj.List[3]) != 1 {
 		t.Fatalf("edge (1,3) not inserted symmetrically")
 	}
 }
@@ -58,7 +58,7 @@ func TestLookupTable(t *testing.T) {
 // numberOfEdges controls approximately how many undirected edges each vertex will
 // receive in the benchmark graphs. A density of 4 means every vertex obtains
 // ~4 undirected edges in total (8 *directed* insertions).
-const numberOfEdges = 4
+const numberOfEdges = 36
 
 // populateGraph adds a repeatable pseudo‑random set of edges with the requested
 // density to the graph described by addEdge(u, v).
