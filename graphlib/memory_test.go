@@ -1,11 +1,3 @@
-// graphlib_memory_test.go
-//
-// Unit and benchmark tests for the graphlib package.  Run
-//
-//     go test -run ^$ -bench . -benchmem -memprofile mem.out -cpuprofile cpu.out
-//
-// to obtain detailed allocation, heap and CPU profiles.
-
 package graphlib
 
 import (
@@ -24,20 +16,28 @@ func TestAdjMatrix_HasEdge(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	m.AddEdge(Edge{0, 1})
-	m.AddEdge(Edge{1, 2})
+	err = m.AddEdge(Edge{Vertex{0}, Vertex{1}})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	err = m.AddEdge(Edge{Vertex{1}, Vertex{2}})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 
-	if !m.HasEdge(Edge{0, 1}) {
+	if !m.HasEdge(Edge{Vertex{0}, Vertex{1}}) {
 		t.Errorf("expected edge (0,1) to exist")
 	}
-	if m.HasEdge(Edge{2, 3}) {
+	if m.HasEdge(Edge{Vertex{2}, Vertex{3}}) {
 		t.Errorf("edge (2,3) should not exist")
 	}
 }
 
 func TestAdjList_InternalConsistency(t *testing.T) {
 	adj, _ := InitializeAdjList(4)
-	adj.AddEdge(Edge{1, 3})
+	if err := adj.AddEdge(Edge{Vertex{1}, Vertex{3}}); err != nil {
+		return
+	}
 	if len(adj.List[1]) != 1 || len(adj.List[3]) != 1 {
 		t.Fatalf("edge (1,3) not inserted symmetrically")
 	}
@@ -62,14 +62,17 @@ const numberOfEdges = 36
 
 // populateGraph adds a repeatable pseudo‑random set of edges with the requested
 // density to the graph described by addEdge(u, v).
-func populateGraph(size int, addEdge func(Edge)) {
+func populateGraph(size int, addEdge func(Edge) error) {
 	r := rand.New(rand.NewSource(42)) // deterministic
 	edgeInsertions := size * numberOfEdges
 	for i := 0; i < edgeInsertions; i++ {
 		u := r.Intn(size)
 		v := r.Intn(size)
 		if u != v {
-			addEdge(Edge{u, v})
+			err := addEdge(Edge{Vertex{u}, Vertex{v}})
+			if err != nil {
+				return
+			}
 		}
 	}
 }
@@ -140,4 +143,39 @@ func TestPeakHeapUsage(t *testing.T) {
 		size,
 		peakAdjMat/1024, peakAdjList/1024,
 	)
+}
+
+// ----------------------------
+// File read benchmark
+// ----------------------------
+
+func BenchmarkReadGraph_EDGELIST_undirected(b *testing.B) {
+	files := []string{
+		"tiny_01.graph",
+		"Wiki-Vote.txt",
+	}
+
+	for _, file := range files {
+		b.Run(fmt.Sprintf("EDGELIST/%s", file), func(b *testing.B) {
+			benchReadGraph(b, file)
+		})
+	}
+}
+
+func BenchmarkReadGraph_METIS_undirected(b *testing.B) {
+	files := []string{
+		"metis_tiny_01.mgraph",
+		"metis_test.mgraph",
+	}
+
+	for _, file := range files {
+		b.Run(fmt.Sprintf("METIS/%s", file), func(b *testing.B) {
+			benchReadGraph(b, file)
+		})
+	}
+}
+
+func benchReadGraph(b *testing.B, file string) {
+	b.ReportAllocs()
+	_, _ = ReadGraphAdjList("../exampleGraphs/"+file, false)
 }

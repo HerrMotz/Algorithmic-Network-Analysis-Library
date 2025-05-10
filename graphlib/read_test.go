@@ -1,9 +1,14 @@
 package graphlib
 
 import (
+	"errors"
 	"reflect"
 	"testing"
 )
+
+// ---------------------------------------
+//  Tests reading from edgelist and METIS
+// ---------------------------------------
 
 var wantAdj = []map[int]bool{
 	{1: true, 2: true, 4: true},
@@ -15,32 +20,36 @@ var wantAdj = []map[int]bool{
 	{5: true, 3: true},
 }
 
-// -------------------------------------------------------------------------
+// -------
 // tests
-// -------------------------------------------------------------------------
+// -------
 
 func TestReadGraph_EdgeList(t *testing.T) {
-	adj, err := ReadGraph("../exampleGraphs/tiny_01.graph", false)
-	if err != nil {
-		t.Fatalf("ReadGraph(edge list) returned error: %v", err)
+	adj, err := ReadGraphAdjList("../exampleGraphs/tiny_01.graph", false)
+	if err != nil && !errors.Is(err, EdgeOrArcExistsError) {
+		t.Fatalf("ReadGraph_AdjList(edge list) returned error: %v", err)
 	}
 	checkAdjList(t, adj)
 }
 
 func TestReadGraph_METIS(t *testing.T) {
-	adj, err := ReadGraph("../exampleGraphs/metis_tiny_01.mgraph", false)
-	if err != nil {
-		t.Fatalf("ReadGraph(METIS) returned error: %v", err)
+	adj, err := ReadGraphAdjList("../exampleGraphs/metis_tiny_01.mgraph", false)
+	if err != nil && !errors.Is(err, EdgeOrArcExistsError) {
+		t.Fatalf("ReadGraph_AdjList(METIS) returned error: %v", err)
 	}
 	checkAdjList(t, adj)
 }
 
-// -------------------------------------------------------------------------
+// ---------
 // helpers
-// -------------------------------------------------------------------------
+// ---------
 
 func checkAdjList(t *testing.T, got *AdjList) {
 	t.Helper()
+
+	if got == nil {
+		t.Fatalf("got nil")
+	}
 
 	if got.Size != len(wantAdj) {
 		t.Fatalf("size = %d, want %d", got.Size, len(wantAdj))

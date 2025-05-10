@@ -1,5 +1,3 @@
-// graphlib/load.go – loads plain edge lists or METIS files into an AdjList.
-
 package graphlib
 
 import (
@@ -13,23 +11,27 @@ import (
 )
 
 // -----------------------------------------------------------------------------
-// Public API
+// Loads plain edge lists or METIS files into an AdjList.
 // -----------------------------------------------------------------------------
 
-// ReadGraph opens *path* and returns the graph as an *AdjList*.
+// ReadGraphAdjList opens *path* and returns the graph as an *AdjList*.
 //
 // • Plain edge‑list  -> one “u v” per line
 // • METIS            -> first line “n m …”, next n lines adjacency lists
 //
-// The loader auto‑detects the format (file‑name extension overrides the
-// heuristic) and converts any 1‑based ids to 0‑based.  If *directed* is true
-// only the arc u→v is stored; otherwise both directions are recorded.
-func ReadGraph(path string, directed bool) (*AdjList, error) {
+// The loader auto‑detects the format and converts any 1‑based ids to 0‑based.
+// If *directed* is true, only the arc u→v is stored; otherwise both directions are recorded.
+func ReadGraphAdjList(path string, directed bool) (*AdjList, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
+
+	defer func(f *os.File) {
+		err := f.Close()
+		if err != nil {
+		}
+	}(f)
 
 	r := bufio.NewReader(f)
 
@@ -38,32 +40,38 @@ func ReadGraph(path string, directed bool) (*AdjList, error) {
 	ext := strings.ToLower(filepath.Ext(path))
 	switch ext {
 	case ".metis", ".mgraph":
-		return readMetis(r, directed)
+		return readMetisToAdjList(r, directed)
 	default:
-		return readEdgeList(r, directed)
+		return readEdgeListToAdjList(r, directed)
 	}
 }
 
-// buildAdj turns a vertex count and arc slice into an *AdjList*.
+// buildAdjFromArcs turns a vertex count and arc slice into an *AdjList*.
+// It ignores duplicate arcs.
 func buildAdjFromArcs(n int, arcs []Arc) (*AdjList, error) {
 	adjList, err := InitializeAdjList(n)
 	if err != nil {
 		return nil, err
 	}
 	for _, arc := range arcs {
-		adjList.AddArc(arc)
+		if err := adjList.AddArc(arc); err != nil && !errors.Is(err, EdgeOrArcExistsError) { // ignores duplicate arcs
+			return nil, err
+		}
 	}
 	return adjList, nil
 }
 
-// buildAdj turns a vertex count and arc slice into an *AdjList*.
+// buildAdjFromEdges turns a vertex count and arc slice into an *AdjList*.
+// it ignores duplicate edges.
 func buildAdjFromEdges(n int, edges []Edge) (*AdjList, error) {
 	adjList, err := InitializeAdjList(n)
 	if err != nil {
 		return nil, err
 	}
 	for _, edge := range edges {
-		adjList.AddEdge(edge)
+		if err := adjList.AddEdge(edge); err != nil && !errors.Is(err, EdgeOrArcExistsError) { // ignored duplicate edges
+			return nil, err
+		}
 	}
 	return adjList, nil
 }
@@ -72,7 +80,7 @@ func buildAdjFromEdges(n int, edges []Edge) (*AdjList, error) {
 // Plain “u v” per‑line edge list
 // -----------------------------------------------------------------------------
 
-func readEdgeList(r *bufio.Reader, directed bool) (*AdjList, error) {
+func readEdgeListToAdjList(r *bufio.Reader, directed bool) (*AdjList, error) {
 	scanner := bufio.NewScanner(r)
 	var edges []Edge
 	var arcs []Arc
@@ -98,9 +106,9 @@ func readEdgeList(r *bufio.Reader, directed bool) (*AdjList, error) {
 		u, v := int(u64), int(v64)
 
 		if directed {
-			arcs = append(arcs, Arc{From: u - 1, To: v - 1}) // assumes the list is 1-indexed
+			arcs = append(arcs, Arc{From: Vertex{u - 1}, To: Vertex{v - 1}}) // assumes the list is 1-indexed
 		} else {
-			edges = append(edges, Edge{U: u - 1, V: v - 1}) // assumes the list is 1-indexed
+			edges = append(edges, Edge{U: Vertex{u - 1}, V: Vertex{v - 1}}) // assumes the list is 1-indexed
 		}
 		maxID = max(maxID, u, v)
 	}
@@ -120,7 +128,7 @@ func readEdgeList(r *bufio.Reader, directed bool) (*AdjList, error) {
 // METIS format
 // -----------------------------------------------------------------------------
 
-func readMetis(r *bufio.Reader, directed bool) (*AdjList, error) {
+func readMetisToAdjList(r *bufio.Reader, directed bool) (*AdjList, error) {
 	// scanner reads firstLine + the rest of the file.
 	scanner := bufio.NewScanner(r)
 
@@ -180,9 +188,13 @@ func readMetis(r *bufio.Reader, directed bool) (*AdjList, error) {
 			}
 
 			if directed {
-				adj.AddArc(Arc{From: v, To: w})
+				if err := adj.AddArc(Arc{From: Vertex{v}, To: Vertex{w}}); err != nil && !errors.Is(err, EdgeOrArcExistsError) { // ignores duplicate arcs {
+					return nil, err
+				}
 			} else {
-				adj.AddEdge(Edge{U: v, V: w})
+				if err := adj.AddEdge(Edge{U: Vertex{v}, V: Vertex{w}}); err != nil && !errors.Is(err, EdgeOrArcExistsError) { // ignores duplicate edges {
+					return nil, err
+				}
 			}
 		}
 		v++
