@@ -1,10 +1,17 @@
 package graphlib
 
-import "testing"
+import (
+	"slices"
+	"testing"
+)
 
-// ----------------------------
-// Correctness checks
-// ----------------------------
+func TestLookupTable(t *testing.T) {
+	names := []string{"berlin", "hamburg", "munich", "cologne"}
+	lut, _ := InitializeLookupTable(len(names), names)
+	if idx := lut["munich"]; idx != 2 {
+		t.Errorf("expect munich → 2, got %d", idx)
+	}
+}
 
 func TestAdjMatrix_HasEdge(t *testing.T) {
 	m, err := InitializeAdjMat(4)
@@ -28,6 +35,10 @@ func TestAdjMatrix_HasEdge(t *testing.T) {
 	}
 }
 
+// ----------------------------
+// Correctness checks For Adjacency List
+// ----------------------------
+
 func TestAdjList_InternalConsistency(t *testing.T) {
 	adj, _ := InitializeAdjList(4)
 	if err := adj.AddEdge(Edge{Vertex{1}, Vertex{3}}); err != nil {
@@ -35,14 +46,6 @@ func TestAdjList_InternalConsistency(t *testing.T) {
 	}
 	if len(adj.List[1]) != 1 || len(adj.List[3]) != 1 {
 		t.Fatalf("edge (1,3) not inserted symmetrically")
-	}
-}
-
-func TestLookupTable(t *testing.T) {
-	names := []string{"berlin", "hamburg", "munich", "cologne"}
-	lut, _ := InitializeLookupTable(len(names), names)
-	if idx := lut["munich"]; idx != 2 {
-		t.Errorf("expect munich → 2, got %d", idx)
 	}
 }
 
@@ -66,5 +69,31 @@ func TestAdjList_HasEdge(t *testing.T) {
 	}
 	if err := adj.AddEdge(Edge{Vertex{1}, Vertex{3}}); err != nil {
 		return
+	}
+	if !adj.HasEdge(Edge{Vertex{1}, Vertex{3}}) {
+		t.Errorf("expected edge (1,3) to exist")
+	}
+}
+
+func TestAdjList_Neighbours(t *testing.T) {
+	adj, _ := InitializeAdjList(4)
+	// add some edges and test
+	if err := adj.AddEdge(Edge{Vertex{1}, Vertex{3}}); err != nil {
+	}
+	if err := adj.AddEdge(Edge{Vertex{1}, Vertex{2}}); err != nil {
+	}
+	if err := adj.AddEdge(Edge{Vertex{2}, Vertex{3}}); err != nil {
+	}
+
+	// test neighbours
+	neighbours, err := adj.Neighbours(Vertex{1})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(neighbours) != 2 {
+		t.Fatalf("expected 2 neighbours, got %d", len(neighbours))
+	}
+	if !slices.Contains(neighbours, 2) || !slices.Contains(neighbours, 3) {
+		t.Fatalf("expected neighbours to be [2,3], got %v", neighbours)
 	}
 }

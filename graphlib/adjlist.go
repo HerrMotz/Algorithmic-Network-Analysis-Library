@@ -88,6 +88,56 @@ func (l *AdjList) HasVertex(v Vertex) bool {
 	return v.Id >= 0 && v.Id < l.Size
 }
 
+func RemoveVertex(l *AdjList, v Vertex) error {
+	if !l.HasVertex(v) {
+		return errors.New("vertex does not exist")
+	}
+
+	l.List[v.Id] = nil
+	l.Size--
+
+	for i := 0; i < l.Size; i++ {
+		delete(l.List[i], v.Id)
+	}
+
+	return nil
+}
+
+func RemoveArc(l *AdjList) error {
+	if l.Size == 0 {
+		return errors.New("graph is empty")
+	}
+
+	for i := 0; i < l.Size; i++ {
+		for j := 0; j < l.Size; j++ {
+			if l.List[i][j] {
+				delete(l.List[i], j)
+			}
+		}
+	}
+
+	return nil
+}
+
+func (l *AdjList) RemoveEdge(edge Edge) error {
+	if l.Size == 0 {
+		return errors.New("graph is empty")
+	}
+
+	if !l.HasVertex(edge.U) || !l.HasVertex(edge.V) {
+		return errors.New("vertex does not exist")
+	}
+
+	if l.List[edge.U.Id][edge.V.Id] {
+		delete(l.List[edge.U.Id], edge.V.Id)
+		delete(l.List[edge.V.Id], edge.U.Id)
+	} else {
+		return EdgeOrArcExistsError
+	}
+
+	return nil
+}
+
 func (l *AdjList) Neighbours(u Vertex) ([]Vertex, error) {
 	if !l.HasVertex(u) {
 		return nil, errors.New("vertex does not exist")
