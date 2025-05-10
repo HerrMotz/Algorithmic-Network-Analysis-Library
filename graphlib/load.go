@@ -81,7 +81,7 @@ func readEdgeList(r *bufio.Reader, directed bool) (*AdjList, error) {
 
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
-		if line == "" || strings.HasPrefix(line, "#") {
+		if line == "" || strings.HasPrefix(line, "#") || strings.HasPrefix(line, "%") {
 			continue
 		}
 
