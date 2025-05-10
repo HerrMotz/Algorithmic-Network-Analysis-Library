@@ -100,38 +100,3 @@ func TestPeakHeapUsage(t *testing.T) {
 		peakAdjMat/1024, peakAdjList/1024,
 	)
 }
-
-// ----------------------------
-// File read benchmark
-// ----------------------------
-
-func BenchmarkReadGraph_EDGELIST_undirected(b *testing.B) {
-	files := []string{
-		"tiny_01.graph",
-		"Wiki-Vote.txt",
-	}
-
-	for _, file := range files {
-		b.Run(fmt.Sprintf("EDGELIST/%s", file), func(b *testing.B) {
-			benchReadGraph(b, file)
-		})
-	}
-}
-
-func BenchmarkReadGraph_METIS_undirected(b *testing.B) {
-	files := []string{
-		"metis_tiny_01.mgraph",
-		"metis_test.mgraph",
-	}
-
-	for _, file := range files {
-		b.Run(fmt.Sprintf("METIS/%s", file), func(b *testing.B) {
-			benchReadGraph(b, file)
-		})
-	}
-}
-
-func benchReadGraph(b *testing.B, file string) {
-	b.ReportAllocs()
-	_, _ = ReadGraphAdjList("../exampleGraphs/"+file, false)
-}

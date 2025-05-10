@@ -6,9 +6,11 @@ import "errors"
 //  Adjacency List (slices)
 // ---------------------------
 
+type Naught struct{}
+
 type AdjList struct {
-	Size int            `json:"size,omitempty"`
-	List []map[int]bool `json:"list,omitempty"` // List[u] are neighbours of u
+	Size int              `json:"size,omitempty"`
+	List []map[int]Naught `json:"list,omitempty"` // List[u] are neighbours of u
 }
 
 // InitializeAdjList creates an adjacency list with *size* isolated vertices.
@@ -18,12 +20,13 @@ func InitializeAdjList(size int) (*AdjList, error) {
 	}
 	l := &AdjList{
 		Size: size,
-		List: make([]map[int]bool, size),
+		List: make([]map[int]Naught, size),
 	}
 
 	// Initialise the adjacency list for each vertex
 	for i := 0; i < size; i++ {
-		l.List[i] = make(map[int]bool)
+		// Todo: If we have knowledge of the average vertex degree, we could preallocate the map with a size.
+		l.List[i] = make(map[int]Naught, 4)
 	}
 
 	return l, nil
@@ -39,56 +42,53 @@ func (l *AdjList) AddArc(arc Arc) error {
 		return errors.New("vertex does not exist")
 	}
 
-	if l.List[arc.From.Id][arc.To.Id] {
+	if _, ok := l.List[arc.From.Id][arc.To.Id]; ok {
 		return EdgeOrArcExistsError
 	}
 
-	if arc.From != arc.To {
-		l.List[arc.From.Id][arc.To.Id] = true
-	}
+	l.List[arc.From.Id][arc.To.Id] = Naught{}
 
 	return nil
 }
 
 func (l *AdjList) AddEdge(edge Edge) error {
-	if l.Size == 0 {
-		return errors.New("graph is empty")
-	}
-
-	if !l.HasVertex(edge.U) || !l.HasVertex(edge.V) {
-		return errors.New("vertex does not exist")
-	}
-
-	if l.List[edge.U.Id][edge.V.Id] || l.List[edge.V.Id][edge.U.Id] {
+	if l.HasArc(Arc{edge.U, edge.V}) || l.HasArc(Arc{edge.V, edge.U}) {
 		return EdgeOrArcExistsError
 	}
 
-	if edge.U != edge.V {
-		l.List[edge.U.Id][edge.V.Id],
-			l.List[edge.V.Id][edge.U.Id] = true, true
+	err := l.AddArc(Arc{edge.U, edge.V})
+	if err != nil {
+		return err
 	}
 
-	return nil
+	err = l.AddArc(Arc{edge.V, edge.U})
+	if errors.Is(err, EdgeOrArcExistsError) && edge.V == edge.U {
+		// Ignore self-loops
+		return nil
+	}
+
+	return err
 }
 
 func (l *AdjList) HasEdge(edge Edge) bool {
-	return l.List[edge.U.Id][edge.V.Id] || l.List[edge.V.Id][edge.U.Id]
+	return l.HasArc(Arc{From: edge.U, To: edge.V}) || l.HasArc(Arc{From: edge.V, To: edge.U})
 }
 
 func (l *AdjList) HasArc(arc Arc) bool {
-	return l.List[arc.From.Id][arc.To.Id]
+	_, ok := l.List[arc.From.Id][arc.To.Id]
+	return ok
 }
 
 func (l *AdjList) AddVertex() {
 	l.Size++
-	l.List = append(l.List, make(map[int]bool))
+	l.List = append(l.List, make(map[int]Naught))
 }
 
 func (l *AdjList) HasVertex(v Vertex) bool {
 	return v.Id >= 0 && v.Id < l.Size
 }
 
-func RemoveVertex(l *AdjList, v Vertex) error {
+func (l *AdjList) RemoveVertex(v Vertex) error {
 	if !l.HasVertex(v) {
 		return errors.New("vertex does not exist")
 	}
@@ -103,14 +103,14 @@ func RemoveVertex(l *AdjList, v Vertex) error {
 	return nil
 }
 
-func RemoveArc(l *AdjList) error {
+func (l *AdjList) RemoveArc() error {
 	if l.Size == 0 {
 		return errors.New("graph is empty")
 	}
 
 	for i := 0; i < l.Size; i++ {
 		for j := 0; j < l.Size; j++ {
-			if l.List[i][j] {
+			if l.HasArc(Arc{From: Vertex{i}, To: Vertex{j}}) {
 				delete(l.List[i], j)
 			}
 		}
@@ -128,7 +128,7 @@ func (l *AdjList) RemoveEdge(edge Edge) error {
 		return errors.New("vertex does not exist")
 	}
 
-	if l.List[edge.U.Id][edge.V.Id] {
+	if l.HasEdge(edge) {
 		delete(l.List[edge.U.Id], edge.V.Id)
 		delete(l.List[edge.V.Id], edge.U.Id)
 	} else {
@@ -138,22 +138,14 @@ func (l *AdjList) RemoveEdge(edge Edge) error {
 	return nil
 }
 
-func (l *AdjList) Neighbours(u Vertex) ([]Vertex, error) {
+func (l *AdjList) Neighbours(u Vertex) (map[int]Naught, error) {
 	if !l.HasVertex(u) {
 		return nil, errors.New("vertex does not exist")
 	}
-	keys := make([]Vertex, len(l.List[u.Id]))
-	for k, v := range l.List[u.Id] {
-		if v {
-			keys[k] = Vertex{Id: k}
-		}
-	}
-	return keys, nil
+	return l.List[u.Id], nil
 }
 
 func (l *AdjList) Degree(u Vertex) (int, error) {
-	if !l.HasVertex(u) {
-		return 0, errors.New("vertex does not exist")
-	}
-	return len(l.List[u.Id]), nil
+	n, err := l.Neighbours(u)
+	return len(n), err
 }

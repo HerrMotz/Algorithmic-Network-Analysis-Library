@@ -2,6 +2,7 @@ package graphlib
 
 import (
 	"errors"
+	"fmt"
 	"reflect"
 	"testing"
 )
@@ -62,5 +63,57 @@ func checkAdjList(t *testing.T, got *AdjList) {
 			t.Errorf("neighbours of %d mismatch\n  got : %v\n  want: %v",
 				v, gotNbrs, wantNbrs)
 		}
+	}
+}
+
+// ----------------------------
+// File read benchmark
+// ----------------------------
+
+func BenchmarkReadGraph_EDGELIST_undirected(b *testing.B) {
+	files := []string{
+		"tiny_01.graph",
+		"Wiki-Vote.txt",
+	}
+
+	for _, file := range files {
+		b.Run(fmt.Sprintf("EDGELIST/%s", file), func(b *testing.B) {
+			benchReadGraph(b, file)
+		})
+	}
+}
+
+func BenchmarkReadGraph_METIS_undirected(b *testing.B) {
+	files := []string{
+		"metis_tiny_01.mgraph",
+		"4elt.mgraph",
+	}
+
+	for _, file := range files {
+		b.Run(fmt.Sprintf("METIS/%s", file), func(b *testing.B) {
+			benchReadGraph(b, file)
+		})
+	}
+}
+
+func benchReadGraph(b *testing.B, file string) {
+	b.ReportAllocs()
+	l, err := ReadGraphAdjList("../exampleGraphs/"+file, false)
+
+	if err != nil {
+		b.Fatalf("ReadGraph_AdjList returned error: %v", err)
+	}
+
+	if l == nil {
+		b.Fatalf("ReadGraph_AdjList returned nil")
+	}
+
+	if l.Size == 0 {
+		b.Fatalf("ReadGraph_AdjList returned empty graph")
+	}
+
+	ok := l.HasVertex(Vertex{0})
+	if !ok {
+		b.Fatalf("ReadGraph_AdjList returned graph without vertex 0")
 	}
 }

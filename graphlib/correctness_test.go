@@ -1,7 +1,6 @@
 package graphlib
 
 import (
-	"slices"
 	"testing"
 )
 
@@ -93,7 +92,9 @@ func TestAdjList_Neighbours(t *testing.T) {
 	if len(neighbours) != 2 {
 		t.Fatalf("expected 2 neighbours, got %d", len(neighbours))
 	}
-	if !slices.Contains(neighbours, 2) || !slices.Contains(neighbours, 3) {
+	_, ok1 := neighbours[2]
+	_, ok2 := neighbours[3]
+	if !ok1 || !ok2 {
 		t.Fatalf("expected neighbours to be [2,3], got %v", neighbours)
 	}
 }
