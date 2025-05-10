@@ -88,13 +88,22 @@ func (l *AdjList) HasVertex(v Vertex) bool {
 	return v.Id >= 0 && v.Id < l.Size
 }
 
-func (l *AdjList) Neighbours(u Vertex) ([]int, error) {
+func (l *AdjList) Neighbours(u Vertex) ([]Vertex, error) {
 	if !l.HasVertex(u) {
 		return nil, errors.New("vertex does not exist")
 	}
-	var neighbours []int
-	for v := range l.List[u.Id] {
-		neighbours = append(neighbours, v)
+	keys := make([]Vertex, len(l.List[u.Id]))
+	for k, v := range l.List[u.Id] {
+		if v {
+			keys[k] = Vertex{Id: k}
+		}
 	}
-	return neighbours, nil
+	return keys, nil
+}
+
+func (l *AdjList) Degree(u Vertex) (int, error) {
+	if !l.HasVertex(u) {
+		return 0, errors.New("vertex does not exist")
+	}
+	return len(l.List[u.Id]), nil
 }

@@ -116,12 +116,5 @@ func (m *AdjMatDense) Degree(u Vertex) (int, error) {
 	if u.Id < 0 || u.Id >= m.Size {
 		return 0, errors.New("vertex does not exist")
 	}
-	var degree int
-	for i := 0; i < m.Size; i++ {
-		if m.Data[u.Id*m.Size+i] {
-			degree++
-		}
-	}
-
-	return degree, nil
+	return m.Deg[u.Id], nil
 }
