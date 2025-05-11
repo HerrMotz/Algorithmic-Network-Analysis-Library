@@ -98,3 +98,46 @@ func TestAdjList_Neighbours(t *testing.T) {
 		t.Fatalf("expected neighbours to be [2,3], got %v", neighbours)
 	}
 }
+
+func TestShortestPaths_DAG(t *testing.T) {
+	adj, _ := InitializeAdjList(4)
+
+	zero := Vertex{0}
+	one := Vertex{1}
+	two := Vertex{2}
+	three := Vertex{3}
+
+	if err := adj.AddEdge(Edge{zero, one}); err != nil {
+		return
+	}
+	if err := adj.AddEdge(Edge{zero, two}); err != nil {
+		return
+	}
+	if err := adj.AddEdge(Edge{one, three}); err != nil {
+		return
+	}
+	if err := adj.AddEdge(Edge{two, three}); err != nil {
+		return
+	}
+
+	parents, distances := adj.directedAcyclicGraph(Vertex{0})
+	if len(parents) != 4 || len(distances) != 4 {
+		t.Fatalf("expected 4 parents and distances, got %d and %d", len(parents), len(distances))
+	}
+
+	if parents[3] != one {
+		t.Fatalf("expected parent of 3 to be 1, got %v", parents[3])
+	}
+
+	if distances[3] != 2 {
+		t.Fatalf("expected distance to 3 to be 2, got %d", distances[3])
+	}
+
+	if parents[2] != zero {
+		t.Fatalf("expected parent of 2 to be 0, got %v", parents[2])
+	}
+
+	if distances[2] != 1 {
+		t.Fatalf("expected distance to 2 to be 1, got %d", distances[2])
+	}
+}
