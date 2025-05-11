@@ -11,14 +11,14 @@ import (
 //  Tests reading from edgelist and METIS
 // ---------------------------------------
 
-var wantAdj = []map[int]bool{
-	{1: true, 2: true, 4: true},
-	{0: true, 2: true, 3: true},
-	{4: true, 3: true, 1: true, 0: true},
-	{1: true, 2: true, 5: true, 6: true},
-	{0: true, 2: true, 5: true},
-	{4: true, 3: true, 6: true},
-	{5: true, 3: true},
+var wantAdj = []map[int]Naught{
+	{1: Naught{}, 2: Naught{}, 4: Naught{}},
+	{0: Naught{}, 2: Naught{}, 3: Naught{}},
+	{4: Naught{}, 3: Naught{}, 1: Naught{}, 0: Naught{}},
+	{1: Naught{}, 2: Naught{}, 5: Naught{}, 6: Naught{}},
+	{0: Naught{}, 2: Naught{}, 5: Naught{}},
+	{4: Naught{}, 3: Naught{}, 6: Naught{}},
+	{5: Naught{}, 3: Naught{}},
 }
 
 // -------
