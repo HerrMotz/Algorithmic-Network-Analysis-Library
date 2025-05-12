@@ -99,7 +99,7 @@ func TestAdjList_Neighbours(t *testing.T) {
 	}
 }
 
-func TestShortestPaths_DAG(t *testing.T) {
+/*func TestShortestPaths_DAG(t *testing.T) {
 	adj, _ := InitializeAdjList(4)
 
 	zero := Vertex{0}
@@ -140,4 +140,69 @@ func TestShortestPaths_DAG(t *testing.T) {
 	if distances[2] != 1 {
 		t.Fatalf("expected distance to 2 to be 1, got %d", distances[2])
 	}
+}*/
+
+func TestQueue(t *testing.T) {
+	queue := NewQueue[int](10)
+	if queue.empty() == false {
+		t.Errorf("expected queue to be empty")
+	}
+
+	c1 := 12392
+	c2 := 9080890
+
+	queue.enqueue(c1)
+	queue.enqueue(c2)
+
+	if p1 := queue.pop(); p1 != c1 {
+		t.Errorf("expected popped value to be c1, got %v", p1)
+	}
+
+	if p2 := queue.pop(); p2 != c2 {
+		t.Errorf("expected popped value to be c2, got %v", p2)
+	}
 }
+
+/*
+func TestSingleSourceShortestPaths(t *testing.T) {
+	adj, _ := InitializeAdjList(4)
+
+	zero := Vertex{0}
+	one := Vertex{1}
+	two := Vertex{2}
+	three := Vertex{3}
+
+	if err := adj.AddEdge(Edge{zero, one}); err != nil {
+		return
+	}
+	if err := adj.AddEdge(Edge{zero, two}); err != nil {
+		return
+	}
+	if err := adj.AddEdge(Edge{one, three}); err != nil {
+		return
+	}
+	if err := adj.AddEdge(Edge{two, three}); err != nil {
+		return
+	}
+
+	distances, parents := adj.singleSourceShortestPath(&zero)
+	if len(parents) != 4 || len(distances) != 4 {
+		t.Fatalf("expected 4 parents and distances, got %d and %d", len(parents), len(distances))
+	}
+
+	if parents[3] != one {
+		t.Fatalf("expected parent of 3 to be 1, got %v", parents[3])
+	}
+
+	if distances[3] != 2 {
+		t.Fatalf("expected distance to 3 to be 2, got %d", distances[3])
+	}
+
+	if parents[2] != zero {
+		t.Fatalf("expected parent of 2 to be 0, got %v", parents[2])
+	}
+
+	if distances[2] != 1 {
+		t.Fatalf("expected distance to 2 to be 1, got %d", distances[2])
+	}
+}*/

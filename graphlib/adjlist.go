@@ -6,7 +6,7 @@ import (
 )
 
 // ---------------------------
-//  Adjacency List (slices)
+//  Adjacency List (slices of maps)
 // ---------------------------
 
 type Naught struct{}
