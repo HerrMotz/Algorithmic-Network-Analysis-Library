@@ -1,8 +1,8 @@
-// graphlib/write.go - exports adjacency matrices and adjacency lists to the plain-edge list and METIS format
-
 package graphlib
 
 import "os"
+
+// exports adjacency matrices and adjacency lists to the plain-edge list and METIS format
 
 func WriteAdjMatDenseToEdgeList(m *AdjMatDense, path string) error {
 	f, err := os.Open(path)

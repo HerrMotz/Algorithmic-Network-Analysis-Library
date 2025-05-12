@@ -120,7 +120,7 @@ func TestShortestPaths_DAG(t *testing.T) {
 		return
 	}
 
-	parents, distances := adj.directedAcyclicGraph(Vertex{0})
+	parents, distances := adj.directedAcyclicGraph(&zero)
 	if len(parents) != 4 || len(distances) != 4 {
 		t.Fatalf("expected 4 parents and distances, got %d and %d", len(parents), len(distances))
 	}
