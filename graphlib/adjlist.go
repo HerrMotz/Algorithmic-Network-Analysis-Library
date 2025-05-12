@@ -250,7 +250,7 @@ func (l *AdjList) DegeneracyOrder() ([]Vertex, error) {
 
 	// repeat n times
 	for i := 0; i < n; i++ {
-		// find smallest j with D[j] non-empty
+		// find the smallest j with D[j] non-empty
 		j := 0
 		for j < n && len(D[j]) == 0 {
 			j++
