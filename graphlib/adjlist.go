@@ -520,12 +520,3 @@ func (l *AdjList) TrianglesCNI() ([][3]Vertex, error) {
     return tris, nil
 }
 
-
-
-
-// global clustering coefficient ??
-
-
-
-
-// degeneracyWithOrdering 
