@@ -149,3 +149,355 @@ func (l *AdjList) Degree(u Vertex) (int, error) {
 	n, err := l.Neighbours(u)
 	return len(n), err
 }
+
+// Computation of Parameters ÜS2T2
+
+// Density: |A| / |V| * (|V| - 1), |A| = arcCount number of arcs, |V| = number of vertices
+func (l *AdjList) Density() (float64, error) {
+	if l.Size == 0 {
+		return 0, errors.New("graph is empty")
+	}
+	if l.Size == 1 {
+		return 0, nil
+	}
+	
+	// count arcs
+	var arcCount int
+	for _, neighbours := range l.List {
+		arcCount += len(neighbours)
+	}
+
+	// max number of arcs = |V| * (|V| - 1)
+	maxArcs := l.Size * (l.Size - 1)
+	return float64(arcCount) / float64(maxArcs), nil
+}
+
+// maximum degree: max(|N(u)|) für alle u
+func (l *AdjList) MaxDegree() (int, error) {
+    if l.Size == 0 {
+        return 0, errors.New("graph is empty")
+    }
+
+	// get degrees of all vertices and find the maximum
+    max := 0
+    for i := 0; i < l.Size; i++ {
+        deg := len(l.List[i])
+        if deg > max {
+            max = deg
+        }
+    }
+    return max, nil
+}
+
+// Hindex
+func (l *AdjList) HIndex() (int, error) {
+    if l.Size == 0 {
+        return 0, errors.New("graph is empty")
+    }
+
+	// get degrees of all vertices
+    degrees := make([]int, 0, l.Size)
+    for i := 0; i < l.Size; i++ {
+        degrees = append(degrees, len(l.List[i]))
+    }
+
+	// sort degrees in descending order
+    sort.Sort(sort.Reverse(sort.IntSlice(degrees)))
+
+	// find h-index
+    h := 0
+    for i, d := range degrees {
+        if d >= i+1 {
+            h = i + 1
+        } else {
+            break
+        }
+    }
+    return h, nil
+}
+
+// DegeneracyOrder implements the pseudocode from the lecture
+func (l *AdjList) DegeneracyOrder() ([]Vertex, error) {
+    n := l.Size
+    if n == 0 {
+        return nil, errors.New("graph is empty")
+    }
+
+    // σ ← empty list
+    sigma := make([]Vertex, 0, n)
+
+    // D ← array of length n, each an empty list
+    D := make([][]int, n)
+    for i := 0; i < n; i++ {
+        D[i] = []int{}
+    }
+
+    // degree array
+    deg := make([]int, n)
+
+    // foreach v ∈ V(G)
+    for v := 0; v < n; v++ {
+        d := len(l.List[v])
+        deg[v] = d
+        D[d] = append(D[d], v)
+    }
+
+    // mark vertices already in σ
+    inSigma := make([]bool, n)
+
+    // repeat n times
+    for i := 0; i < n; i++ {
+        // find smallest j with D[j] non-empty
+        j := 0
+        for j < n && len(D[j]) == 0 {
+            j++
+        }
+        if j >= n {
+            break
+        }
+
+        // remove v ← D[j].remove()
+        idx := len(D[j]) - 1
+        v := D[j][idx]
+        D[j] = D[j][:idx]
+
+        // σ.append(v)
+        sigma = append(sigma, Vertex{v})
+        inSigma[v] = true
+
+        // foreach u ∈ N(v)
+        for u := range l.List[v] {
+            if inSigma[u] {
+                continue
+            }
+            du := deg[u]
+
+            // remove u from D[du]
+            for k, x := range D[du] {
+                if x == u {
+                    D[du] = append(D[du][:k], D[du][k+1:]...)
+                    break
+                }
+            }
+
+            // du ← du - 1
+            deg[u] = du - 1
+
+            // D[du-1].append(u)
+            D[du-1] = append(D[du-1], u)
+        }
+    }
+    return sigma, nil
+}
+
+// k-Core Decomposition implements the pseudocode from the lecture
+func (l *AdjList) KCoreDecomp() ([][]Vertex, [][]Vertex, error) {
+    n := l.Size
+    if n == 0 {
+        return nil, nil, errors.New("graph is empty")
+    }
+
+    // 1) σ ← Degen-Order(G)
+    sigma, err := l.DegeneracyOrder()
+    if err != nil {
+        return nil, nil, err
+    }
+
+    // build rank[v] = position of v in σ
+    rank := make([]int, n)
+    for i, v := range sigma {
+        rank[v.Id] = i
+    }
+
+    // 2) D ← D^→_σ(G): orientate each edge u—w to ensure that rank[u] < rank[w]
+    D := make([][]Vertex, n)
+    for u := 0; u < n; u++ {
+        for w := range l.List[u] {
+            if rank[u] < rank[w] {
+                D[u] = append(D[u], Vertex{w})
+            }
+        }
+    }
+
+    // 3) L[0..n-1] ← array of empty lists
+    L := make([][]Vertex, n)
+    k := 0
+
+    // 6–9) for i starting at 0 until n-1
+    for _, v := range sigma {
+        dPlus := len(D[v.Id])        // deg⁺_D(v)
+        if dPlus > k {
+            k = dPlus
+        }
+        L[k] = append(L[k], v)
+    }
+
+    // 10–12) fill empty slots in L
+    for i := 0; i < n; i++ {
+        if len(L[i]) == 0 {
+            j := i + 1
+            for j < n && len(L[j]) == 0 {
+                j++
+            }
+            if j < n {
+                L[i] = L[j]
+            }
+        }
+    }
+    return L, D, nil
+}
+
+
+
+// Triangles ÜS2T3
+// TrianglesNodeIterator finds all triangles in the graph using a node iterator.
+func (l *AdjList) TrianglesNodeIterator() ([][3]Vertex, error) {
+    n := l.Size
+    if n < 3 {
+        return nil, nil
+    }
+
+    // 1) count degrees
+    deg := make([]int, n)
+    for u := 0; u < n; u++ {
+        deg[u] = len(l.List[u])
+    }
+
+    // 2) build forward adjacency list
+    fwd := make([][]int, n)
+    for u := 0; u < n; u++ {
+        for v := range l.List[u] {
+            if deg[u] < deg[v] || (deg[u] == deg[v] && u < v) {
+                fwd[u] = append(fwd[u], v)
+            }
+        }
+        sort.Ints(fwd[u])
+    }
+
+    // 3) merge 
+    var tris [][3]Vertex
+    for u := 0; u < n; u++ {
+        for _, v := range fwd[u] {
+            a, b := fwd[u], fwd[v]
+            i, j := 0, 0
+            for i < len(a) && j < len(b) {
+                switch {
+                case a[i] < b[j]:
+                    i++
+                case a[i] > b[j]:
+                    j++
+                default:
+                    w := a[i]
+                    tris = append(tris, [3]Vertex{
+                        {Id: u}, {Id: v}, {Id: w},
+                    })
+                    i++; j++
+                }
+            }
+        }
+    }
+
+    return tris, nil
+}
+
+// TrianglesCNI lists all triangles via Chiba&Nishizeki.
+// returns triples (u,v,w) with r[u]<r[v]<r[w].
+func (l *AdjList) TrianglesCNI() ([][3]Vertex, error) {
+    n := l.Size
+    if n < 3 {
+        return nil, nil
+    }
+
+    // 1) get Degeneracy-Ordering
+    ordering, _, _, err := l.degeneracyWithOrdering()
+    if err != nil {
+        return nil, err
+    }
+    // get rank r[v] = pos of v in the ordering
+    rank := make([]int, n)
+    for i, v := range ordering {
+        rank[v.Id] = i
+    }
+
+    // 2) 
+    out := make([][]int, n)
+    for u := 0; u < n; u++ {
+        for v := range l.List[u] {
+            if rank[u] < rank[v] {
+                out[u] = append(out[u], v)
+            }
+        }
+    }
+
+    // 3) mark them and find triples
+    tris := make([][3]Vertex, 0)
+    mark := make([]bool, n)
+    for u := 0; u < n; u++ {
+        // mark all out[u]
+        for _, w := range out[u] {
+            mark[w] = true
+        }
+        // for each v in out[u], search for out[v]
+        for _, v := range out[u] {
+            for _, w := range out[v] {
+                if mark[w] {
+                    tris = append(tris, [3]Vertex{
+                        {Id: u}, {Id: v}, {Id: w},
+                    })
+                }
+            }
+        }
+        // delete marks
+        for _, w := range out[u] {
+            mark[w] = false
+        }
+    }
+
+    return tris, nil
+}
+
+
+
+
+// local clustering coefficient: 2 * |E| / (|N(u)| * (|N(u)| - 1)), |E| = number of edges, |N(u)| = number of neighbours of u
+func (l *AdjList) LocalClustering(u Vertex) (float64, error) {
+    if !l.HasVertex(u) {
+        return 0, errors.New("vertex does not exist")
+    }
+
+    // neighbours of u
+    neighMap, _ := l.Neighbours(u)
+    k := len(neighMap)
+    if k < 2 {
+        return 0, nil
+    }
+
+    // get edges between neighbours
+    neighs := make([]int, 0, k)
+    for v := range neighMap {
+        neighs = append(neighs, v)
+    }
+
+    // count edges between neighbours
+    var connected int
+    for i := 0; i < k; i++ {
+        for j := i + 1; j < k; j++ {
+            vi := Vertex{neighs[i]}
+            vj := Vertex{neighs[j]}
+            if l.HasEdge(Edge{U: vi, V: vj}) {
+                connected++
+            }
+        }
+    }
+
+    // possible pairs of neighbours
+    possible := float64(k*(k-1)) / 2.0
+    return float64(connected) / possible, nil
+}
+
+// global clustering coefficient ??
+
+
+
+
+// degeneracyWithOrdering 
