@@ -1,5 +1,0 @@
-- Nachbarschaft von Knoten Vergleichen verbessern
-- gute Mischung aus random graphs und echten graphs
-- Adjazenzmatrix (CSR) und Adjazenzliste abspeichern
-- Knotengrad abspeichern
-- 
