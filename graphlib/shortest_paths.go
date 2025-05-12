@@ -40,7 +40,23 @@ func (l *AdjList) directedAcyclicGraph(start *Vertex) ([]Vertex, []int) {
 	return parents, distances
 }
 
+// singleSourceShortestPath starts BFS from the given start node and returns the distance to each node in the connected
+// component.
 func (l *AdjList) singleSourceShortestPath(start *Vertex) []int {
+	// Note: The parents array could be spared.
 	_, d := l.directedAcyclicGraph(start)
 	return d
+}
+
+// naiveAllPairsShortestPath return the full distance matrix for a given adjacency list
+func (l *AdjList) naiveAllPairsShortestPath() [][]int {
+	// we return a full matrix, because the distance from each node to each other is well-defined,
+	// even if they are not in the same connected component
+
+	distanceMatrix := make([][]int, l.Size)
+	for i := 0; i < l.Size; i++ {
+		distanceMatrix[i] = l.singleSourceShortestPath(&Vertex{i})
+	}
+
+	return distanceMatrix
 }

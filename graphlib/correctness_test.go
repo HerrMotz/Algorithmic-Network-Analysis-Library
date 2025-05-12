@@ -250,3 +250,38 @@ func TestQueue(t *testing.T) {
 		}
 	}
 }
+
+func TestConnectedComponents(t *testing.T) {
+	adj, _ := InitializeAdjList(8)
+
+	vertices := [5]Vertex{
+		{0},
+		{1},
+		{2},
+		{3},
+		{4},
+	}
+
+	edges := [4]Edge{
+		{vertices[0], vertices[1]},
+		{vertices[1], vertices[2]},
+		{vertices[0], vertices[3]},
+		{vertices[2], vertices[4]},
+	}
+
+	for _, edge := range edges {
+		err := adj.AddEdge(edge)
+		if err != nil {
+			return
+		}
+	}
+
+	component := adj.naiveConnectedComponents()
+	expect := [8]int{0, 0, 0, 0, 0, 1, 2, 3}
+
+	for i, v := range component {
+		if expect[i] != v {
+			t.Errorf("Expected %v, but got %v", expect[i], v)
+		}
+	}
+}
