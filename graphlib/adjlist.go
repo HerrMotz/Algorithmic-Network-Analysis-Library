@@ -150,6 +150,8 @@ func (l *AdjList) Degree(u Vertex) (int, error) {
 	return len(n), err
 }
 
+
+
 // Computation of Parameters ÜS2T2
 
 // Density: |A| / |V| * (|V| - 1), |A| = arcCount number of arcs, |V| = number of vertices
@@ -325,7 +327,7 @@ func (l *AdjList) KCoreDecomp() ([][]Vertex, [][]Vertex, error) {
 
     // 6–9) for i starting at 0 until n-1
     for _, v := range sigma {
-        dPlus := len(D[v.Id])        // deg⁺_D(v)
+        dPlus := len(D[v.Id])        // is deg⁺_D(v)
         if dPlus > k {
             k = dPlus
         }
@@ -347,7 +349,63 @@ func (l *AdjList) KCoreDecomp() ([][]Vertex, [][]Vertex, error) {
     return L, D, nil
 }
 
+// local clustering coefficient
+// (from lecture:) C(v) = |{{u,w} ⊆ N(v) : {u,w} ∈ E}| / (deg(v) über 2).
+func (l *AdjList) LocalClustering(v Vertex) (float64, error) {
+    if !l.HasVertex(v) {
+        return 0, errors.New("vertex does not exist")
+    }
 
+    // neighbours of v as slices
+    neighMap, _ := l.Neighbours(v)
+    k := len(neighMap)
+    if k < 2 {
+        return 0, nil
+    }
+
+    neighs := make([]Vertex, 0, k)
+    for uID := range neighMap {
+        neighs = append(neighs, Vertex{uID})
+    }
+
+    // count edges between neighbours
+    var connected int
+    for i := 0; i < k; i++ {
+        for j := i + 1; j < k; j++ {
+            u, w := neighs[i], neighs[j]
+            if l.HasEdge(Edge{U: u, V: w}) {
+                connected++
+            }
+        }
+    }
+
+    possible := float64(k*(k-1)) / 2.0
+    return float64(connected) / possible, nil
+}
+
+// global clustering coefficient using triangles (lecture)
+// c(G) = 6·#triangles / # length-2 paths,
+// where length-2 paths = ∑ₖ deg(k)·(deg(k)−1).
+func (l *AdjList) GlobalClustering() (float64, error) {
+    // 1) count all undirected triangles 
+    tris, err := l.TrianglesCNI()
+    if err != nil {
+        return 0, err
+    }
+    numTris := len(tris)
+
+    // 2) count all 2-paths: ∑ₖ deg(k)*(deg(k)-1)
+    var numPaths int
+    for v := 0; v < l.Size; v++ {
+        d := len(l.List[v])
+        numPaths += d * (d - 1) // /2 bei ungerichteten? 
+    }
+
+    if numPaths == 0 {
+        return 0, nil
+    }
+    return 6 * float64(numTris) / float64(numPaths), nil
+}
 
 // Triangles ÜS2T3
 // TrianglesNodeIterator finds all triangles in the graph using a node iterator.
@@ -413,13 +471,12 @@ func (l *AdjList) TrianglesCNI() ([][3]Vertex, error) {
     if err != nil {
         return nil, err
     }
+
     // get rank r[v] = pos of v in the ordering
     rank := make([]int, n)
     for i, v := range ordering {
         rank[v.Id] = i
     }
-
-    // 2) 
     out := make([][]int, n)
     for u := 0; u < n; u++ {
         for v := range l.List[u] {
@@ -432,22 +489,29 @@ func (l *AdjList) TrianglesCNI() ([][3]Vertex, error) {
     // 3) mark them and find triples
     tris := make([][3]Vertex, 0)
     mark := make([]bool, n)
+
+	// for u = v1, . . . , vn−2 do {
     for u := 0; u < n; u++ {
-        // mark all out[u]
+        // for each v ∈ N (u) do mark v;
         for _, w := range out[u] {
             mark[w] = true
         }
-        // for each v in out[u], search for out[v]
+
+        // for each v ∈ N (u) do {
         for _, v := range out[u] {
+			// for each w ∈ N (v) do {
             for _, w := range out[v] {
+				// if w is marked then {
                 if mark[w] {
+					// output triangle {u, v, w};
                     tris = append(tris, [3]Vertex{
                         {Id: u}, {Id: v}, {Id: w},
                     })
                 }
             }
         }
-        // delete marks
+
+        // unmark v;
         for _, w := range out[u] {
             mark[w] = false
         }
@@ -458,42 +522,6 @@ func (l *AdjList) TrianglesCNI() ([][3]Vertex, error) {
 
 
 
-
-// local clustering coefficient: 2 * |E| / (|N(u)| * (|N(u)| - 1)), |E| = number of edges, |N(u)| = number of neighbours of u
-func (l *AdjList) LocalClustering(u Vertex) (float64, error) {
-    if !l.HasVertex(u) {
-        return 0, errors.New("vertex does not exist")
-    }
-
-    // neighbours of u
-    neighMap, _ := l.Neighbours(u)
-    k := len(neighMap)
-    if k < 2 {
-        return 0, nil
-    }
-
-    // get edges between neighbours
-    neighs := make([]int, 0, k)
-    for v := range neighMap {
-        neighs = append(neighs, v)
-    }
-
-    // count edges between neighbours
-    var connected int
-    for i := 0; i < k; i++ {
-        for j := i + 1; j < k; j++ {
-            vi := Vertex{neighs[i]}
-            vj := Vertex{neighs[j]}
-            if l.HasEdge(Edge{U: vi, V: vj}) {
-                connected++
-            }
-        }
-    }
-
-    // possible pairs of neighbours
-    possible := float64(k*(k-1)) / 2.0
-    return float64(connected) / possible, nil
-}
 
 // global clustering coefficient ??
 
