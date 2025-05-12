@@ -1,6 +1,5 @@
 package graphlib
 
-/*
 // directedAcyclicGraph returns the vertices of a directed acyclic graph (DAG) for all nodes in the connected component
 // of the given node.
 func (l *AdjList) directedAcyclicGraph(start *Vertex) ([]Vertex, []int) {
@@ -9,19 +8,19 @@ func (l *AdjList) directedAcyclicGraph(start *Vertex) ([]Vertex, []int) {
 	// For now, we just use a slice and append to it.
 	heuristicValue := 15 // e.g. the maximum vertex degree
 
-	queue := make([]int, 0, heuristicValue)
-	visited := make([]bool, heuristicValue)
+	queue := NewQueue[int](heuristicValue)
+	visited := make([]bool, l.Size)
 	parents := make([]Vertex, l.Size)
 	distances := make([]int, l.Size)
 
-	queue = append(queue, start.Id)
+	queue.enqueue(start.Id)
 	visited[start.Id] = true
 	parents[start.Id] = Vertex{}
 	distances[start.Id] = 0
 
 	// BFS
-	for len(queue) > 0 {
-
+	for queue.size > 0 {
+		v := queue.pop()
 		// Iterate over all neighbours of v
 		neighbours, err := l.Neighbours(Vertex{v})
 		if err != nil {
@@ -30,7 +29,7 @@ func (l *AdjList) directedAcyclicGraph(start *Vertex) ([]Vertex, []int) {
 
 		for k := range neighbours {
 			if !visited[k] {
-				queue = append(queue, k)
+				queue.enqueue(k)
 				visited[k] = true
 				parents[k] = Vertex{v}
 				distances[k] = distances[v] + 1
@@ -42,6 +41,6 @@ func (l *AdjList) directedAcyclicGraph(start *Vertex) ([]Vertex, []int) {
 }
 
 func (l *AdjList) singleSourceShortestPath(start *Vertex) []int {
-	_, parents := l.directedAcyclicGraph(start)
-	return parents
-}*/
+	_, d := l.directedAcyclicGraph(start)
+	return d
+}
