@@ -1,6 +1,7 @@
 package graphlib
 
 import (
+	"math/rand/v2"
 	"testing"
 )
 
@@ -143,13 +144,17 @@ func TestAdjList_Neighbours(t *testing.T) {
 }*/
 
 func TestQueue(t *testing.T) {
-	queue := NewQueue[int](10)
+	const capacity = 10
+
+	queue := NewQueue[int](capacity)
 	if queue.empty() == false {
 		t.Errorf("expected queue to be empty")
 	}
 
-	c1 := 12392
-	c2 := 9080890
+	const c1 = 12392
+	const c2 = 9080890
+	const c3 = 3748998
+	const c4 = 546785
 
 	queue.enqueue(c1)
 	queue.enqueue(c2)
@@ -160,6 +165,55 @@ func TestQueue(t *testing.T) {
 
 	if p2 := queue.pop(); p2 != c2 {
 		t.Errorf("expected popped value to be c2, got %v", p2)
+	}
+
+	if queue.empty() == false {
+		t.Errorf("expected queue to be empty after popping to pushed values, got size %v", queue.size)
+	}
+
+	queue.enqueue(c3)
+
+	if queue.empty() == true {
+		t.Errorf("expected queue to not be after pushing one value")
+	}
+
+	if queue.size != 1 {
+		t.Errorf("expected queue length to be 1, got %v", queue.size)
+	}
+
+	if queue.peek() != c3 {
+		t.Errorf("expected peek to return current element, got %v", queue.size)
+	}
+
+	queue.enqueue(c4)
+	if queue.size != 2 {
+		t.Errorf("expected queue length to be 2, got %v", queue.size)
+	}
+
+	queue.grow()
+	if queue.size != 2 {
+		t.Errorf("expected queue length to be the same (2) after growing, got %v", queue.size)
+	}
+
+	queue.pop()
+	queue.pop()
+
+	const forceGrowCapacity = 3 * capacity
+
+	list := make([]int, forceGrowCapacity)
+	for i := 0; i < forceGrowCapacity; i++ {
+		list[i] = rand.IntN(100 * capacity)
+		queue.enqueue(list[i])
+	}
+
+	if queue.size != forceGrowCapacity {
+		t.Errorf("expected queue length to be 2 + a constant \"force grow capacity\" %v, got %v", forceGrowCapacity, queue.size)
+	}
+
+	for i := 0; i < forceGrowCapacity; i++ {
+		if _e := queue.pop(); _e != list[i] {
+			t.Errorf("expected queue to reconstruct the input list order. at pos %v expected %v but got %v", i, list[i], _e)
+		}
 	}
 }
 

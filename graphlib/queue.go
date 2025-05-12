@@ -1,5 +1,9 @@
 package graphlib
 
+import (
+	"math"
+)
+
 // -----------------------------
 // internal helpers
 // -----------------------------
@@ -17,6 +21,7 @@ type QueueImpl[T any] struct {
 	buf        []T // backing storage
 	head, tail int // index of first element, index *after* last element
 	size       int // number of valid elements
+	// note: we could pass a heuristic function here to calculate the growth
 }
 
 // NewQueue creates a queue with at least the given initial capacity.
@@ -67,7 +72,11 @@ func (q *QueueImpl[T]) peek() T {
 
 // grow doubles the capacity while keeping the logical order intact.
 func (q *QueueImpl[T]) grow() {
-	newCap := len(q.buf) * 2
+	// appending to the existing slice (and moving the contents) would be the same
+	// as doing it manually. But in this implementation we still have the chance to control
+	// the newCap value.
+
+	newCap := int(math.Ceil(float64(len(q.buf)) * 1.5)) // todo chance to add another heuristic
 	if newCap == 0 {
 		newCap = 1
 	}
