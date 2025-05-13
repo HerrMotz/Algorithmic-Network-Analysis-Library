@@ -7,3 +7,7 @@
 
 ## Todos
 - [ ] Alle Funktionen (insbesondere in `components.go`) mit Großbuchstaben beginnen lassen.
+- [ ] All Pairs Shortest Paths parallelisieren
+- [ ] Performance Benchmarks bzgl. Netzwerkgröße (Was ist die Grenze der Verarbeitbarkeit?)
+- [ ] Hypothese testen, dass Netzwerke gleichen Typs ähnliche Strukturmaße aufweisen.
+- [ ] "Parameters" in Structural Measures umbenennen (optional)
