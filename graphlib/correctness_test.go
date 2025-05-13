@@ -79,11 +79,13 @@ func TestAdjList_HasEdge(t *testing.T) {
 func TestAdjList_Neighbours(t *testing.T) {
 	adj, _ := InitializeAdjList(4)
 	// add some edges and test
-	if err := adj.AddEdge(Edge{Vertex{1}, Vertex{3}}); err != nil {
+	edges := []Edge{
+		{Vertex{1}, Vertex{3}},
+		{Vertex{1}, Vertex{2}},
+		{Vertex{2}, Vertex{3}},
 	}
-	if err := adj.AddEdge(Edge{Vertex{1}, Vertex{2}}); err != nil {
-	}
-	if err := adj.AddEdge(Edge{Vertex{2}, Vertex{3}}); err != nil {
+	for _, e := range edges {
+		mustAddEdge(t, adj, e)
 	}
 
 	// test neighbours
@@ -101,6 +103,13 @@ func TestAdjList_Neighbours(t *testing.T) {
 	}
 }
 
+func mustAddEdge(t *testing.T, adj *AdjList, e Edge) {
+	t.Helper()
+	if err := adj.AddEdge(e); err != nil {
+		t.Fatalf("AddEdge(%v) failed: %v", e, err)
+	}
+}
+
 func TestShortestPaths_DAG(t *testing.T) {
 	adj, _ := InitializeAdjList(4)
 
@@ -109,17 +118,15 @@ func TestShortestPaths_DAG(t *testing.T) {
 	two := Vertex{2}
 	three := Vertex{3}
 
-	if err := adj.AddEdge(Edge{zero, one}); err != nil {
-		return
+	edges := []Edge{
+		{zero, one},
+		{zero, two},
+		{one, three},
+		{two, three},
 	}
-	if err := adj.AddEdge(Edge{zero, two}); err != nil {
-		return
-	}
-	if err := adj.AddEdge(Edge{one, three}); err != nil {
-		return
-	}
-	if err := adj.AddEdge(Edge{two, three}); err != nil {
-		return
+
+	for _, e := range edges {
+		mustAddEdge(t, adj, e)
 	}
 
 	parents, distances := adj.directedAcyclicGraph(&zero)
@@ -153,16 +160,16 @@ func TestSingleSourceShortestPaths(t *testing.T) {
 	three := Vertex{3}
 
 	if err := adj.AddEdge(Edge{zero, one}); err != nil {
-		return
+		t.Fatalf("unexpected error: %v", err)
 	}
 	if err := adj.AddEdge(Edge{zero, two}); err != nil {
-		return
+		t.Fatalf("unexpected error: %v", err)
 	}
 	if err := adj.AddEdge(Edge{one, three}); err != nil {
-		return
+		t.Fatalf("unexpected error: %v", err)
 	}
 	if err := adj.AddEdge(Edge{two, three}); err != nil {
-		return
+		t.Fatalf("unexpected error: %v", err)
 	}
 
 	distances := adj.singleSourceShortestPath(&zero)
@@ -288,11 +295,8 @@ func TestConnectedComponents(t *testing.T) {
 		{vertices[2], vertices[4]},
 	}
 
-	for _, edge := range edges {
-		err := adj.AddEdge(edge)
-		if err != nil {
-			return
-		}
+	for _, e := range edges {
+		mustAddEdge(t, adj, e)
 	}
 
 	component := adj.naiveConnectedComponents()
