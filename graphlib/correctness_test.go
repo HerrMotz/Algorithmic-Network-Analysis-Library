@@ -1,6 +1,7 @@
 package graphlib
 
 import (
+	"math"
 	"math/rand/v2"
 	"testing"
 )
@@ -251,6 +252,24 @@ func TestQueue(t *testing.T) {
 	}
 }
 
+func TestConnectedComponentsEdgeCases(t *testing.T) {
+	adjOneNode, _ := InitializeAdjList(1)
+	const expect = 0
+	v := adjOneNode.naiveDiameter()
+
+	if expect != v {
+		t.Errorf("Expected %v, but got %v", expect, v)
+	}
+
+	adjTwoNode, _ := InitializeAdjList(2)
+	const expect2 = math.MaxInt32
+	v = adjTwoNode.naiveDiameter()
+
+	if expect2 != v {
+		t.Errorf("Expected %v, but got %v", expect2, v)
+	}
+}
+
 func TestConnectedComponents(t *testing.T) {
 	adj, _ := InitializeAdjList(8)
 
@@ -283,5 +302,55 @@ func TestConnectedComponents(t *testing.T) {
 		if expect[i] != v {
 			t.Errorf("Expected %v, but got %v", expect[i], v)
 		}
+	}
+}
+
+func TestNaiveDiameter(t *testing.T) {
+	adj, _ := InitializeAdjList(8)
+
+	vertices := [8]Vertex{
+		{0}, {1}, {2}, {3}, {4}, {5}, {6}, {7},
+	}
+
+	edges := [4]Edge{
+		{vertices[0], vertices[1]},
+		{vertices[1], vertices[2]},
+		{vertices[2], vertices[3]},
+		{vertices[3], vertices[4]},
+	}
+
+	for _, edge := range edges {
+		err := adj.AddEdge(edge)
+		if err != nil {
+			return
+		}
+	}
+
+	diameter := adj.naiveDiameter()
+	const expect = math.MaxInt32
+
+	if diameter != expect {
+		t.Errorf("Expected %v, but got %v", expect, diameter)
+	}
+
+	moreEdges := [3]Edge{
+		{vertices[4], vertices[5]},
+		{vertices[5], vertices[6]},
+		{vertices[6], vertices[7]},
+	}
+
+	for _, edge := range moreEdges {
+		err := adj.AddEdge(edge)
+		if err != nil {
+			return
+		}
+	}
+
+	const expect2 = 7
+
+	diameter = adj.naiveDiameter()
+
+	if diameter != expect2 {
+		t.Errorf("Expected %v, got %v", expect2, diameter)
 	}
 }

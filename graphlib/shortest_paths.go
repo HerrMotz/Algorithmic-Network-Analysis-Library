@@ -1,5 +1,10 @@
 package graphlib
 
+import (
+	"math"
+	"slices"
+)
+
 // directedAcyclicGraph returns the vertices of a directed acyclic graph (DAG) for all nodes in the connected component
 // of the given node.
 func (l *AdjList) directedAcyclicGraph(start *Vertex) ([]Vertex, []int) {
@@ -11,7 +16,7 @@ func (l *AdjList) directedAcyclicGraph(start *Vertex) ([]Vertex, []int) {
 	queue := NewQueue[int](heuristicValue)
 	visited := make([]bool, l.Size)
 	parents := make([]Vertex, l.Size)
-	distances := make([]int, l.Size)
+	distances := slices.Repeat([]int{math.MaxInt32}, l.Size)
 
 	queue.enqueue(start.Id)
 	visited[start.Id] = true
