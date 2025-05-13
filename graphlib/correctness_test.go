@@ -364,7 +364,10 @@ var exAdj0 = []map[int]Naught{
 	{1: Naught{}},
 	{0: Naught{}},
 }
-var wantCut0 = [0]int{}
+var wantCut0 = map[int]Naught{}
+var wantNbh0 = map[int]Naught{
+	0: {}, // this is the correct output only because the for loop starts at idx 0 in NeighbourhoodSubsets
+}
 
 var exAdj1 = []map[int]Naught{
 	{1: Naught{}, 2: Naught{}},
@@ -373,7 +376,11 @@ var exAdj1 = []map[int]Naught{
 	{},
 }
 
-var wantCut1 = [1]int{0}
+var wantCut1 = map[int]Naught{0: {}}
+var wantNbh1 = map[int]Naught{
+	0: {},
+	1: {}, // this is the correct output only because the for loop starts at idx 0 in NeighbourhoodSubsets
+}
 
 var exAdj2 = []map[int]Naught{
 	{3: Naught{}, 5: Naught{}},
@@ -384,25 +391,54 @@ var exAdj2 = []map[int]Naught{
 	{0: Naught{}},
 }
 
-var wantCut2 = [3]int{0, 3, 4}
+var wantCut2 = map[int]Naught{0: {}, 3: {}, 4: {}}
+var wantNbh2 = map[int]Naught{
+	0: {},
+	1: {},
+	// 2 not, because 1 and 2 have the same neighbourhood
+	3: {},
+	4: {},
+}
 
 func TestCutVertices(t *testing.T) {
 	tests := []struct {
 		name string
 		adj  AdjList
 		size int
-		want []int
+		want map[int]Naught
 	}{
-		{"tiny cycle", AdjList{List: exAdj0, Size: len(exAdj0)}, 2, wantCut0[:]},
-		{"star plus isolated", AdjList{List: exAdj1, Size: len(exAdj1)}, 4, wantCut1[:]},
-		{"more complex", AdjList{List: exAdj2, Size: len(exAdj2)}, 6, wantCut2[:]},
+		{"tiny cycle", AdjList{List: exAdj0, Size: len(exAdj0)}, 2, wantCut0},
+		{"star plus isolated", AdjList{List: exAdj1, Size: len(exAdj1)}, 4, wantCut1},
+		{"more complex", AdjList{List: exAdj2, Size: len(exAdj2)}, 6, wantCut2},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			got := tc.adj.CutVertices(tc.size)
+			got, _ := tc.adj.CutVertices(tc.size)
 			if !reflect.DeepEqual(got, tc.want) {
 				t.Errorf("CutVertices(adj, %d) = %v; want %v", tc.size, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestNeighbourhoodSubsets(t *testing.T) {
+	tests := []struct {
+		name string
+		adj  AdjList
+		size int
+		want map[int]Naught
+	}{
+		{"tiny cycle", AdjList{List: exAdj0, Size: len(exAdj0)}, 2, wantNbh0},
+		{"star plus isolated", AdjList{List: exAdj1, Size: len(exAdj1)}, 4, wantNbh1},
+		{"more complex", AdjList{List: exAdj2, Size: len(exAdj2)}, 6, wantNbh2},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got, _ := tc.adj.NeighbourhoodSubsets(tc.size)
+			if !reflect.DeepEqual(got, tc.want) {
+				t.Errorf("NeighbourhoodSubsets(adj, %d) = %v; want %v", tc.size, got, tc.want)
 			}
 		})
 	}

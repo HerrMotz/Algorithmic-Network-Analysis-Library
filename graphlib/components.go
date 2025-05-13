@@ -48,7 +48,7 @@ func (l *AdjList) naiveConnectedComponents() []int {
 // 0 … size‑1.
 //
 // The function works for disconnected graphs as well.
-func (l *AdjList) CutVertices(size int) (map[int]struct{}, error) {
+func (l *AdjList) CutVertices(size int) (map[int]Naught, error) {
 	disc := make([]int, size) // time the node was discovered in the DFS
 	low := make([]int, size)  // the lowest possible discovery time of a node or his descendants possibly using back nodes
 	visited := make([]bool, size)
@@ -61,7 +61,7 @@ func (l *AdjList) CutVertices(size int) (map[int]struct{}, error) {
 	}
 
 	//  “set” that will hold the result
-	cut := make(map[int]struct{})
+	cut := make(map[int]Naught)
 
 	//  DFS
 	time := 0
@@ -94,10 +94,10 @@ func (l *AdjList) CutVertices(size int) (map[int]struct{}, error) {
 
 				// Articulation‑point tests.
 				if parent[u] == -1 && childCnt > 1 { // root with >1 child
-					cut[u] = struct{}{}
+					cut[u] = Naught{}
 				}
 				if parent[u] != -1 && low[v] >= disc[u] { // bridge‑like subtree
-					cut[u] = struct{}{}
+					cut[u] = Naught{}
 				}
 			} else if v != parent[u] { // back edge
 				if disc[v] < low[u] {
@@ -118,4 +118,71 @@ func (l *AdjList) CutVertices(size int) (map[int]struct{}, error) {
 	}
 
 	return cut, nil
+}
+
+// NeighbourhoodSubsets returns a set of vertices u such that there exists another
+// vertex v in the graph whose (open or closed) neighborhood is a subset of the
+// (open or closed) neighborhood of u.
+//
+// – Open neighbourhood   N(u)  := { w | {u,w} ∈ E }
+// – Closed neighbourhood N[u] := N(u) ∪ {u}
+func (l *AdjList) NeighbourhoodSubsets(size int) (map[int]Naught, error) {
+	// Helper for the subset test
+	isSubset := func(sub, sup map[int]Naught) bool {
+		for x := range sub {
+			if _, ok := sup[x]; !ok {
+				return false
+			}
+		}
+		return true
+	}
+
+	// Main search
+	result := make(map[int]Naught)
+
+	for u := 0; u < size; u++ {
+		// --- collect candidates ( neighbours of u OR of any neighbour of u ) --
+		candidates := make(map[int]Naught)
+
+		openU := make(map[int]Naught, 8) // todo: chance to add a heuristic
+		openU, _ = l.Neighbours(Vertex{u})
+
+		// we only need closedU, because the comparison works with only closedU
+		closedU := make(map[int]Naught, len(openU)+1)
+		closedU = openU
+		closedU[u] = Naught{}
+
+		for v := range openU {
+			// only reference passing
+			openV := make(map[int]Naught, 8) // todo: chance to add a heuristic
+			openV, _ = l.Neighbours(Vertex{v})
+
+			candidates[v] = Naught{}
+			for w := range openV {
+				candidates[w] = Naught{}
+			}
+		}
+		delete(candidates, u) // we only want "another" vertex
+
+		// --- check each candidate --------------------------------------------
+		for v := range candidates {
+			// only reference passing
+			openV := make(map[int]Naught, 8) // todo: chance to add a heuristic
+			openV, _ = l.Neighbours(Vertex{v})
+
+			if _, already := result[v]; already {
+				// mimic the Python early‑out: if v is already in the result set
+				// (because N(v)=N(u) etc.) do not put both u and v into result.
+				continue
+			}
+
+			if isSubset(openV, openU) || isSubset(openV, closedU) {
+				// if isSubset(openV, openU) ||  {
+				result[u] = Naught{}
+				break // proceed to next u
+			}
+		}
+	}
+
+	return result, nil
 }
