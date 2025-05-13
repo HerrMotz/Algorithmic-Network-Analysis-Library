@@ -177,3 +177,6 @@ pyrightconfig.json
 
 .vscode
 .idea
+
+graphlib/write_test.graph
+graphlib/write_test.mgraph
