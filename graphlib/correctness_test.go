@@ -310,7 +310,7 @@ func TestConnectedComponents(t *testing.T) {
 	}
 }
 
-func TestNaiveDiameter(t *testing.T) {
+func TestDiameter(t *testing.T) {
 	adj, _ := InitializeAdjList(8)
 
 	vertices := [8]Vertex{
@@ -332,10 +332,16 @@ func TestNaiveDiameter(t *testing.T) {
 	}
 
 	diameter := adj.NaiveDiameter()
+	diameter2 := adj.ImprovedDiameter()
+
 	const expect = math.MaxUint32
 
 	if diameter != expect {
 		t.Errorf("Expected %v, but got %v", expect, diameter)
+	}
+
+	if diameter2 != expect {
+		t.Errorf("Expected %v, but got %v", expect, diameter2)
 	}
 
 	moreEdges := [3]Edge{
@@ -354,9 +360,14 @@ func TestNaiveDiameter(t *testing.T) {
 	const expect2 = 7
 
 	diameter = adj.NaiveDiameter()
+	diameter2 = adj.ImprovedDiameter()
 
 	if diameter != expect2 {
 		t.Errorf("Expected %v, got %v", expect2, diameter)
+	}
+
+	if diameter2 != expect2 {
+		t.Errorf("Expected %v, got %v", expect2, diameter2)
 	}
 }
 
