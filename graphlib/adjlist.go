@@ -8,8 +8,9 @@ import (
 // ---------------------------
 //  Adjacency List (slices of maps)
 // ---------------------------
-// random Graphs benchmrken, 
+// random Graphs benchmrken,
 // snap.stanford.edu/data/
+
 type Naught struct{}
 
 type AdjList struct {
@@ -194,4 +195,3 @@ func (l *AdjList) TotalDegreeParallel(numWorkers int) int {
 	}
 	return total
 }
-

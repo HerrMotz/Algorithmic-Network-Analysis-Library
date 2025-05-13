@@ -3,6 +3,7 @@ package graphlib
 import (
 	"math"
 	"math/rand/v2"
+	"reflect"
 	"testing"
 )
 
@@ -356,5 +357,53 @@ func TestNaiveDiameter(t *testing.T) {
 
 	if diameter != expect2 {
 		t.Errorf("Expected %v, got %v", expect2, diameter)
+	}
+}
+
+var exAdj0 = []map[int]Naught{
+	{1: Naught{}},
+	{0: Naught{}},
+}
+var wantCut0 = [0]int{}
+
+var exAdj1 = []map[int]Naught{
+	{1: Naught{}, 2: Naught{}},
+	{0: Naught{}},
+	{0: Naught{}},
+	{},
+}
+
+var wantCut1 = [1]int{0}
+
+var exAdj2 = []map[int]Naught{
+	{3: Naught{}, 5: Naught{}},
+	{2: Naught{}, 4: Naught{}},
+	{1: Naught{}, 4: Naught{}},
+	{0: Naught{}, 4: Naught{}},
+	{1: Naught{}, 2: Naught{}, 3: Naught{}},
+	{0: Naught{}},
+}
+
+var wantCut2 = [3]int{0, 3, 4}
+
+func TestCutVertices(t *testing.T) {
+	tests := []struct {
+		name string
+		adj  AdjList
+		size int
+		want []int
+	}{
+		{"tiny cycle", AdjList{List: exAdj0, Size: len(exAdj0)}, 2, wantCut0[:]},
+		{"star plus isolated", AdjList{List: exAdj1, Size: len(exAdj1)}, 4, wantCut1[:]},
+		{"more complex", AdjList{List: exAdj2, Size: len(exAdj2)}, 6, wantCut2[:]},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := tc.adj.CutVertices(tc.size)
+			if !reflect.DeepEqual(got, tc.want) {
+				t.Errorf("CutVertices(adj, %d) = %v; want %v", tc.size, got, tc.want)
+			}
+		})
 	}
 }
