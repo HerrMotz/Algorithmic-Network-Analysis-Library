@@ -2,6 +2,7 @@ package graphlib
 
 import (
     "testing"
+    "time"
 )
 
 // ########################################################################
@@ -10,35 +11,52 @@ import (
 
 func BenchmarkRead(b *testing.B) {
 	b.ResetTimer()
-	b.Run("Read Random Graph%", func(b *testing.B) {
-		ReadGraphAdjList("random_graph_2000_0.5.graph", false)
+    start := time.Now()
+
+	b.Run("Read Random Graph", func(b *testing.B) {
+		ReadGraphAdjList("random_graph_2000_0_5.mgraph", false)
 	})
+
+    b.Logf("Finished %d runs in %s", b.N, time.Since(start))
+
+    b.ReportAllocs()
+    
 }
 
 func BenchmarkSSSP(b *testing.B) {
     // lade Graph nur einmal vor dem Benchmark
-    g, err := ReadGraphAdjList("random_graph_2000_0.5.graph", false)
+    g, err := ReadGraphAdjList("random_graph_2000_0_5.mgraph", false)
     if err != nil {
 		b.Fatalf("ReadGraphAdjLis failed: %v", err)
 	}
 
 	b.ResetTimer()
+
+    start := time.Now()
 	b.Run("Single Source shortest Path%", func(b *testing.B) {
 		g.SingleSourceShortestPath(&Vertex{0})
 	})
+
+    b.Logf("Finished %d runs in %s", b.N, time.Since(start))
+    b.ReportAllocs()
 }
 
 func BenchmarkAllPairs(b *testing.B) {
     // lade Graph nur einmal vor dem Benchmark
-    g, err := ReadGraphAdjList("random_graph_2000_0.5.graph", false)
+    g, err := ReadGraphAdjList("random_graph_2000_0_5.mgraph", false)
     if err != nil {
 		b.Fatalf("ReadGraphAdjLis failed: %v", err)
 	}
 
 	b.ResetTimer()
+
+    start := time.Now()
 	b.Run("All-Pairs%", func(b *testing.B) {
 		g.NaiveAllPairsShortestPath()
 	})
+
+    b.Logf("Finished %d runs in %s", b.N, time.Since(start))
+    b.ReportAllocs()
 }
 
 
