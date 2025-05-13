@@ -262,7 +262,7 @@ func TestConnectedComponentsEdgeCases(t *testing.T) {
 	}
 
 	adjTwoNode, _ := InitializeAdjList(2)
-	const expect2 = math.MaxInt32
+	const expect2 = math.MaxInt64
 	v = adjTwoNode.naiveDiameter()
 
 	if expect2 != v {
@@ -327,7 +327,7 @@ func TestNaiveDiameter(t *testing.T) {
 	}
 
 	diameter := adj.naiveDiameter()
-	const expect = math.MaxInt32
+	const expect = math.MaxInt64
 
 	if diameter != expect {
 		t.Errorf("Expected %v, but got %v", expect, diameter)
