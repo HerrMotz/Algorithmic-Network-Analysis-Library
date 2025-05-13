@@ -15,6 +15,10 @@ func TestLocalClustering(t *testing.T) {
         v    Vertex
         want float64
     }{
+		// possible = deg*(deg-1)/2
+		// connected = number of edges between neighbours
+		// formula = connected / possible
+		
         {Vertex{0}, 0.38181818181818183},   // deg=11, connected=20, possible=55
         {Vertex{2}, 0.6071428571428571},    // deg=8,  connected=17, possible=28
         {Vertex{6}, 0.6666666666666666},    // deg=6,  connected=10, possible=15
