@@ -145,15 +145,16 @@ func (l *AdjList) DegeneracyOrder() ([]Vertex, error) {
     return sigma, nil
 }
 
-// k-Core Decomposition implements the pseudocode from the lecture
-// returns L... k-core decomposition, D... oriented graph
+// KCoreDecomp: L[k] enthält genau alle v mit deg⁺_D(v)=k
+// KCoreDecomp implements the k-core decomposition as per the lecture pseudocode.
+// Returns L (Buckets indexed by core level) and D (σ-oriented adjacency).
 func (l *AdjList) KCoreDecomp() ([][]Vertex, [][]Vertex, error) {
     n := l.Size
     if n == 0 {
         return nil, nil, errors.New("graph is empty")
     }
 
-    // 1) σ ← Degen-Order(G)
+    // 1) σ ← DegeneracyOrder(G)
     sigma, err := l.DegeneracyOrder()
     if err != nil {
         return nil, nil, err
@@ -165,30 +166,30 @@ func (l *AdjList) KCoreDecomp() ([][]Vertex, [][]Vertex, error) {
         rank[v.Id] = i
     }
 
-    // 2) D ← D^→_σ(G): orientate each edge u—w to ensure that rank[u] < rank[w]
+    // 2) D ← directed graph oriented by σ
     D := make([][]Vertex, n)
     for u := 0; u < n; u++ {
         for w := range l.List[u] {
             if rank[u] < rank[w] {
-                D[u] = append(D[u], Vertex{w})
+                D[u] = append(D[u], Vertex{Id: w})
             }
         }
     }
 
-    // 3) L[0..n-1] ← array of empty lists
+    // 3) L ← array of length n for buckets
     L := make([][]Vertex, n)
     k := 0
 
-    // 6–9) for i starting at 0 until n-1
+    // 4–9) for each v in σ, update k and assign to L[k]
     for _, v := range sigma {
-        dPlus := len(D[v.Id])        // is deg⁺_D(v)
+        dPlus := len(D[v.Id])
         if dPlus > k {
             k = dPlus
         }
         L[k] = append(L[k], v)
     }
 
-    // 10–12) fill empty slots in L
+    // 10–12) fill empty buckets with next non-empty
     for i := 0; i < n; i++ {
         if len(L[i]) == 0 {
             j := i + 1
@@ -200,5 +201,6 @@ func (l *AdjList) KCoreDecomp() ([][]Vertex, [][]Vertex, error) {
             }
         }
     }
+
     return L, D, nil
 }

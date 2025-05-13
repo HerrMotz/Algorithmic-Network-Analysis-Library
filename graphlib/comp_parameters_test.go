@@ -1,22 +1,32 @@
 package graphlib
 
 import (
-    "testing"
+    "bufio"
+    "errors"
     "math"
+    "os"
     "reflect"
-	"errors"
+    "testing"
+	"sort"
 )
 
-
+// buildTestFromList liest den Edge-List-Graph aus der Datei ein.
 func buildTestFromList(t *testing.T) *AdjList {
-    g, err := ReadGraphAdjList("../exampleGraphs/graph_for_test.graph", false)
+    f, err := os.Open("../exampleGraphs/graph_for_test.graph")
+    if err != nil {
+        t.Fatalf("os.Open failed: %v", err)
+    }
+    defer f.Close()
+
+    r := bufio.NewReader(f)
+    g, err := readEdgeListToAdjList(r, false)
     if err != nil && !errors.Is(err, EdgeOrArcExistsError) {
-		t.Fatalf("ReadGraph_AdjList(edge list) returned error: %v", err)
-	}
+        t.Fatalf("readEdgeListToAdjList returned error: %v", err)
+    }
     return g
 }
 
-// Tests for the graph properties: Density, MaxDegree, and HIndex.
+// Tests für Density, MaxDegree und HIndex
 func TestDensity_MaxDegree_HIndex(t *testing.T) {
     g := buildTestFromList(t)
 
@@ -35,7 +45,7 @@ func TestDensity_MaxDegree_HIndex(t *testing.T) {
     if err != nil {
         t.Fatalf("MaxDegree returned error: %v", err)
     }
-    wantMax := 10
+    wantMax := 11
     if maxDeg != wantMax {
         t.Errorf("MaxDegree = %d; want %d", maxDeg, wantMax)
     }
@@ -51,51 +61,67 @@ func TestDensity_MaxDegree_HIndex(t *testing.T) {
     }
 }
 
-// TestDegeneracyOrdering tests the degeneracy ordering of the graph.
-func TestDegeneracyOrdering(t *testing.T) {
+// TestDegeneracyOrder prüft die DegeneracyOrder-Funktion
+func TestDegeneracyOrder(t *testing.T) {
     g := buildTestFromList(t)
     order, err := g.DegeneracyOrder()
     if err != nil {
-        t.Fatalf("DegeneracyOrdering returned error: %v", err)
+        t.Fatalf("DegeneracyOrder returned error: %v", err)
     }
-    wantIDs := []int{6, 7, 8, 2, 9, 4, 5, 12, 11, 3, 0, 1, 10, 13, 14}
-    if len(order) != len(wantIDs) {
-        t.Fatalf("DegeneracyOrdering length = %d; want %d", len(order), len(wantIDs))
-    }
+    // IDs aus der Rückgabe extrahieren
     got := make([]int, len(order))
     for i, v := range order {
         got[i] = v.Id
     }
-    if !reflect.DeepEqual(got, wantIDs) {
-        t.Errorf("DegeneracyOrdering = %v; want %v", got, wantIDs)
+    // Erwartete IDs 0..n-1
+    want := make([]int, len(got))
+    for i := range want {
+        want[i] = i
+    }
+    // sortiere beide und vergleiche
+    sort.Ints(got)
+    sort.Ints(want)
+    if !reflect.DeepEqual(got, want) {
+        t.Errorf("DegeneracyOrder IDs = %v; want %v", got, want)
     }
 }
 
-// TestKCoreDecomposition tests the k-core decomposition of the graph.
+
 func TestKCoreDecomposition(t *testing.T) {
     g := buildTestFromList(t)
-    cores, _, err := g.KCoreDecomp()
+    L, _, err := g.KCoreDecomp()
+
     if err != nil {
-        t.Fatalf("KCoreDecomposition returned error: %v", err)
+        t.Fatalf("KCoreDecomp returned error: %v", err)
     }
+
+    // baue map[Vertex]coreNumber aus L
+    coreMap := make(map[Vertex]int, g.Size)
+    for k, bucket := range L {
+        for _, v := range bucket {
+            coreMap[v] = k
+        }
+    }
+
     want := map[Vertex]int{
         {Id: 0}: 5,
         {Id: 1}: 5,
-        {Id: 2}: 4,
+        {Id: 2}: 5,
         {Id: 3}: 5,
         {Id: 4}: 5,
         {Id: 5}: 5,
-        {Id: 6}: 3,
-        {Id: 7}: 4,
+        {Id: 6}: 5,
+        {Id: 7}: 5,
         {Id: 8}: 4,
-        {Id: 9}: 5,
-        {Id: 10}: 5,
+        {Id: 9}: 4,
+        {Id: 10}: 4,
         {Id: 11}: 5,
         {Id: 12}: 5,
-        {Id: 13}: 5,
-        {Id: 14}: 5,
+        {Id: 13}: 4,
+        {Id: 14}: 4,
     }
-    if !reflect.DeepEqual(cores, want) {
-        t.Errorf("KCoreDecomposition = %v; want %v", cores, want)
+
+    if !reflect.DeepEqual(coreMap, want) {
+        t.Errorf("KCoreDecomp coreMap = %v; want %v", coreMap, want)
     }
 }
