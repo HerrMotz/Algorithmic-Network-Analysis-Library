@@ -5,9 +5,9 @@ import (
 	"slices"
 )
 
-// directedAcyclicGraph returns the vertices of a directed acyclic graph (DAG) for all nodes in the connected component
+// DirectedAcyclicGraph returns the vertices of a directed acyclic graph (DAG) for all nodes in the connected component
 // of the given node.
-func (l *AdjList) directedAcyclicGraph(start *Vertex) ([]Vertex, []int) {
+func (l *AdjList) DirectedAcyclicGraph(start *Vertex) ([]Vertex, []int) {
 	// Initialise a queue. Here would be the chance to use a heuristic, which tells
 	// us something about the maximum queue size. todo
 	// For now, we just use a slice and append to it.
@@ -45,22 +45,22 @@ func (l *AdjList) directedAcyclicGraph(start *Vertex) ([]Vertex, []int) {
 	return parents, distances
 }
 
-// singleSourceShortestPath starts BFS from the given start node and returns the distance to each node in the connected
+// SingleSourceShortestPath starts BFS from the given start node and returns the distance to each node in the connected
 // component.
-func (l *AdjList) singleSourceShortestPath(start *Vertex) []int {
+func (l *AdjList) SingleSourceShortestPath(start *Vertex) []int {
 	// Note: The parents array could be spared.
-	_, d := l.directedAcyclicGraph(start)
+	_, d := l.DirectedAcyclicGraph(start)
 	return d
 }
 
-// naiveAllPairsShortestPath return the full distance matrix for a given adjacency list
-func (l *AdjList) naiveAllPairsShortestPath() [][]int {
+// NaiveAllPairsShortestPath return the full distance matrix for a given adjacency list
+func (l *AdjList) NaiveAllPairsShortestPath() [][]int {
 	// we return a full matrix, because the distance from each node to each other is well-defined,
 	// even if they are not in the same connected component
 
 	distanceMatrix := make([][]int, l.Size)
 	for i := 0; i < l.Size; i++ {
-		distanceMatrix[i] = l.singleSourceShortestPath(&Vertex{i})
+		distanceMatrix[i] = l.SingleSourceShortestPath(&Vertex{i})
 	}
 
 	return distanceMatrix

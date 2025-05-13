@@ -129,7 +129,7 @@ func TestShortestPaths_DAG(t *testing.T) {
 		mustAddEdge(t, adj, e)
 	}
 
-	parents, distances := adj.directedAcyclicGraph(&zero)
+	parents, distances := adj.DirectedAcyclicGraph(&zero)
 	if len(parents) != 4 || len(distances) != 4 {
 		t.Fatalf("expected 4 parents and distances, got %d and %d", len(parents), len(distances))
 	}
@@ -172,7 +172,7 @@ func TestSingleSourceShortestPaths(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	distances := adj.singleSourceShortestPath(&zero)
+	distances := adj.SingleSourceShortestPath(&zero)
 	if len(distances) != 4 {
 		t.Fatalf("expected 4 distances, got %d", len(distances))
 	}
@@ -262,7 +262,7 @@ func TestQueue(t *testing.T) {
 func TestConnectedComponentsEdgeCases(t *testing.T) {
 	adjOneNode, _ := InitializeAdjList(1)
 	const expect = 0
-	v := adjOneNode.naiveDiameter()
+	v := adjOneNode.NaiveDiameter()
 
 	if expect != v {
 		t.Errorf("Expected %v, but got %v", expect, v)
@@ -270,7 +270,7 @@ func TestConnectedComponentsEdgeCases(t *testing.T) {
 
 	adjTwoNode, _ := InitializeAdjList(2)
 	const expect2 = math.MaxInt64
-	v = adjTwoNode.naiveDiameter()
+	v = adjTwoNode.NaiveDiameter()
 
 	if expect2 != v {
 		t.Errorf("Expected %v, but got %v", expect2, v)
@@ -330,7 +330,7 @@ func TestNaiveDiameter(t *testing.T) {
 		}
 	}
 
-	diameter := adj.naiveDiameter()
+	diameter := adj.NaiveDiameter()
 	const expect = math.MaxInt64
 
 	if diameter != expect {
@@ -352,7 +352,7 @@ func TestNaiveDiameter(t *testing.T) {
 
 	const expect2 = 7
 
-	diameter = adj.naiveDiameter()
+	diameter = adj.NaiveDiameter()
 
 	if diameter != expect2 {
 		t.Errorf("Expected %v, got %v", expect2, diameter)
