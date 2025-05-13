@@ -11,3 +11,4 @@
 - [ ] Performance Benchmarks bzgl. Netzwerkgröße (Was ist die Grenze der Verarbeitbarkeit?)
 - [ ] Hypothese testen, dass Netzwerke gleichen Typs ähnliche Strukturmaße aufweisen.
 - [ ] "Parameters" in Structural Measures umbenennen (optional)
+- [ ] Node degrees cachen in AdjList
