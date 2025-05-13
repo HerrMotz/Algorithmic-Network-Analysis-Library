@@ -61,6 +61,18 @@ func TestDensity_MaxDegree_HIndex(t *testing.T) {
     }
 }
 
+func TestDegeneracy(t *testing.T) {
+	g := buildTestFromList(t)
+    d, err := g.Degeneracy()
+    if err != nil {
+        t.Fatalf("Degeneracy returned error: %v", err)
+    }
+    want := 5
+    if d != want {
+        t.Errorf("Degeneracy = %d; want %d", d, want)
+    }
+}
+
 // TestDegeneracyOrder prüft die DegeneracyOrder-Funktion
 func TestDegeneracyOrder(t *testing.T) {
     g := buildTestFromList(t)

@@ -71,6 +71,38 @@ func (l *AdjList) HIndex() (int, error) {
     return h, nil
 }
 
+func (l *AdjList) Degeneracy() (int, error) {
+    // 1) get the degeneracy order σ
+    sigma, err := l.DegeneracyOrder()
+    if err != nil {
+        return 0, err
+    }
+
+    // 2) track removed vertices
+    removed := make([]bool, l.Size)
+    maxDeg := 0
+
+    // 3) for each v in removal order
+    for _, v := range sigma {
+        u := v.Id
+        // count current degree (neighbors not yet removed)
+        d := 0
+        for w := range l.List[u] {
+            if !removed[w] {
+                d++
+            }
+        }
+        // update degeneracy
+        if d > maxDeg {
+            maxDeg = d
+        }
+        // mark u removed
+        removed[u] = true
+    }
+
+    return maxDeg, nil
+}
+
 // DegeneracyOrder implements the pseudocode from the lecture
 func (l *AdjList) DegeneracyOrder() ([]Vertex, error) {
     n := l.Size
