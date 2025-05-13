@@ -3,6 +3,7 @@ package graphlib
 import (
 	"errors"
 	"sort"
+	"sync"
 )
 
 // ---------------------------
@@ -151,6 +152,47 @@ func (l *AdjList) Neighbours(u Vertex) (map[int]Naught, error) {
 func (l *AdjList) Degree(u Vertex) (int, error) {
 	n, err := l.Neighbours(u)
 	return len(n), err
+}
+
+func (l *AdjList) TotalDegree() int {
+	total := 0
+	for _, m := range l.List {
+		total += len(m)
+	}
+	return total
+}
+
+func (l *AdjList) TotalDegreeParallel(numWorkers int) int {
+	size := len(l.List)
+	chunk := (size + numWorkers - 1) / numWorkers
+
+	var wg sync.WaitGroup
+	sums := make(chan int, numWorkers)
+
+	for i := 0; i < size; i += chunk {
+		wg.Add(1)
+		end := i + chunk
+		if end > size {
+			end = size
+		}
+		go func(sub []map[int]Naught) {
+			defer wg.Done()
+			s := 0
+			for _, m := range sub {
+				s += len(m) // to make life easier, this does not use the getters and setters
+			}
+			sums <- s
+		}(l.List[i:end])
+	}
+
+	wg.Wait()
+	close(sums)
+
+	total := 0
+	for s := range sums {
+		total += s
+	}
+	return total
 }
 
 // Computation of Parameters ÜS2T2

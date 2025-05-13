@@ -16,7 +16,7 @@ func (l *AdjList) DirectedAcyclicGraph(start *Vertex) ([]Vertex, []int) {
 	queue := NewQueue[int](heuristicValue)
 	visited := make([]bool, l.Size)
 	parents := make([]Vertex, l.Size)
-	distances := slices.Repeat([]int{math.MaxInt64}, l.Size)
+	distances := slices.Repeat([]int{math.MaxUint32}, l.Size)
 
 	queue.enqueue(start.Id)
 	visited[start.Id] = true
