@@ -1,5 +1,10 @@
 package graphlib
 
+import (
+    "errors"
+    "sort"
+)
+
 // Computation of Parameters ÜS2T2
 
 // Density: |A| / |V| * (|V| - 1), |A| = arcCount number of arcs, |V| = number of vertices
@@ -141,6 +146,7 @@ func (l *AdjList) DegeneracyOrder() ([]Vertex, error) {
 }
 
 // k-Core Decomposition implements the pseudocode from the lecture
+// returns L... k-core decomposition, D... oriented graph
 func (l *AdjList) KCoreDecomp() ([][]Vertex, [][]Vertex, error) {
     n := l.Size
     if n == 0 {

@@ -1,5 +1,9 @@
 package graphlib
 
+import (
+    "sort"
+)
+
 // Triangles ÜS2T3
 // TrianglesNodeIterator finds all triangles in the graph using a node iterator.
 func (l *AdjList) TrianglesNodeIterator() ([][3]Vertex, error) {
@@ -60,7 +64,7 @@ func (l *AdjList) TrianglesCNI() ([][3]Vertex, error) {
     }
 
     // 1) get Degeneracy-Ordering
-    ordering, _, _, err := l.degeneracyWithOrdering()
+    ordering, err := l.DegeneracyOrder()
     if err != nil {
         return nil, err
     }

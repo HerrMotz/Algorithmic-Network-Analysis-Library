@@ -1,5 +1,9 @@
 package graphlib
 
+import (
+    "errors"
+)
+
 // local clustering coefficient
 // (from lecture:) C(v) = |{{u,w} ⊆ N(v) : {u,w} ∈ E}| / (deg(v) über 2).
 func (l *AdjList) LocalClustering(v Vertex) (float64, error) {
