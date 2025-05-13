@@ -5,3 +5,5 @@
 - Für Benchmarks sollte eine gute Mischung aus random generierten und echten Graphen verwendet werden.
 
 
+## Todos
+- [ ] Alle Funktionen (insbesondere in `components.go`) mit Großbuchstaben beginnen lassen.
