@@ -101,9 +101,9 @@ func BenchmarkGraphAlgorithmsWithRandomGraphs(b *testing.B) {
 	for n := 100; n <= 1000; n += 100 {
 		sizes = append(sizes, n)
 	}
-	for n := 1250; n <= 3000; n += 250 {
-		sizes = append(sizes, n)
-	}
+	//for n := 1250; n <= 3000; n += 250 {
+	//	sizes = append(sizes, n)
+	//}
 
 	// for each size and each algorithm, run a sub‐benchmark
 	for _, n := range sizes {
@@ -118,6 +118,7 @@ func BenchmarkGraphAlgorithmsWithRandomGraphs(b *testing.B) {
 				for i := 0; i < b.N; i++ {
 					algo.run(g)
 				}
+                b.ReportAllocs()
 			})
 		}
 	}
@@ -159,3 +160,73 @@ func BenchmarkGraphAlgorithmsWithErdos(b *testing.B) {
 
 // ########################################################################
 // benchmark zwischen triangles methoden
+
+// BenchmarkTrianglesOnErdos benchmarks both triangle‐finding methods on the out.pajek-erdos.graph dataset.
+func BenchmarkTrianglesOnErdos(b *testing.B) {
+    b.ReportAllocs()
+
+    // 1) load the Erdos graph (exclude load time from benchmarks)
+    l, err := ReadGraphAdjList("../exampleGraphs/out.pajek-erdos.graph", false)
+    if err != nil {
+        b.Fatalf("failed to read erdos graph: %v", err)
+    }
+
+    // 2) define the two triangle‐finding methods
+    methods := []struct {
+        name string
+        fn   func(*AdjList) ([][3]Vertex, error)
+    }{
+        {"TrianglesNodeIterator", (*AdjList).TrianglesNodeIterator},
+        {"TrianglesCNI",          (*AdjList).TrianglesCNI},
+    }
+
+    // 3) run benchmarks
+    for _, m := range methods {
+        b.Run(m.name, func(b *testing.B) {
+            for i := 0; i < b.N; i++ {
+                tris, err := m.fn(l)
+                if err != nil {
+                    b.Fatalf("%s returned error: %v", m.name, err)
+                }
+                // optionally inspect tris to prevent compiler optimizations,
+                // e.g. b.Log(len(tris))
+                _ = len(tris)
+            }
+        })
+    }
+}
+
+// BenchmarkTrianglesOnErdos benchmarks both triangle‐finding methods on the out.pajek-erdos.graph dataset.
+func BenchmarkTrianglesOnDimacs(b *testing.B) {
+    b.ReportAllocs()
+
+    // 1) load the Erdos graph (exclude load time from benchmarks)
+    l, err := ReadGraphAdjList("../exampleGraphs/out.dimacs10-netscie.graph", false)
+    if err != nil {
+        b.Fatalf("failed to read erdos graph: %v", err)
+    }
+
+    // 2) define the two triangle‐finding methods
+    methods := []struct {
+        name string
+        fn   func(*AdjList) ([][3]Vertex, error)
+    }{
+        {"TrianglesNodeIterator", (*AdjList).TrianglesNodeIterator},
+        {"TrianglesCNI",          (*AdjList).TrianglesCNI},
+    }
+
+    // 3) run benchmarks
+    for _, m := range methods {
+        b.Run(m.name, func(b *testing.B) {
+            for i := 0; i < b.N; i++ {
+                tris, err := m.fn(l)
+                if err != nil {
+                    b.Fatalf("%s returned error: %v", m.name, err)
+                }
+                // optionally inspect tris to prevent compiler optimizations,
+                // e.g. b.Log(len(tris))
+                _ = len(tris)
+            }
+        })
+    }
+}
