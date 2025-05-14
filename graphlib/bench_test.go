@@ -63,7 +63,37 @@ func BenchmarkAllPairs(b *testing.B) {
 // ########################################################################
 // Hier Benchmarken wir die Graphlib allpairShortestPath-Funktion, diameter
 
-func BenchmarkGraphAlgorithms(b *testing.B) {
+var algos = []struct {
+	name string
+	run  func(g *AdjList)
+}{
+	{
+		name: "NaiveAllPairs",
+		run: func(g *AdjList) {
+			_ = g.NaiveAllPairsShortestPath()
+		},
+	},
+	{
+		name: "ImprovedAllPairs",
+		run: func(g *AdjList) {
+			_, _ = g.ImprovedAllPairsShortestPaths()
+		},
+	},
+	{
+		name: "NaiveDiameter",
+		run: func(g *AdjList) {
+			_ = g.NaiveDiameter()
+		},
+	},
+	{
+		name: "ImprovedDiameter",
+		run: func(g *AdjList) {
+			_ = g.ImprovedDiameter()
+		},
+	},
+}
+
+func BenchmarkGraphAlgorithmsWithRandomGraphs(b *testing.B) {
 	const rho = 0.15
 
 	// prepare the list of graph sizes
@@ -71,39 +101,8 @@ func BenchmarkGraphAlgorithms(b *testing.B) {
 	for n := 100; n <= 1000; n += 100 {
 		sizes = append(sizes, n)
 	}
-	/*for n := 1250; n <= 3000; n += 250 {
+	for n := 1250; n <= 3000; n += 250 {
 		sizes = append(sizes, n)
-	}*/
-
-	// define each algorithm as a named function
-	algos := []struct {
-		name string
-		run  func(g *AdjList)
-	}{
-		{
-			name: "NaiveAllPairs",
-			run: func(g *AdjList) {
-				_ = g.NaiveAllPairsShortestPath()
-			},
-		},
-		{
-			name: "ImprovedAllPairs",
-			run: func(g *AdjList) {
-				_, _ = g.ImprovedAllPairsShortestPaths()
-			},
-		},
-		{
-			name: "NaiveDiameter",
-			run: func(g *AdjList) {
-				_ = g.NaiveDiameter()
-			},
-		},
-		{
-			name: "ImprovedDiameter",
-			run: func(g *AdjList) {
-				_ = g.ImprovedDiameter()
-			},
-		},
 	}
 
 	// for each size and each algorithm, run a sub‐benchmark
@@ -121,6 +120,25 @@ func BenchmarkGraphAlgorithms(b *testing.B) {
 				}
 			})
 		}
+	}
+}
+
+func BenchmarkGraphAlgorithmsWithErdos(b *testing.B) {
+	b.ReportAllocs()
+	// read erdos
+	l, err := ReadGraphAdjList("../exampleGraphs/out.pajek-erdos.graph", false)
+	if err != nil {
+		b.Fatalf("ReadGraphAdjLis failed: %v", err)
+	}
+
+	for _, algo := range algos {
+		benchName := fmt.Sprintf("%s", algo.name)
+		b.Run(benchName, func(b *testing.B) {
+			// reset the timer to exclude graph construction
+			for i := 0; i < b.N; i++ {
+				algo.run(l)
+			}
+		})
 	}
 }
 
