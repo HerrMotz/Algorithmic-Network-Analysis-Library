@@ -104,7 +104,7 @@ func (l *AdjList) ImprovedDiameter() int {
 	upper := INF // “∞”
 	for v := range l.List {
 		// do it in exactly this order,
-		// because probably dupNbhg is larger than cuts
+		// because probably dupNbhd is larger than cuts
 		_, bad1 := dupNbhd[v]
 		_, bad2 := cuts[v]
 		// start := all - skip
