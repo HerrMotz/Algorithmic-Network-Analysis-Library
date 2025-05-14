@@ -99,18 +99,10 @@ func (l *AdjList) ImprovedDiameter() int {
 	cuts, _ := l.CutVertices(l.Size)
 	dupNbhd, _ := l.NeighbourhoodSubsets()
 
-	// 2.  Collect the set of *existing* vertices (AdjList may be sparse)
-	all := make([]int, 0, l.Size)
-	for v := 0; v < l.Size; v++ {
-		if l.HasVertex(Vertex{v}) {
-			all = append(all, v)
-		}
-	}
-
-	// 3.  BFS scans and on‑the‑fly bounds update
+	// 2.  BFS scans and on‑the‑fly bounds update
 	lower := 0
 	upper := INF // “∞”
-	for _, v := range all {
+	for v := range l.List {
 		// do it in exactly this order,
 		// because probably dupNbhg is larger than cuts
 		_, bad1 := dupNbhd[v]
