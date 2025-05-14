@@ -6,7 +6,11 @@ import (
 	"math/rand"
 )
 
-func GenerateRandomGraph(n int, rho float64, loops, directed bool, seed int64) ([][]float64, []Edge, error) {
+// GenerateRandomGraph builds a random graph of n vertices with density rho.
+// loops controls whether self‐edges are allowed, directed controls if the graph is directed.
+// Returns an initialized AdjList and the list of edges/arcs added.
+func GenerateRandomGraph(n int, rho float64, loops, directed bool, seed int64) (*AdjList, []Edge, error) {
+	// 1. Validate
 	if n <= 0 {
 		return nil, nil, fmt.Errorf("n must be > 0")
 	}
@@ -14,8 +18,7 @@ func GenerateRandomGraph(n int, rho float64, loops, directed bool, seed int64) (
 		return nil, nil, fmt.Errorf("rho must be in [0,1]")
 	}
 
-	// ------------------------------------------------------------------ //
-	// 1.  How many edges do we need for the requested density?
+	// 2. Compute target number of edges/arcs
 	mFloat := rho * float64(n) * float64(n-1)
 	if !directed {
 		mFloat /= 2
@@ -32,11 +35,9 @@ func GenerateRandomGraph(n int, rho float64, loops, directed bool, seed int64) (
 		m = int(math.Floor(mFloat))
 	}
 
-	// ------------------------------------------------------------------ //
-	// 2.  Enumerate every legal edge (or arc).
+	// 3. Enumerate all legal pairs
 	type pair struct{ x, y int }
-	possible := make([]pair, 0)
-
+	possible := make([]pair, 0, n*n)
 	for x := 0; x < n; x++ {
 		for y := 0; y < n; y++ {
 			switch {
@@ -47,46 +48,51 @@ func GenerateRandomGraph(n int, rho float64, loops, directed bool, seed int64) (
 					possible = append(possible, pair{x, y})
 				}
 			case !directed && loops:
-				if x <= y { // store upper‑triangle incl. diagonal
+				if x <= y {
 					possible = append(possible, pair{x, y})
 				}
 			case !directed && !loops:
-				if x < y { // strict upper‑triangle
+				if x < y {
 					possible = append(possible, pair{x, y})
 				}
 			}
 		}
 	}
-
 	if m > len(possible) {
-		// This can only happen with an impossible density request.
 		m = len(possible)
 	}
 
-	// ------------------------------------------------------------------ //
-	// 3.  Sample m distinct edges without replacement.
 	rand.Shuffle(len(possible), func(i, j int) { possible[i], possible[j] = possible[j], possible[i] })
 	chosen := possible[:m]
 
-	// ------------------------------------------------------------------ //
-	// 4.  Build adjacency matrix.
-	A := make([][]float64, n)
-	for i := range A {
-		A[i] = make([]float64, n)
+	// 4. Initialize the adjacency list
+	adjList, err := InitializeAdjList(n)
+	if err != nil {
+		return nil, nil, err
 	}
 
-	for _, e := range chosen {
-		A[e.x][e.y] = 1
-		if !directed {
-			A[e.y][e.x] = 1
+	edges := make([]Edge, 0, m)
+	for _, p := range chosen {
+		u := Vertex{p.x}
+		v := Vertex{p.y}
+		if directed {
+			arc := Arc{u, v}
+			if !adjList.HasArc(arc) {
+				if err := adjList.AddArc(arc); err != nil {
+					return nil, nil, err
+				}
+			}
+			edges = append(edges, Edge{u, v})
+		} else {
+			edge := Edge{u, v}
+			if !adjList.HasEdge(edge) {
+				if err := adjList.AddEdge(edge); err != nil {
+					return nil, nil, err
+				}
+			}
+			edges = append(edges, edge)
 		}
 	}
 
-	// Convert to public Edge slice so callers don’t depend on internal pair.
-	edges := make([]Edge, len(chosen))
-	for i, p := range chosen {
-		edges[i] = Edge{Vertex{p.x}, Vertex{p.y}}
-	}
-
-	return A, edges, nil
+	return adjList, edges, nil
 }

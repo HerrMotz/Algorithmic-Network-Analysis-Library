@@ -210,6 +210,7 @@ def improved_all_pairs_shortest_paths(adj_list):
         degree = len(open_neighbor_sets[node])
         if degree == 0:
             distances_known[node] = True
+            distance_matrix[node][node] = 0 #in Zeile 212 einfügen
             continue
 
         #check if distances from all neighbors are already known

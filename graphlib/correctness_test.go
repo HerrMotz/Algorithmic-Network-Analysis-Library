@@ -173,7 +173,7 @@ func TestSingleSourceShortestPaths(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	distances := adj.SingleSourceShortestPath(&zero)
+	distances, _ := adj.SingleSourceShortestPath(zero)
 	if len(distances) != 4 {
 		t.Fatalf("expected 4 distances, got %d", len(distances))
 	}
@@ -453,4 +453,8 @@ func TestNeighbourhoodSubsets(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestImprovedAllPairsShortestPaths(t *testing.T) {
+	// todo
 }
