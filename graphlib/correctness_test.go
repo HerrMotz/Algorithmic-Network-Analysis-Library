@@ -1,7 +1,6 @@
 package graphlib
 
 import (
-	"math"
 	"math/rand/v2"
 	"reflect"
 	"testing"
@@ -270,7 +269,7 @@ func TestConnectedComponentsEdgeCases(t *testing.T) {
 	}
 
 	adjTwoNode, _ := InitializeAdjList(2)
-	const expect2 = math.MaxUint32
+	const expect2 = INF
 	v = adjTwoNode.NaiveDiameter()
 
 	if expect2 != v {
@@ -334,7 +333,7 @@ func TestDiameter(t *testing.T) {
 	diameter := adj.NaiveDiameter()
 	diameter2 := adj.ImprovedDiameter()
 
-	const expect = math.MaxUint32
+	const expect = INF
 
 	if diameter != expect {
 		t.Errorf("Expected %v, but got %v", expect, diameter)
@@ -379,6 +378,10 @@ var wantCut0 = map[int]Naught{}
 var wantNbh0 = map[int]Naught{
 	0: {}, // this is the correct output only because the for loop starts at idx 0 in NeighbourhoodSubsets
 }
+var wantDist0 = [][]int{
+	{0, 1},
+	{1, 0},
+}
 
 var exAdj1 = []map[int]Naught{
 	{1: Naught{}, 2: Naught{}},
@@ -391,6 +394,12 @@ var wantCut1 = map[int]Naught{0: {}}
 var wantNbh1 = map[int]Naught{
 	0: {},
 	1: {}, // this is the correct output only because the for loop starts at idx 0 in NeighbourhoodSubsets
+}
+var wantDist1 = [][]int{
+	{0, 1, 1, INF},
+	{1, 0, 2, INF},
+	{1, 2, 0, INF},
+	{INF, INF, INF, 0},
 }
 
 var exAdj2 = []map[int]Naught{
@@ -409,6 +418,14 @@ var wantNbh2 = map[int]Naught{
 	// 2 not, because 1 and 2 have the same neighbourhood
 	3: {},
 	4: {},
+}
+var wantDist2 = [][]int{
+	{0, 3, 3, 1, 2, 1},
+	{3, 0, 1, 2, 1, 4},
+	{3, 1, 0, 2, 1, 4},
+	{1, 2, 2, 0, 1, 2},
+	{2, 1, 1, 1, 0, 3},
+	{1, 4, 4, 2, 3, 0},
 }
 
 func TestCutVertices(t *testing.T) {
@@ -447,7 +464,7 @@ func TestNeighbourhoodSubsets(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			got, _ := tc.adj.NeighbourhoodSubsets(tc.size)
+			got, _ := tc.adj.NeighbourhoodSubsets()
 			if !reflect.DeepEqual(got, tc.want) {
 				t.Errorf("NeighbourhoodSubsets(adj, %d) = %v; want %v", tc.size, got, tc.want)
 			}
@@ -456,5 +473,23 @@ func TestNeighbourhoodSubsets(t *testing.T) {
 }
 
 func TestImprovedAllPairsShortestPaths(t *testing.T) {
-	// todo
+	tests := []struct {
+		name string
+		adj  AdjList
+		size int
+		want [][]int
+	}{
+		{"tiny cycle", AdjList{List: exAdj0, Size: len(exAdj0)}, 2, wantDist0},
+		{"star plus isolated", AdjList{List: exAdj1, Size: len(exAdj1)}, 4, wantDist1},
+		{"more complex", AdjList{List: exAdj2, Size: len(exAdj2)}, 6, wantDist2},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got, _ := tc.adj.ImprovedAllPairsShortestPaths()
+			if !reflect.DeepEqual(got, tc.want) {
+				t.Errorf("NeighbourhoodSubsets(adj, %d) = %v; want %v", tc.size, got, tc.want)
+			}
+		})
+	}
 }

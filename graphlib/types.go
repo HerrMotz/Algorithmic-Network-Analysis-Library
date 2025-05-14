@@ -1,6 +1,9 @@
 package graphlib
 
-import "errors"
+import (
+	"errors"
+	"math"
+)
 
 type Arc struct {
 	From Vertex `json:"from,omitempty"`
@@ -14,6 +17,8 @@ type Edge struct {
 type Vertex struct {
 	Id int
 }
+
+const INF = math.MaxUint32 // or MaxInt64, depending on your needs
 
 var EdgeOrArcExistsError = errors.New("edge or arc already exists")
 

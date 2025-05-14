@@ -1,7 +1,6 @@
 package graphlib
 
 import (
-	"math"
 	"slices"
 )
 
@@ -11,8 +10,8 @@ func (l *AdjList) NaiveDiameter() int {
 	for i := 0; i < l.Size; i++ {
 		distances, _ := l.SingleSourceShortestPath(Vertex{i})
 		_n := slices.Max(distances)
-		if _n == math.MaxUint32 { // if there is more than one connected component
-			return math.MaxUint32
+		if _n == INF { // if there is more than one connected component
+			return INF
 		}
 		diameter = max(diameter, _n)
 
@@ -27,7 +26,7 @@ func (l *AdjList) NaiveDiameter() int {
 //
 // – Open neighbourhood   N(u)  := { w | {u,w} ∈ E }
 // – Closed neighbourhood N[u] := N(u) ∪ {u}
-func (l *AdjList) NeighbourhoodSubsets(size int) (map[int]Naught, error) {
+func (l *AdjList) NeighbourhoodSubsets() (map[int]Naught, error) {
 	// Helper for the subset test
 	isSubset := func(sub, sup map[int]Naught) bool {
 		for x := range sub {
@@ -41,7 +40,7 @@ func (l *AdjList) NeighbourhoodSubsets(size int) (map[int]Naught, error) {
 	// Main search
 	result := make(map[int]Naught)
 
-	for u := 0; u < size; u++ {
+	for u := 0; u < l.Size; u++ {
 		// --- collect candidates ( neighbours of u OR of any neighbour of u ) --
 		candidates := make(map[int]Naught)
 
@@ -98,7 +97,7 @@ func (l *AdjList) NeighbourhoodSubsets(size int) (map[int]Naught, error) {
 func (l *AdjList) ImprovedDiameter() int {
 	// 1.  Determine vertices we do *not* start a BFS from
 	cuts, _ := l.CutVertices(l.Size)
-	dupNbhd, _ := l.NeighbourhoodSubsets(l.Size)
+	dupNbhd, _ := l.NeighbourhoodSubsets()
 
 	// 2.  Collect the set of *existing* vertices (AdjList may be sparse)
 	all := make([]int, 0, l.Size)
@@ -110,7 +109,7 @@ func (l *AdjList) ImprovedDiameter() int {
 
 	// 3.  BFS scans and on‑the‑fly bounds update
 	lower := 0
-	upper := math.MaxUint32 // “∞”
+	upper := INF // “∞”
 	for _, v := range all {
 		// do it in exactly this order,
 		// because probably dupNbhg is larger than cuts
@@ -122,8 +121,8 @@ func (l *AdjList) ImprovedDiameter() int {
 			if err != nil {
 				return 0
 			}
-			if maxDist == math.MaxUint32 { // disconnected
-				return math.MaxUint32
+			if maxDist == INF { // disconnected
+				return INF
 			}
 
 			if maxDist > lower {
@@ -179,7 +178,7 @@ func (l *AdjList) bfsMaxDistance(start int) (int, error) {
 	// any existing vertex not reached → disconnected component
 	for v := 0; v < l.Size; v++ {
 		if l.HasVertex(Vertex{v}) && !visited[v] {
-			return math.MaxUint32, nil
+			return INF, nil
 		}
 	}
 	return maxD, nil

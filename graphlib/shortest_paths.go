@@ -1,7 +1,6 @@
 package graphlib
 
 import (
-	"math"
 	"slices"
 )
 
@@ -16,7 +15,7 @@ func (l *AdjList) DirectedAcyclicGraph(start *Vertex) ([]Vertex, []int) {
 	queue := NewQueue[int](heuristicValue)
 	visited := make([]bool, l.Size)
 	parents := make([]Vertex, l.Size)
-	distances := slices.Repeat([]int{math.MaxUint32}, l.Size)
+	distances := slices.Repeat([]int{INF}, l.Size)
 
 	queue.enqueue(start.Id)
 	visited[start.Id] = true
@@ -51,7 +50,7 @@ func (l *AdjList) SingleSourceShortestPath(source Vertex) ([]int, error) {
 	size := l.Size
 	dist := make([]int, size)
 	for i := range dist {
-		dist[i] = math.MaxUint32
+		dist[i] = INF
 	}
 	dist[source.Id] = 0
 	queue := NewQueue[int](10) // todo heuristic chance
@@ -99,7 +98,7 @@ func (l *AdjList) ImprovedAllPairsShortestPaths() ([][]int, error) {
 	for i := range distanceMatrix {
 		distanceMatrix[i] = make([]int, size)
 		for j := range distanceMatrix[i] {
-			distanceMatrix[i][j] = math.MaxUint32
+			distanceMatrix[i][j] = INF
 		}
 	}
 	// Track which rows are known
@@ -162,7 +161,7 @@ func (l *AdjList) ImprovedAllPairsShortestPaths() ([][]int, error) {
 				} else if _, ok := openNeighbourSets[node][u]; ok {
 					distances[u] = 1
 				} else {
-					minD := math.MaxUint32
+					minD := INF
 					for neigh := range openNeighbourSets[node] {
 						if d := distanceMatrix[neigh][u]; d < minD {
 							minD = d
