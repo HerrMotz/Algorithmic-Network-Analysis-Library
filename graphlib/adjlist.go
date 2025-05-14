@@ -8,8 +8,6 @@ import (
 // ---------------------------
 //  Adjacency List (slices of maps)
 // ---------------------------
-// random Graphs benchmrken,
-// snap.stanford.edu/data/
 
 type Naught struct{}
 
