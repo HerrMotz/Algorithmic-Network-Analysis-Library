@@ -140,6 +140,21 @@ func BenchmarkGraphAlgorithmsWithErdos(b *testing.B) {
 			}
 		})
 	}
+
+	l, err = ReadGraphAdjList("../exampleGraphs/out.dimacs10-netscie.graph", false)
+	if err != nil {
+		b.Fatalf("ReadGraphAdjLis failed: %v", err)
+	}
+
+	for _, algo := range algos {
+		benchName := fmt.Sprintf("%s", algo.name)
+		b.Run(benchName, func(b *testing.B) {
+			// reset the timer to exclude graph construction
+			for i := 0; i < b.N; i++ {
+				algo.run(l)
+			}
+		})
+	}
 }
 
 // ########################################################################
