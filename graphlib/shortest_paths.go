@@ -163,6 +163,7 @@ func (l *AdjList) ImprovedAllPairsShortestPaths() ([][]int, error) {
 				} else {
 					minD := INF
 					for neigh := range openNeighbourSets[node] {
+						// todo: could replace with slices.Min for improved readability
 						if d := distanceMatrix[neigh][u]; d < minD {
 							minD = d
 						}
