@@ -46,6 +46,23 @@ func ReadGraphAdjList(path string, directed bool) (*AdjList, error) {
 	}
 }
 
+func ReadGraphSparseMatrix(path string, directed bool) (*AdjMatSparse, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+
+	defer func(f *os.File) {
+		err := f.Close()
+		if err != nil {
+		}
+	}(f)
+
+	r := bufio.NewReader(f)
+
+	return readAdjListToSparse(r, directed)
+}
+
 // buildAdjFromArcs turns a vertex count and arc slice into an *AdjList*.
 // It ignores duplicate arcs.
 func buildAdjFromArcs(n int, arcs []Arc, subtract int) (*AdjList, error) {
@@ -360,6 +377,72 @@ func ReadMetisToSparse(path string, directed bool) (AdjMatSparse, error) {
 		return AdjMatSparse{}, err
 	}
 	return mat, nil
+}
+
+func readAdjListToSparse(r *bufio.Reader, directed bool) (*AdjMatSparse, error) {
+	var s, d []uint32
+	scanner := bufio.NewScanner(r)
+
+	var minID uint32
+
+	minID = INF
+
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" || strings.HasPrefix(line, "#") || strings.HasPrefix(line, "%") {
+			continue
+		}
+
+		fields := strings.Fields(line)
+		if len(fields) < 2 {
+			return &AdjMatSparse{}, fmt.Errorf("invalid adjacency list line (need at least 1 neighbor): %q", line)
+		}
+
+		src64, err := strconv.ParseUint(fields[0], 10, 32)
+		if err != nil {
+			return &AdjMatSparse{}, fmt.Errorf("invalid vertex id: %q", fields[0])
+		}
+		src := uint32(src64)
+		if src < minID {
+			minID = src
+		}
+
+		for _, field := range fields[1:] {
+			dst64, err := strconv.ParseUint(field, 10, 32)
+			if err != nil {
+				return &AdjMatSparse{}, fmt.Errorf("invalid neighbor id: %q", field)
+			}
+			dst := uint32(dst64)
+			if dst < minID {
+				minID = dst
+			}
+
+			s = append(s, src)
+			d = append(d, dst)
+			if !directed {
+				s = append(s, dst)
+				d = append(d, src)
+			}
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		return &AdjMatSparse{}, err
+	}
+
+	// Normalize to zero indexing if file was one-indexed
+	if minID == 1 {
+		for i := range s {
+			s[i]--
+			d[i]--
+		}
+	}
+
+	if err := SortIJ(&s, &d); err != nil {
+		return &AdjMatSparse{}, err
+	}
+
+	m, e := NewFromSortedIJ(s, d)
+	return &m, e
 }
 
 // readWeightedEdgeListToAdjList reads a text edge list where every non‑comment
