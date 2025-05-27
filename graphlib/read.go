@@ -361,3 +361,84 @@ func ReadMetisToSparse(path string, directed bool) (AdjMatSparse, error) {
 	}
 	return mat, nil
 }
+
+// readWeightedEdgeListToAdjList reads a text edge list where every non‑comment
+// line has three fields «u v w».  Vertex IDs may start with 0 or 1 – the function
+// auto‑detects the offset to store vertices as 0‑based. Blank lines or lines
+// beginning with # or % are treated as comments.
+//
+// When *directed==false* the edge is stored symmetrically via *AddEdge*;
+// otherwise via *AddArc*.
+func readWeightedEdgeListToAdjList(r *bufio.Reader, directed bool) (*WeightedAdjList, error) {
+	type triple struct {
+		u, v int
+		w    Weight
+	}
+
+	scanner := bufio.NewScanner(r)
+
+	triples := make([]triple, 0)
+	minID := int(^uint(0) >> 1) // +∞
+	maxID := -1
+
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" || strings.HasPrefix(line, "#") || strings.HasPrefix(line, "%") {
+			continue
+		}
+
+		fields := strings.Fields(line)
+		if len(fields) < 3 {
+			return nil, fmt.Errorf("weighted edge list: expected at least three fields 'u v w', got %q", line)
+		}
+
+		u, err1 := strconv.Atoi(fields[0])
+		v, err2 := strconv.Atoi(fields[1])
+		w64, err3 := strconv.ParseFloat(fields[2], 64)
+		if err1 != nil || err2 != nil || err3 != nil {
+			return nil, fmt.Errorf("weighted edge list: bad numbers in %q", line)
+		}
+
+		triples = append(triples, triple{u: u, v: v, w: Weight(w64)})
+
+		minID = min(minID, u, v)
+		maxID = max(maxID, u, v)
+	}
+	if err := scanner.Err(); err != nil {
+		return nil, err
+	}
+
+	// ---------- decide offset (0‑ vs 1‑based) ----------
+	var offset int
+	switch minID {
+	case 0:
+		offset = 0
+	case 1:
+		offset = 1
+	default:
+		return nil, fmt.Errorf("weighted edge list: vertex ids must start with 0 or 1 (found %d)", minID)
+	}
+
+	n := maxID - offset + 1
+
+	g, err := InitializeWeightedAdjList(n)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, t := range triples {
+		u := t.u - offset
+		v := t.v - offset
+		if directed {
+			if err := g.AddArc(Arc{From: Vertex{u}, To: Vertex{v}}, t.w); err != nil && !errors.Is(err, EdgeOrArcExistsError) {
+				return nil, err
+			}
+		} else {
+			if err := g.AddEdge(Edge{U: Vertex{u}, V: Vertex{v}}, t.w); err != nil && !errors.Is(err, EdgeOrArcExistsError) {
+				return nil, err
+			}
+		}
+	}
+
+	return g, nil
+}
