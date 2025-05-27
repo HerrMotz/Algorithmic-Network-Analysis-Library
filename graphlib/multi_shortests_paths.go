@@ -9,7 +9,7 @@ import (
 // - Uses a dynamic worker pool (size = workers arg or runtime.NumCPU()).
 // - Treats each vertex (row) as an independent job for even load distribution.
 //
-// MultiThreadedNaiveAllPairsShortestPath:
+// MultiThreadedNaiveAllPairsShortestPath
 // - Drop-in parallel replacement for NaiveAllPairsShortestPath.
 // - Spawns workers that each run BFS (SingleSourceShortestPath) on assigned vertices.
 // - Dynamic job queue ensures high-degree vertices don’t block other cores.
@@ -49,7 +49,8 @@ func (l *AdjList) MultiThreadedNaiveAllPairsShortestPath(workers int) [][]int {
     return distanceMatrix
 }
 
-// MultiThreadedImprovedAllPairsShortestPaths parallelizes ImprovedAllPairsShortestPaths:
+// MultiThreadedImprovedAllPairsShortestPaths 
+// parallelizes ImprovedAllPairsShortestPaths
 // 1) Build neighborhoods (sequentially, then read-only).
 // 2) Dispatch all vertices to a worker pool.
 // 3) Each worker copies distances from processed neighbors or falls back to BFS.
