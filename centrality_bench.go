@@ -1,4 +1,4 @@
-// file: centrality_benchmark.go
+// centrality_benchmark.go
 package main
 
 import (
@@ -13,13 +13,12 @@ import (
     "graphlib/graphlib"
 )
 
-// pair verbindet Vertex und Score
 type pair struct {
     v   graphlib.Vertex
     val float64
 }
 
-// topKSorted liefert die komplette Rangliste (best→worst)
+// topKSorted given a list of scores, returns a sorted list of pairs (Vertex, Score).
 func topKSorted(scores []float64) []pair {
     n := len(scores)
     pairs := make([]pair, n)
@@ -56,13 +55,13 @@ func kendallTau(rankX, rankY []pair) float64 {
 }
 
 func main() {
-    // 1) Graph laden
+    // load graph
     g, err := graphlib.ReadGraphAdjList("exampleGraphs/graph_for_test.graph", false)
     if err != nil {
         log.Fatalf("could not load graph: %v", err)
     }
 
-    // 2) Zentralitäten berechnen
+    // calculate centrality measures
     degScores, err := g.DegreeCentralityAll(false)
     if err != nil {
         log.Fatalf("DegreeCentralityAll: %v", err)
@@ -72,11 +71,10 @@ func main() {
         log.Fatalf("ClosenessCentralityAll: %v", err)
     }
 
-    // 3) Ranglisten erstellen
+    // generate rankings
     degRank := topKSorted(degScores)
     cloRank := topKSorted(cloScores)
 
-    // 4) Eine gemeinsame CSV schreiben
     f, err := os.Create("centrality_rankings.csv")
     if err != nil {
         log.Fatalf("could not create CSV: %v", err)
@@ -86,7 +84,6 @@ func main() {
     w := csv.NewWriter(f)
     defer w.Flush()
 
-    // Header anpassen
     if err := w.Write([]string{
         "DegreeVertex", "DegreeScore",
         "ClosenessVertex", "ClosenessScore",
@@ -94,7 +91,6 @@ func main() {
         log.Fatalf("could not write header: %v", err)
     }
 
-    // Pro Rangplatz eine Zeile mit den beiden Pairs
     n := len(degRank)
     if len(cloRank) < n {
         n = len(cloRank)
@@ -111,7 +107,7 @@ func main() {
         }
     }
 
-    // 5) Kendall’s Tau berechnen und ausgeben
+    // 5) calc Kendall’s Tau 
     tau := kendallTau(degRank, cloRank)
     fmt.Printf("Kendall's Tau between Degree and Closeness rankings: %.4f\n", tau)
 }
