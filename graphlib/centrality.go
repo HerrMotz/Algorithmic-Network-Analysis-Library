@@ -37,12 +37,14 @@ func (g *AdjList) DegreeCentralityAll(normalised bool) ([]float64, error) {
         if err != nil { // should never fail for valid i
             return nil, err
         }
+
         if normalised && g.Size > 1 {
             scores[i] = float64(d) / float64(g.Size-1)
         } else {
             scores[i] = float64(d)
         }
     }
+
     return scores, nil
 }
 
@@ -76,26 +78,31 @@ func (g *AdjList) TopKDegreeCentrality(k int, normalised bool) ([]Vertex, []floa
     if k <= 0 {
         return nil, nil, nil
     }
+
     scores, err := g.DegreeCentralityAll(normalised)
     if err != nil {
         return nil, nil, err
     }
+
     idx := make([]int, g.Size)
     for i := range idx {
         idx[i] = i
     }
+
     sort.Slice(idx, func(i, j int) bool {
         return scores[idx[i]] > scores[idx[j]]
     })
     if k > len(idx) {
         k = len(idx)
     }
+
     vertices := make([]Vertex, k)
     values := make([]float64, k)
     for i := 0; i < k; i++ {
         vertices[i] = Vertex{idx[i]}
         values[i] = scores[idx[i]]
     }
+
     return vertices, values, nil
 }
 
@@ -167,10 +174,8 @@ func (g *AdjList) ClosenessCentralityAll(normalised bool, workers int) ([]float6
         }
 
         if normalised {
-            // (Anzahl erreichte Knoten - 1) / Summe der Distanzen
             res[i] = float64(reachable) / sum
         } else {
-            // unnormalisiert: 1 / Summe der Distanzen
             res[i] = 1.0 / sum
         }
     }
@@ -184,12 +189,14 @@ func (g *AdjList) HighestClosenessCentrality(normalised bool, workers int) (Vert
     if err != nil {
         return Vertex{}, 0, err
     }
+
     maxV, maxC := Vertex{0}, -1.0
     for i, c := range scores {
         if c > maxC {
             maxC, maxV = c, Vertex{i} 
         }
     }
+
     return maxV, maxC, nil
 }
 
@@ -199,25 +206,30 @@ func (g *AdjList) TopKClosenessCentrality(k int, normalised bool, workers int) (
     if k <= 0 {
         return nil, nil, nil
     }
+
     scores, err := g.ClosenessCentralityAll(normalised, workers)
     if err != nil {
         return nil, nil, err
     }
+
     idx := make([]int, len(scores))
     for i := range idx {
         idx[i] = i
     }
+
     sort.Slice(idx, func(i, j int) bool {
         return scores[idx[i]] > scores[idx[j]]
     })
     if k > len(idx) {
         k = len(idx)
     }
+
     vertices := make([]Vertex, k)
     values := make([]float64, k)
     for i := 0; i < k; i++ {
         vertices[i] = Vertex{idx[i]}
         values[i] = scores[idx[i]]
     }
+	
     return vertices, values, nil
 }
