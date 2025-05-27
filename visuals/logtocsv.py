@@ -2,8 +2,8 @@ import re
 import csv
 
 # Pfade anpassen
-input_file = 'benchmark.log'
-output_file = 'benchmark_metrics.csv'
+input_file = 'visuals/benchmark2.log'
+output_file = 'benchmark_metrics2.csv'
 
 # Regex zum Parsen: n, Algorithmus, Iterationen, ns/op, B/op, allocs/op
 pattern = re.compile(

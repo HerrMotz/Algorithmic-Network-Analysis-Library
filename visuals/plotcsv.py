@@ -2,7 +2,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 # Load CSV file (adjust path if needed)
-df = pd.read_csv('benchmark_metrics.csv')
+df = pd.read_csv('visuals/benchmark_metrics2.csv')
 
 # Algorithms in desired order
 algos = ['NaiveAllPairs', 'ImprovedAllPairs', 'NaiveDiameter', 'ImprovedDiameter']
