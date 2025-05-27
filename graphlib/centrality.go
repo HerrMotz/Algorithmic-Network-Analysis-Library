@@ -222,7 +222,7 @@ func (g *AdjList) TopKClosenessCentrality(k int, normalised bool, workers int) (
 // --> for unweighted graphs
 // --> C(v) = (n-1) / Σ_u d(v,u)^p
 
-// PowerClosenessCentralityOf -- NOT TESTED
+// PowerClosenessCentralityOf
 // returns the power closeness centrality of a single vertex v
 // It performs a single‑source BFS which is optimal for one‑off queries.
 func (g *AdjList) PowerClosenessCentralityOf(v Vertex, p float64, normalised bool) (float64, error) {
@@ -251,7 +251,7 @@ func (g *AdjList) PowerClosenessCentralityOf(v Vertex, p float64, normalised boo
 	return 1.0 / sum, nil
 }
 
-// PowerClosenessCentralityAll -- NOT TESTED
+// PowerClosenessCentralityAll
 // returns power closeness centrality for every vertex
 // Internally it computes APSP once using the multithreaded BFS pool for speed.
 
@@ -308,12 +308,132 @@ func (g *AdjList) HighestPowerClosenessCentrality(normalised bool, p float64, wo
 }
 
 // TopKPowerClosenessCentrality
-// returns the k vertices with highest power closeness scores
+// returns the k vertices with the highest power closeness scores
 func (g *AdjList) TopKPowerClosenessCentrality(k int, normalised bool, p float64, workers int) ([]Vertex, []float64, error) {
 	if k <= 0 {
 		return nil, nil, nil
 	}
 	scores, err := g.PowerClosenessCentralityAll(normalised, p, workers)
+	if err != nil {
+		return nil, nil, err
+	}
+	idx := make([]int, len(scores))
+	for i := range idx {
+		idx[i] = i
+	}
+	sort.Slice(idx, func(i, j int) bool {
+		return scores[idx[i]] > scores[idx[j]]
+	})
+	if k > len(idx) {
+		k = len(idx)
+	}
+	vertices := make([]Vertex, k)
+	values := make([]float64, k)
+	for i := 0; i < k; i++ {
+		vertices[i] = Vertex{idx[i]}
+		values[i] = scores[idx[i]]
+	}
+	return vertices, values, nil
+}
+
+// ---------------------------
+//  Exponential Closeness Centrality (unweighted graph)
+// ---------------------------
+// --> for unweighted graphs
+// --> C(v) = (n-1) / Σ_u e^(d(v,u)*lambda)
+
+// ExponentialClosenessCentralityOf
+// returns the exponential closeness centrality of a single vertex v
+// It performs a single‑source BFS which is optimal for one‑off queries.
+func (g *AdjList) ExponentialClosenessCentralityOf(v Vertex, lambda float64, normalised bool) (float64, error) {
+	dist, err := g.SingleSourceShortestPath(v)
+	if err != nil {
+		return 0, err
+	}
+
+	// 2) sum distances to the POWER of p and count reachable vertices
+	var sum float64
+	reachable := 0
+	for _, d := range dist {
+		if d < INF {
+			sum += math.Pow(math.E, float64(d)*lambda)
+			reachable++
+		}
+	}
+	if sum == 0 {
+		return 0, nil
+	}
+
+	// 3) raw vs. normalised
+	if normalised {
+		return float64(reachable-1) / sum, nil
+	}
+	return 1.0 / sum, nil
+}
+
+// ExponentialClosenessCentralityAll
+// returns exponential closeness centrality for every vertex
+// Internally it computes APSP once using the multithreaded BFS pool for speed.
+
+func (g *AdjList) ExponentialClosenessCentralityAll(normalised bool, lambda float64, workers int) ([]float64, error) {
+	n := g.Size
+	distMatrix := g.MultiThreadedNaiveAllPairsShortestPath(workers)
+
+	res := make([]float64, n)
+	for i := 0; i < n; i++ {
+		var sum float64
+		reachable := 0
+
+		for j := 0; j < n; j++ {
+			if i == j {
+				continue
+			}
+			d := distMatrix[i][j]
+			if d < math.MaxInt32 { // reachable
+				sum += math.Pow(math.E, float64(d)*lambda)
+				reachable++
+			}
+		}
+
+		if sum == 0 {
+			res[i] = 0
+			continue
+		}
+
+		if normalised {
+			// (# reachable nodes - 1) / sum of distances^p
+			res[i] = float64(reachable) / sum
+		} else {
+			// not normalized: 1 / sum of distances^p
+			res[i] = 1.0 / sum
+		}
+	}
+	return res, nil
+}
+
+// HighestExponentialClosenessCentrality
+// returns vertex with maximum exponential closeness
+func (g *AdjList) HighestExponentialClosenessCentrality(normalised bool, lambda float64, workers int) (Vertex, float64, error) {
+	scores, err := g.ExponentialClosenessCentralityAll(normalised, lambda, workers)
+	if err != nil {
+		return Vertex{}, 0, err
+	}
+	maxV, maxC := Vertex{0}, -1.0
+	for i, c := range scores {
+		if c > maxC {
+			maxC, maxV = c, Vertex{i}
+		}
+	}
+	return maxV, maxC, nil
+}
+
+// TopKExponentialClosenessCentrality
+// returns the k vertices with the highest exponential closeness scores
+func (g *AdjList) TopKExponentialClosenessCentrality(k int, normalised bool, lambda float64, workers int) ([]Vertex, []float64, error) {
+	if k <= 0 {
+		return nil, nil, nil
+	}
+	scores, err := g.PowerClosenessCentralityAll(normalised, lambda, workers)
 	if err != nil {
 		return nil, nil, err
 	}
