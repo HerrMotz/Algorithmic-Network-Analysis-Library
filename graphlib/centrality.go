@@ -51,16 +51,20 @@ func (g *AdjList) DegreeCentralityAll(normalised bool) ([]float64, error) {
 // returns the vertex with maximum degree centrality;
 // ties are resolved by the smaller vertex id.
 func (g *AdjList) HighestDegreeCentrality(normalised bool) (Vertex, float64, error) {
-    maxV, maxC := Vertex{0}, -1.0
-    for i := 0; i < g.Size; i++ {
-        c, err := g.DegreeCentralityOf(Vertex{i}, normalised)
-        if err != nil {
-            return Vertex{}, 0, err
-        }
+    scores, err := g.DegreeCentralityAll(normalised)
+    if err != nil {
+        return Vertex{}, 0, err
+    }
+
+    var maxV Vertex
+    maxC := -1.0
+    for i, c := range scores {
         if c > maxC {
-            maxC, maxV = c, Vertex{i}
+            maxC = c
+            maxV = Vertex{i}
         }
     }
+
     return maxV, maxC, nil
 }
 
@@ -106,16 +110,32 @@ func (g *AdjList) TopKDegreeCentrality(k int, normalised bool) ([]Vertex, []floa
 // ClosenessCentralityOf 
 // returns the closeness centrality of a single vertex v
 // It performs a single‑source BFS which is optimal for one‑off queries.
-func (g *AdjList) ClosenessCentralityOf(v Vertex, normalised bool, workers int) (float64, error) {
-    scores, err := g.ClosenessCentralityAll(normalised, workers)
+func (g *AdjList) ClosenessCentralityOf(v Vertex, normalised bool) (float64, error) {
+    dist, err := g.SingleSourceShortestPath(v)
     if err != nil {
         return 0, err
     }
-    if v.Id < 0 || v.Id >= len(scores) {
+
+    // 2) find sum of distances and count reachable vertices
+    var sum float64
+    reachable := 0
+    for _, d := range dist {
+        if d < INF { 
+            sum += float64(d)
+            reachable++
+        }
+    }
+    if sum == 0 {
         return 0, nil
     }
-    return scores[v.Id], nil
+
+    // 3) raw vs. normalised
+    if normalised {
+        return float64(reachable-1) / sum, nil
+    }
+    return 1.0 / sum, nil
 }
+
 
 // ClosenessCentralityAll 
 // returns closeness centrality for every vertex
