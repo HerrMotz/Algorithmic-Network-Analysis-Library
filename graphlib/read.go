@@ -48,13 +48,13 @@ func ReadGraphAdjList(path string, directed bool) (*AdjList, error) {
 
 // buildAdjFromArcs turns a vertex count and arc slice into an *AdjList*.
 // It ignores duplicate arcs.
-func buildAdjFromArcs(n int, arcs []Arc) (*AdjList, error) {
+func buildAdjFromArcs(n int, arcs []Arc, subtract int) (*AdjList, error) {
 	adjList, err := InitializeAdjList(n)
 	if err != nil {
 		return nil, err
 	}
 	for _, arc := range arcs {
-		if err := adjList.AddArc(arc); err != nil && !errors.Is(err, EdgeOrArcExistsError) { // ignores duplicate arcs
+		if err := adjList.AddArc(Arc{Vertex{arc.From.Id - subtract}, Vertex{arc.To.Id - subtract}}); err != nil && !errors.Is(err, EdgeOrArcExistsError) { // ignores duplicate arcs
 			return nil, err
 		}
 	}
@@ -63,13 +63,13 @@ func buildAdjFromArcs(n int, arcs []Arc) (*AdjList, error) {
 
 // buildAdjFromEdges turns a vertex count and arc slice into an *AdjList*.
 // it ignores duplicate edges.
-func buildAdjFromEdges(n int, edges []Edge) (*AdjList, error) {
+func buildAdjFromEdges(n int, edges []Edge, subtract int) (*AdjList, error) {
 	adjList, err := InitializeAdjList(n)
 	if err != nil {
 		return nil, err
 	}
 	for _, edge := range edges {
-		if err := adjList.AddEdge(edge); err != nil && !errors.Is(err, EdgeOrArcExistsError) { // ignored duplicate edges
+		if err := adjList.AddEdge(Edge{Vertex{edge.U.Id - subtract}, Vertex{edge.V.Id - subtract}}); err != nil && !errors.Is(err, EdgeOrArcExistsError) { // ignored duplicate edges
 			return nil, err
 		}
 	}
@@ -86,6 +86,7 @@ func readEdgeListToAdjList(r *bufio.Reader, directed bool) (*AdjList, error) {
 	var arcs []Arc
 
 	maxID := -1
+	minID := INF
 
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
@@ -106,11 +107,12 @@ func readEdgeListToAdjList(r *bufio.Reader, directed bool) (*AdjList, error) {
 		u, v := int(u64), int(v64)
 
 		if directed {
-			arcs = append(arcs, Arc{From: Vertex{u - 1}, To: Vertex{v - 1}}) // assumes the list is 1-indexed
+			arcs = append(arcs, Arc{From: Vertex{u}, To: Vertex{v}})
 		} else {
-			edges = append(edges, Edge{U: Vertex{u - 1}, V: Vertex{v - 1}}) // assumes the list is 1-indexed
+			edges = append(edges, Edge{U: Vertex{u}, V: Vertex{v}})
 		}
 		maxID = max(maxID, u, v)
+		minID = min(minID, u, v)
 	}
 
 	if err := scanner.Err(); err != nil {
@@ -118,32 +120,25 @@ func readEdgeListToAdjList(r *bufio.Reader, directed bool) (*AdjList, error) {
 	}
 
 	if directed {
-		return buildAdjFromArcs(maxID, arcs)
+		return buildAdjFromArcs(maxID, arcs, minID)
 	} else {
-		return buildAdjFromEdges(maxID, edges)
+		return buildAdjFromEdges(maxID, edges, minID)
 	}
 }
 
 // -----------------------------------------------------------------------------
 // METIS format
 // -----------------------------------------------------------------------------
-
 func readMetisToAdjList(r *bufio.Reader, directed bool) (*AdjList, error) {
-	// scanner reads firstLine + the rest of the file.
 	scanner := bufio.NewScanner(r)
 
-	// -------- header --------
-	var n int
-	var v int
-	var adj *AdjList
-
+	// ----- header -----
+	var n, v int
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
-
 		if line == "" || strings.HasPrefix(line, "%") {
 			continue
 		}
-
 		fields := strings.Fields(line)
 		if len(fields) < 2 {
 			return nil, errors.New("METIS: header must contain at least n and m")
@@ -154,7 +149,6 @@ func readMetisToAdjList(r *bufio.Reader, directed bool) (*AdjList, error) {
 		}
 		break
 	}
-
 	if err := scanner.Err(); err != nil {
 		return nil, err
 	}
@@ -162,11 +156,9 @@ func readMetisToAdjList(r *bufio.Reader, directed bool) (*AdjList, error) {
 		return nil, errors.New("METIS: n must be positive")
 	}
 
-	adj, err := InitializeAdjList(n)
-	if err != nil {
-		return nil, err
-	}
-
+	// ----- read all adjacency lists once -----
+	neighs := make([][]int, 0, n)
+	minID := int(^uint(0) >> 1) // +∞
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
 		if line == "" || strings.HasPrefix(line, "%") {
@@ -177,26 +169,18 @@ func readMetisToAdjList(r *bufio.Reader, directed bool) (*AdjList, error) {
 			return nil, fmt.Errorf("METIS: too many adjacency lines (>%d)", n)
 		}
 
-		for _, token := range strings.Fields(line) {
-			w64, err := strconv.ParseInt(token, 10, 0)
+		raw := make([]int, 0)
+		for _, tok := range strings.Fields(line) {
+			w, err := strconv.Atoi(tok)
 			if err != nil {
-				return nil, fmt.Errorf("METIS: bad neighbour id in line %d: %v", v+1, err) // assumes the list is 1-indexed
+				return nil, fmt.Errorf("METIS: bad neighbour id in line %d: %v", v+1, err)
 			}
-			w := int(w64) - 1   // assumes METIS is 1-indexed
-			if w < 0 || w > n { // assumes the list is 1-indexed
-				return nil, fmt.Errorf("METIS: neighbour id %d out of range", w+1) // assumes the list is 1-indexed
-			}
-
-			if directed {
-				if err := adj.AddArc(Arc{From: Vertex{v}, To: Vertex{w}}); err != nil && !errors.Is(err, EdgeOrArcExistsError) { // ignores duplicate arcs {
-					return nil, err
-				}
-			} else {
-				if err := adj.AddEdge(Edge{U: Vertex{v}, V: Vertex{w}}); err != nil && !errors.Is(err, EdgeOrArcExistsError) { // ignores duplicate edges {
-					return nil, err
-				}
+			raw = append(raw, w)
+			if w < minID {
+				minID = w
 			}
 		}
+		neighs = append(neighs, raw)
 		v++
 	}
 	if err := scanner.Err(); err != nil {
@@ -206,5 +190,44 @@ func readMetisToAdjList(r *bufio.Reader, directed bool) (*AdjList, error) {
 		return nil, fmt.Errorf("METIS: expected %d adjacency lines, got %d", n, v)
 	}
 
+	// ----- decide offset -----
+	var offset int
+	switch minID {
+	case 0:
+		offset = 0
+	case 1:
+		offset = 1
+	default:
+		return nil, fmt.Errorf("METIS: vertex ids must start with 0 or 1 (found %d)", minID)
+	}
+
+	// ----- build adjacency -----
+	adj, err := InitializeAdjList(n)
+	if err != nil {
+		return nil, err
+	}
+
+	for v, nbrs := range neighs {
+		for _, wRaw := range nbrs {
+			w := wRaw - offset
+			if w < 0 || w >= n {
+				return nil, fmt.Errorf("METIS: neighbour id %d out of range after shift", wRaw)
+			}
+
+			if directed {
+				if err := adj.AddArc(
+					Arc{From: Vertex{v}, To: Vertex{w}},
+				); err != nil && !errors.Is(err, EdgeOrArcExistsError) {
+					return nil, err
+				}
+			} else {
+				if err := adj.AddEdge(
+					Edge{U: Vertex{v}, V: Vertex{w}},
+				); err != nil && !errors.Is(err, EdgeOrArcExistsError) {
+					return nil, err
+				}
+			}
+		}
+	}
 	return adj, nil
 }
