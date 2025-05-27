@@ -1,4 +1,4 @@
-// centrality_benchmark.go
+// file: centrality_benchmark.go
 package main
 
 import (
@@ -13,12 +13,13 @@ import (
     "graphlib/graphlib"
 )
 
+// pair verbindet Vertex und Score
 type pair struct {
     v   graphlib.Vertex
     val float64
 }
 
-// topKSorted given a list of scores, returns a sorted list of pairs (Vertex, Score).
+// topKSorted liefert die komplette Rangliste (best→worst)
 func topKSorted(scores []float64) []pair {
     n := len(scores)
     pairs := make([]pair, n)
@@ -31,10 +32,45 @@ func topKSorted(scores []float64) []pair {
     return pairs
 }
 
+// writeRankingCSV schreibt eine CSV mit Spalten: Rank,Vertex,Score
+func writeRankingCSV(filename string, ranking []pair) error {
+    f, err := os.Create(filename)
+    if err != nil {
+        return err
+    }
+    defer f.Close()
+
+    w := csv.NewWriter(f)
+    defer w.Flush()
+
+    // Header
+    if err := w.Write([]string{"Rank", "Vertex", "Score"}); err != nil {
+        return err
+    }
+    // Datenzeilen
+    for i, p := range ranking {
+        rec := []string{
+            strconv.Itoa(i + 1),
+            strconv.Itoa(p.v.Id),
+            fmt.Sprintf("%.6f", p.val),
+        }
+        if err := w.Write(rec); err != nil {
+            return err
+        }
+    }
+    return nil
+}
+
 // kendallTau berechnet Kendall's Tau für zwei Ranglisten gleicher Länge.
+// rankX und rankY geben für jede Position die Vertex-IDs.
 func kendallTau(rankX, rankY []pair) float64 {
     n := len(rankX)
+    // position maps
+    posX := make(map[int]int, n)
     posY := make(map[int]int, n)
+    for i, p := range rankX {
+        posX[p.v.Id] = i
+    }
     for i, p := range rankY {
         posY[p.v.Id] = i
     }
@@ -42,72 +78,54 @@ func kendallTau(rankX, rankY []pair) float64 {
     var concordant, discordant int
     for i := 0; i < n-1; i++ {
         for j := i + 1; j < n; j++ {
-            xi, xj := rankX[i].v.Id, rankX[j].v.Id
-            if posY[xi] < posY[xj] {
+            vi, vj := rankX[i].v.Id, rankX[j].v.Id
+            // in X: vi vor vj; in Y prüfen
+            if (posY[vi] < posY[vj]) {
                 concordant++
             } else {
                 discordant++
             }
         }
     }
-    total := n * (n - 1) / 2
-    return float64(concordant-discordant) / float64(total)
+    totalPairs := n * (n - 1) / 2
+    return float64(concordant-discordant) / float64(totalPairs)
 }
 
 func main() {
-    // load graph
-    g, err := graphlib.ReadGraphAdjList("exampleGraphs/graph_for_test.graph", false)
+
+    // 1) Graph laden
+    g, err := graphlib.ReadGraphAdjList("exampleGraphs/out.pajek-erdos.graph", false)
     if err != nil {
         log.Fatalf("could not load graph: %v", err)
     }
 
-    // calculate centrality measures
-    degScores, err := g.DegreeCentralityAll(false)
+    // 2) Zentralitäten berechnen
+    degreeScores, err := g.DegreeCentralityAll(false)
     if err != nil {
         log.Fatalf("DegreeCentralityAll: %v", err)
     }
-    cloScores, err := g.ClosenessCentralityAll(true, runtime.NumCPU())
+    closenessScores, err := g.ClosenessCentralityAll(true, runtime.NumCPU())
     if err != nil {
         log.Fatalf("ClosenessCentralityAll: %v", err)
     }
 
-    // generate rankings
-    degRank := topKSorted(degScores)
-    cloRank := topKSorted(cloScores)
+    // !! hier weitere hinzufügen für mehr Zentralitäten !!
 
-    f, err := os.Create("centrality_rankings.csv")
-    if err != nil {
-        log.Fatalf("could not create CSV: %v", err)
+
+    // 3) Ranglisten erstellen
+    degRank := topKSorted(degreeScores)
+    cloRank := topKSorted(closenessScores)
+
+    // !! hier weitere Ranglisten hinzufügen für mehr Zentralitäten !!
+
+    // 4) CSVs schreiben
+    if err := writeRankingCSV("degree_ranking.csv", degRank); err != nil {
+        log.Fatalf("write degree CSV: %v", err)
     }
-    defer f.Close()
-
-    w := csv.NewWriter(f)
-    defer w.Flush()
-
-    if err := w.Write([]string{
-        "DegreeVertex", "DegreeScore",
-        "ClosenessVertex", "ClosenessScore",
-    }); err != nil {
-        log.Fatalf("could not write header: %v", err)
+    if err := writeRankingCSV("closeness_ranking.csv", cloRank); err != nil {
+        log.Fatalf("write closeness CSV: %v", err)
     }
+    // !! hier weitere CSVs hinzufügen für mehr Zentralitäten !!
 
-    n := len(degRank)
-    if len(cloRank) < n {
-        n = len(cloRank)
-    }
-    for i := 0; i < n; i++ {
-        row := []string{
-            strconv.Itoa(degRank[i].v.Id),
-            fmt.Sprintf("%.6f", degRank[i].val),
-            strconv.Itoa(cloRank[i].v.Id),
-            fmt.Sprintf("%.6f", cloRank[i].val),
-        }
-        if err := w.Write(row); err != nil {
-            log.Fatalf("could not write row %d: %v", i+1, err)
-        }
-    }
-
-    // 5) calc Kendall’s Tau 
-    tau := kendallTau(degRank, cloRank)
-    fmt.Printf("Kendall's Tau between Degree and Closeness rankings: %.4f\n", tau)
+    // !! die CSVs dann in visuals/S3/centrality_ranking/ packen und die centrality_vis.py anpassen !! 
 }
