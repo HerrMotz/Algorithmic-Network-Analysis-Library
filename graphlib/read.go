@@ -231,3 +231,133 @@ func readMetisToAdjList(r *bufio.Reader, directed bool) (*AdjList, error) {
 	}
 	return adj, nil
 }
+
+// ReadMetisToSparse opens *path*, auto-detects whether the file is 0- or 1-indexed
+// and returns the graph as an AdjMatSparse. If *directed* is false each
+// (v,w) pair is mirrored so that the matrix is symmetric.
+//
+// The routine keeps only the (i,j) pairs in memory, so it will happily ingest
+// very large graphs.
+func ReadMetisToSparse(path string, directed bool) (AdjMatSparse, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return AdjMatSparse{}, err
+	}
+	defer f.Close()
+
+	scanner := bufio.NewScanner(f)
+	// allow very long adjacency lines
+	scanner.Buffer(make([]byte, 64*1024), 32*1024*1024)
+
+	// header
+	var n int // number of vertices
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" || strings.HasPrefix(line, "%") {
+			continue
+		}
+		fs := strings.Fields(line)
+		if len(fs) < 2 {
+			return AdjMatSparse{}, errors.New("METIS: header must contain at least n and m")
+		}
+		if n, err = strconv.Atoi(fs[0]); err != nil || n <= 0 {
+			return AdjMatSparse{}, fmt.Errorf("METIS: bad n in header: %v", fs[0])
+		}
+		break
+	}
+	if err := scanner.Err(); err != nil {
+		return AdjMatSparse{}, err
+	}
+
+	// collect raw pairs  (row = current line index, col = token)
+	type pair struct {
+		src uint32
+		dst uint32
+	}
+	rawPairs := make([]pair, 0)
+	var minID uint32 // necessary, because the compiler automagically gives minID type int32 for whatever reason
+	minID = INF
+	maxID := uint32(0)
+
+	v := 0 // 0-based row index we will keep
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" || strings.HasPrefix(line, "%") {
+			continue
+		}
+		if v >= n {
+			return AdjMatSparse{}, fmt.Errorf("METIS: too many adjacency lines (>%d)", n)
+		}
+
+		for _, tok := range strings.Fields(line) {
+			w64, err := strconv.ParseInt(tok, 10, 0)
+			if err != nil {
+				return AdjMatSparse{}, fmt.Errorf("METIS: bad neighbour id in line %d: %v", v+1, err)
+			}
+			w := uint32(w64)
+
+			rawPairs = append(rawPairs, pair{src: uint32(v), dst: w})
+			if w < minID {
+				minID = w
+			}
+			if w > maxID {
+				maxID = w
+			}
+		}
+		v++
+	}
+	if err := scanner.Err(); err != nil {
+		return AdjMatSparse{}, err
+	}
+	if v != n {
+		return AdjMatSparse{}, fmt.Errorf("METIS: expected %d adjacency lines, got %d", n, v)
+	}
+
+	// decide index offset (0- vs 1-based)
+	var offset uint32
+	switch minID {
+	case 0:
+		offset = 0
+	case 1:
+		offset = 1
+	default:
+		return AdjMatSparse{}, fmt.Errorf("METIS: vertex ids must start with 0 or 1 (found %d)", minID)
+	}
+	if maxID-offset != uint32(n-1) {
+		return AdjMatSparse{}, fmt.Errorf("METIS: header says n=%d, but max id after shift is %d", n, maxID-offset)
+	}
+
+	// build the final i-j lists
+	s := make([]uint32, 0, len(rawPairs)*func() int {
+		if directed {
+			return 1
+		}
+		return 2
+	}())
+	d := make([]uint32, 0, cap(s))
+
+	for _, p := range rawPairs {
+		w := p.dst - offset
+		if w >= uint32(n) {
+			return AdjMatSparse{}, fmt.Errorf("METIS: neighbour id %d out of range after shift", p.dst)
+		}
+
+		s = append(s, p.src)
+		d = append(d, w)
+
+		if !directed && w != p.src { // mirroring (skip self-loops)
+			s = append(s, w)
+			d = append(d, p.src)
+		}
+	}
+
+	// sort + dedupe, then compress to CSR
+	if err := SortIJ(&s, &d); err != nil {
+		return AdjMatSparse{}, err
+	}
+	mat, err := NewFromSortedIJ(s, d)
+	if err != nil {
+		return AdjMatSparse{}, err
+	}
+	return mat, nil
+}
