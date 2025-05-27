@@ -1,0 +1,12 @@
+package graphlib
+
+import (
+	"fmt"
+	csr "github.com/sbromberger/graphmatrix"
+)
+
+type AdjMatSparse struct {
+	*csr.GraphMatrix
+}
+
+
