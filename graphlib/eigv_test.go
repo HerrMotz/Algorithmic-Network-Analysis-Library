@@ -5,6 +5,7 @@ import (
 	"gonum.org/v1/gonum/mat"
 	"math"
 	"math/rand"
+	"reflect"
 	"testing"
 )
 
@@ -141,4 +142,14 @@ func BenchmarkAdjMatSparse_PowerIteration(b *testing.B) {
 	h(b, 10000, 4, 200)
 	h(b, 10000, 10, 200)
 	h(b, 100000, 10, 200)
+}
+
+func TestTopKCentralities(t *testing.T) {
+	v := Vector{0.12, 2.34, 5.67, 1.23, 3.45}
+	top3 := v.TopKCentralities(3)
+
+	expected := Vector{2.34, 3.45, 5.67}
+	if !reflect.DeepEqual(top3, expected) {
+		t.Errorf("TopKCentralities got %v; want %v", top3, expected)
+	}
 }

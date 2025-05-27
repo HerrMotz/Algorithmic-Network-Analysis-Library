@@ -15,23 +15,23 @@ import (
 
 // PowerIteration Executes a von Mises iteration for start vector x
 // for a fixed number of iterations.
-func (m *AdjMatSparse) PowerIteration(x *Vector, iterations int) error {
+func (m *AdjMatSparse) PowerIteration(v *Vector, iterations int) error {
 	n := int(m.Dim())
 
-	if len(*x) != n {
+	if len(*v) != n {
 		return errors.New("vector length does not match matrix dimension")
 	}
 
 	var sum float64
 
 	for i := 0; i < iterations; i++ {
-		*x, _ = m.MulVec(x) // the error can be ignored because it is checked in this function as well
+		*v, _ = m.MulVec(v) // the error can be ignored because it is checked in this function as well
 		// re-normalise
-		for _, v := range *x {
+		for _, v := range *v {
 			sum += v
 		}
 		// in place
-		x.ScaleVector(1 / sum)
+		v.ScaleVector(1 / sum)
 		sum = 0
 	}
 
@@ -42,13 +42,13 @@ func (m *AdjMatSparse) PowerIteration(x *Vector, iterations int) error {
 // stops when two different start vectors have come closer than δ or
 // when the maximum number of iterations is reached.
 func (m *AdjMatSparse) PowerIterationRayleigh(
-	x1, x2 *Vector, // start vectors (modified in-place)
+	v1, v2 *Vector, // start vectors (modified in-place)
 	delta float64, // convergence threshold
 	iterations int, // hard iteration cap
 ) error {
 
 	n := int(m.Dim())
-	if len(*x1) != n || len(*x2) != n {
+	if len(*v1) != n || len(*v2) != n {
 		return errors.New("vector length does not match matrix dimension")
 	}
 
@@ -56,22 +56,22 @@ func (m *AdjMatSparse) PowerIterationRayleigh(
 
 	for k := 0; k < iterations; k++ {
 		// power step
-		*x1, _ = m.MulVec(x1)
-		*x2, _ = m.MulVec(x2)
+		*v1, _ = m.MulVec(v1)
+		*v2, _ = m.MulVec(v2)
 
 		// accumulate ℓ₁-norm
 		var sum1, sum2 float64
 		for i := 0; i < n; i++ {
-			sum1 += (*x1)[i]
-			sum2 += (*x2)[i]
+			sum1 += (*v1)[i]
+			sum2 += (*v2)[i]
 		}
-		x1.ScaleVector(1 / sum1)
-		x2.ScaleVector(1 / sum2)
+		v1.ScaleVector(1 / sum1)
+		v2.ScaleVector(1 / sum2) // todo can this be done with only one sum?
 
-		// ‖x1 – x2‖₂ convergence test
+		// ‖v1 – v2‖₂ convergence test
 		var diff float64
 		for i := 0; i < n; i++ {
-			d := (*x1)[i] - (*x2)[i]
+			d := (*v1)[i] - (*v2)[i]
 			diff += d * d
 		}
 
@@ -85,6 +85,18 @@ func (m *AdjMatSparse) PowerIterationRayleigh(
 	return nil // vectors were updated in-place
 }
 
-func (m *AdjMatSparse) EigenvectorCentrality() {
+/*
+// KatzCentrality calculates the katz centrality using power iteration
+func (m *AdjMatSparse) KatzCentrality(beta *Vector, iterations int) error {
+	n := int(m.Dim())
+}*/
 
+// TopKCentralities This function returns the top k centralities for a given vector.
+func (v *Vector) TopKCentralities(k int) Vector {
+	v.Sort() // they are sorted from smallest to largest with growing index
+	n := len(*v)
+	if k > n {
+		k = n
+	}
+	return (*v)[n-k:]
 }

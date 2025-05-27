@@ -51,18 +51,18 @@ type AdjMatSparse struct {
 }
 
 // String is used for pretty printing.
-func (g *AdjMatSparse) String() string {
-	return fmt.Sprintf("AdjMatSparse %v, %v, size %d", g.IndPtr, g.Indices, g.Dim())
+func (m *AdjMatSparse) String() string {
+	return fmt.Sprintf("AdjMatSparse %v, %v, size %d", m.IndPtr, m.Indices, m.Dim())
 }
 
 // GetRow returns the 'n'th row slice, or an empty slice if empty.
-func (g *AdjMatSparse) GetRow(r uint32) ([]uint32, error) {
-	if r > uint32(len(g.IndPtr))-1 {
-		return []uint32{}, fmt.Errorf("row %d out of bounds (max %d)", r, len(g.IndPtr))
+func (m *AdjMatSparse) GetRow(r uint32) ([]uint32, error) {
+	if r > uint32(len(m.IndPtr))-1 {
+		return []uint32{}, fmt.Errorf("row %d out of bounds (max %d)", r, len(m.IndPtr))
 	}
-	rowStart := g.IndPtr[r]
-	rowEnd := g.IndPtr[r+1]
-	return g.Indices[rowStart:rowEnd], nil
+	rowStart := m.IndPtr[r]
+	rowEnd := m.IndPtr[r+1]
+	return m.Indices[rowStart:rowEnd], nil
 }
 
 // cumsum was taken from github.com/james-bowman/sparse.
@@ -97,56 +97,56 @@ func compress(row []uint32, col []uint32, n uint64) (ia []uint64, ja []uint32) {
 }
 
 // inRange returns true if (r, c) is a valid index into v.
-func (g *AdjMatSparse) inRange(r, c uint32) bool {
-	n := g.Dim()
+func (m *AdjMatSparse) inRange(r, c uint32) bool {
+	n := m.Dim()
 	return (c < n) && (r < n)
 }
 
 // Dim returns the (single-axis) dimension of the AdjMatSparse.
-func (g *AdjMatSparse) Dim() uint32 {
-	return uint32(len(g.IndPtr) - 1)
+func (m *AdjMatSparse) Dim() uint32 {
+	return uint32(len(m.IndPtr) - 1)
 }
 
 // N returns the number of defined values in the AdjMatSparse.
-func (g *AdjMatSparse) N() uint64 {
-	return uint64(len(g.Indices))
+func (m *AdjMatSparse) N() uint64 {
+	return uint64(len(m.Indices))
 }
 
 // GetIndex returns true if the value at (r, c) is defined.
-func (g *AdjMatSparse) GetIndex(r, c uint32) bool {
-	if uint32(len(g.IndPtr)) <= c+1 {
+func (m *AdjMatSparse) GetIndex(r, c uint32) bool {
+	if uint32(len(m.IndPtr)) <= c+1 {
 		return false
 	}
 
-	r1 := g.IndPtr[r]
-	r2 := g.IndPtr[r+1]
+	r1 := m.IndPtr[r]
+	r2 := m.IndPtr[r+1]
 	if r1 >= r2 {
 		return false
 	}
-	_, found := SearchSorted32(g.Indices, c, r1, r2)
+	_, found := SearchSorted32(m.Indices, c, r1, r2)
 	return found
 }
 
 // SetIndex sets the value at (r, c) to true.
 // This can be a relatively expensive operation as it can force
 // reallocation as the vectors increase in size.
-func (g *AdjMatSparse) SetIndex(r, c uint32) error {
-	if !g.inRange(r, c) {
+func (m *AdjMatSparse) SetIndex(r, c uint32) error {
+	if !m.inRange(r, c) {
 		return errors.New("index out of range")
 	}
-	rowStartIdx := g.IndPtr[r] // this is the pointer into the Indices for column c
-	rowEndIdx := g.IndPtr[r+1]
+	rowStartIdx := m.IndPtr[r] // this is the pointer into the Indices for column c
+	rowEndIdx := m.IndPtr[r+1]
 
-	i, found := SearchSorted32(g.Indices, c, rowStartIdx, rowEndIdx)
+	i, found := SearchSorted32(m.Indices, c, rowStartIdx, rowEndIdx)
 	if found { // already set
 		return nil
 	}
-	g.Indices = append(g.Indices, 0)
-	copy(g.Indices[i+1:], g.Indices[i:])
-	g.Indices[i] = c
+	m.Indices = append(m.Indices, 0)
+	copy(m.Indices[i+1:], m.Indices[i:])
+	m.Indices[i] = c
 
-	for i := int(r + 1); i < len(g.IndPtr); i++ {
-		g.IndPtr[i]++
+	for i := int(r + 1); i < len(m.IndPtr); i++ {
+		m.IndPtr[i]++
 	}
 	return nil
 }
