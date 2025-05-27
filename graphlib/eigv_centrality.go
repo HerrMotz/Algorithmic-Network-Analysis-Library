@@ -85,11 +85,37 @@ func (m *AdjMatSparse) PowerIterationRayleigh(
 	return nil // vectors were updated in-place
 }
 
-/*
-// KatzCentrality calculates the katz centrality using power iteration
-func (m *AdjMatSparse) KatzCentrality(beta *Vector, iterations int) error {
+// KatzCentrality calculates the katz centrality using power iteration,
+// for a start vector v, walk probability alpha, ground importance vector beta
+// and a given number of iterations.
+func (m *AdjMatSparse) KatzCentrality(v *Vector, alpha *Vector, beta *Vector, iterations int) error {
 	n := int(m.Dim())
-}*/
+
+	if len(*beta) != n {
+		return errors.New("vector length does not match matrix dimension")
+	}
+
+	var sum float64
+
+	for i := 0; i < iterations; i++ {
+		// calculate x' := A*x
+		*v, _ = m.MulVec(v) // the error can be ignored because it is checked in this function as well
+		// calculate alpha * x' + beta
+		err := v.FMA(alpha, beta)
+		if err != nil {
+			return err
+		}
+		// re-normalise
+		for _, v := range *v {
+			sum += v
+		}
+		// in place
+		v.ScaleVector(1 / sum)
+		sum = 0
+	}
+
+	return nil // this is not the vector, everything happens in place
+}
 
 // TopKCentralities This function returns the top k centralities for a given vector.
 func (v *Vector) TopKCentralities(k int) Vector {

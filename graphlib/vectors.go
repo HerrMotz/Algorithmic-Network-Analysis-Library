@@ -2,12 +2,13 @@ package graphlib
 
 import (
 	"fmt"
+	"math"
 	"sort"
 )
 
 type Vector []float64
 
-func (m *AdjMatSparse) MulVec(v *Vector) ([]float64, error) {
+func (m *AdjMatSparse) MulVec(v *Vector) (Vector, error) {
 	n := int(m.Dim())
 	if len(*v) != n {
 		return nil, fmt.Errorf("vector length %d does not match matrix dimension %d", len(*v), n)
@@ -27,6 +28,20 @@ func (m *AdjMatSparse) MulVec(v *Vector) ([]float64, error) {
 	}
 
 	return r, nil
+}
+
+// FMA takes the vectors v.FMA(a,b) and returns a * v + b
+func (v *Vector) FMA(a, b *Vector) error {
+	if len(*v) != len(*b) || len(*a) != len(*b) {
+		return fmt.Errorf("input slices must have the same length")
+	}
+	n := len(*a)
+
+	for i := 0; i < n; i++ {
+		(*v)[i] = math.FMA((*a)[i], (*v)[i], (*b)[i])
+	}
+
+	return nil
 }
 
 func (v *Vector) ScaleVector(n float64) {
