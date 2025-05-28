@@ -42,6 +42,6 @@ func BenchmarkCentralityAll(b *testing.B) {
                 }
             }
             b.ReportAllocs()
-        })
+        })	
     }
 }

@@ -1,0 +1,108 @@
+n= 100 DegreeCentralityAll: 30.708µs
+n= 100 ClosenessCentralityAll: 1.000084ms
+
+n= 100 PowerClosenessCentralityAll: 812.375µs
+n= 100 ExponentialClosenessCentralityAll: 884.417µs
+n= 100 PowerIteration: 15.04175ms
+n= 200 DegreeCentralityAll: 750ns
+n= 200 ClosenessCentralityAll: 3.439875ms
+
+n= 200 PowerClosenessCentralityAll: 1.696625ms
+n= 200 ExponentialClosenessCentralityAll: 2.728833ms
+n= 200 PowerIteration: 33.311167ms
+n= 300 DegreeCentralityAll: 417ns
+n= 300 ClosenessCentralityAll: 4.191917ms
+
+n= 300 PowerClosenessCentralityAll: 4.732083ms
+n= 300 ExponentialClosenessCentralityAll: 5.510834ms
+n= 300 PowerIteration: 53.891042ms
+n= 400 DegreeCentralityAll: 417ns
+n= 400 ClosenessCentralityAll: 12.311208ms
+
+n= 400 PowerClosenessCentralityAll: 11.294583ms
+n= 400 ExponentialClosenessCentralityAll: 12.026625ms
+n= 400 PowerIteration: 87.290791ms
+n= 500 DegreeCentralityAll: 500ns
+n= 500 ClosenessCentralityAll: 18.090333ms
+
+n= 500 PowerClosenessCentralityAll: 20.101459ms
+n= 500 ExponentialClosenessCentralityAll: 19.954417ms
+n= 500 PowerIteration: 139.467667ms
+n= 600 DegreeCentralityAll: 500ns
+n= 600 ClosenessCentralityAll: 22.748125ms
+
+n= 600 PowerClosenessCentralityAll: 27.38975ms
+n= 600 ExponentialClosenessCentralityAll: 28.090125ms
+n= 600 PowerIteration: 210.457083ms
+n= 700 DegreeCentralityAll: 1.167µs
+n= 700 ClosenessCentralityAll: 35.210416ms
+
+n= 700 PowerClosenessCentralityAll: 38.346042ms
+n= 700 ExponentialClosenessCentralityAll: 39.782667ms
+n= 700 PowerIteration: 286.54375ms
+n= 800 DegreeCentralityAll: 1.083µs
+n= 800 ClosenessCentralityAll: 53.3ms
+
+n= 800 PowerClosenessCentralityAll: 57.24075ms
+n= 800 ExponentialClosenessCentralityAll: 58.937417ms
+n= 800 PowerIteration: 377.234875ms
+n= 900 DegreeCentralityAll: 1.042µs
+n= 900 ClosenessCentralityAll: 71.354791ms
+
+n= 900 PowerClosenessCentralityAll: 76.348542ms
+n= 900 ExponentialClosenessCentralityAll: 80.594584ms
+n= 900 PowerIteration: 478.8185ms
+n=1000 DegreeCentralityAll: 1.208µs
+n=1000 ClosenessCentralityAll: 92.283666ms
+
+n=1000 PowerClosenessCentralityAll: 98.673542ms
+n=1000 ExponentialClosenessCentralityAll: 104.272ms
+n=1000 PowerIteration: 592.72775ms
+n=1250 DegreeCentralityAll: 5.791µs
+n=1250 ClosenessCentralityAll: 149.725375ms
+
+n=1250 PowerClosenessCentralityAll: 164.455875ms
+n=1250 ExponentialClosenessCentralityAll: 168.806625ms
+n=1250 PowerIteration: 951.44725ms
+n=1500 DegreeCentralityAll: 2.917µs
+n=1500 ClosenessCentralityAll: 283.27575ms
+
+n=1500 PowerClosenessCentralityAll: 292.878458ms
+n=1500 ExponentialClosenessCentralityAll: 306.530708ms
+n=1500 PowerIteration: 1.402301084s
+n=1750 DegreeCentralityAll: 13.666µs
+n=1750 ClosenessCentralityAll: 473.546375ms
+
+n=1750 PowerClosenessCentralityAll: 502.941875ms
+n=1750 ExponentialClosenessCentralityAll: 506.543333ms
+n=1750 PowerIteration: 1.990634875s
+n=2000 DegreeCentralityAll: 3.791µs
+n=2000 ClosenessCentralityAll: 654.8225ms
+
+n=2000 PowerClosenessCentralityAll: 676.122458ms
+n=2000 ExponentialClosenessCentralityAll: 702.926834ms
+n=2000 PowerIteration: 2.742430916s
+n=2250 DegreeCentralityAll: 6.834µs
+n=2250 ClosenessCentralityAll: 892.437125ms
+
+n=2250 PowerClosenessCentralityAll: 916.307875ms
+n=2250 ExponentialClosenessCentralityAll: 962.012042ms
+n=2250 PowerIteration: 3.628108542s
+n=2500 DegreeCentralityAll: 7.583µs
+n=2500 ClosenessCentralityAll: 1.155481666s
+
+n=2500 PowerClosenessCentralityAll: 1.19770875s
+n=2500 ExponentialClosenessCentralityAll: 1.220326333s
+n=2500 PowerIteration: 4.649833084s
+n=2750 DegreeCentralityAll: 5.5µs
+n=2750 ClosenessCentralityAll: 1.41272875s
+
+n=2750 PowerClosenessCentralityAll: 1.465200334s
+n=2750 ExponentialClosenessCentralityAll: 1.515841416s
+n=2750 PowerIteration: 5.779468375s
+n=3000 DegreeCentralityAll: 3.625µs
+n=3000 ClosenessCentralityAll: 2.1799585s
+
+n=3000 PowerClosenessCentralityAll: 2.187119917s
+n=3000 ExponentialClosenessCentralityAll: 2.2735235s
+n=3000 PowerIteration: 7.091868708s

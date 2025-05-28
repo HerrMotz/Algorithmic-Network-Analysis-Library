@@ -2,60 +2,65 @@ package main
 
 import (
     "fmt"
-    "log"
+    "runtime"
+    "time"
 
     "graphlib/graphlib"
 )
 
 func main() {
-    // Define the two input graph files
-    graphs := []struct {
-        name string
-        path string
-    }{
-        {"DIMACS10 netscie", "exampleGraphs/out.dimacs10-netscie.graph"},
-        {"Pajek Erdos", "exampleGraphs/out.pajek-erdos.graph"},
+    const rho = 0.15
+    sizes := []int{}
+    for n := 100; n <= 1000; n += 100 {
+        sizes = append(sizes, n)
+    }
+    for n := 1250; n <= 3000; n += 250 {
+        sizes = append(sizes, n)
     }
 
-    for _, g := range graphs {
-        // 1) Read the graph
-        l, err := graphlib.ReadGraphAdjList(g.path, false)
-        if err != nil {
-            log.Fatalf("failed to read %s: %v", g.name, err)
-        }
+    for _, n := range sizes {
+        g, _, _ := graphlib.GenerateRandomGraph(n, rho, false, false, 42)
 
-        // 2) Compute metrics
-        density, err := l.Density()
-        if err != nil {
-            log.Fatalf("Density error for %s: %v", g.name, err)
+        // Degree
+        start := time.Now()
+        if _, err := g.DegreeCentralityAll(false); err != nil {
+            panic(err)
         }
+        fmt.Printf("n=%4d DegreeCentralityAll: %v\n", n, time.Since(start))
 
-        maxDeg, err := l.MaxDegree()
-        if err != nil {
-            log.Fatalf("MaxDegree error for %s: %v", g.name, err)
+        // Closeness
+        start = time.Now()
+        if _, err := g.ClosenessCentralityAll(true, runtime.NumCPU()); err != nil {
+            panic(err)
         }
+        fmt.Printf("n=%4d ClosenessCentralityAll: %v\n\n", n, time.Since(start))
 
-        hIndex, err := l.HIndex()
-        if err != nil {
-            log.Fatalf("HIndex error for %s: %v", g.name, err)
+        // Power Closeness
+        start = time.Now()
+        if _, err := g.PowerClosenessCentralityAll(true, 2, runtime.NumCPU()); err != nil {
+            panic(err)
         }
+        fmt.Printf("n=%4d PowerClosenessCentralityAll: %v\n", n, time.Since(start))
 
-        degeneracy, err := l.Degeneracy()
-        if err != nil {
-            log.Fatalf("Degeneracy error for %s: %v", g.name, err)
+        // Exponential Closeness
+        start = time.Now()
+        if _, err := g.ExponentialClosenessCentralityAll(true, 1.5, runtime.NumCPU()); err != nil {
+            panic(err)
         }
+        fmt.Printf("n=%4d ExponentialClosenessCentralityAll: %v\n", n, time.Since(start))
 
-        clustering, err := l.GlobalClustering()
-        if err != nil {
-            log.Fatalf("GlobalClustering error for %s: %v", g.name, err)
+        // Power Iteration
+        g.WriteToEdgeList("exampleGraphs/buffer.edgelist", 0)
+        m, _ := graphlib.ReadGraphSparseMatrix("exampleGraphs/buffer.edgelist", false)
+
+        powerIterationScores := graphlib.Vector(make([]float64, m.Dim()))
+        for i := range powerIterationScores {
+            powerIterationScores[i] = 1.0
         }
-
-        // 3) Print results
-        fmt.Printf("=== Metrics for %s ===\n", g.name)
-        fmt.Printf("Density:             %.6f\n", density)
-        fmt.Printf("Maximum Degree:      %d\n", maxDeg)
-        fmt.Printf("H-Index:             %d\n", hIndex)
-        fmt.Printf("Degeneracy:          %d\n", degeneracy)
-        fmt.Printf("Global Clustering:   %.6f\n\n", clustering)
+        start = time.Now()
+        if err := m.PowerIteration(&powerIterationScores, 10000); err != nil {
+            panic(err)
+        }
+        fmt.Printf("n=%4d PowerIteration: %v\n", n, time.Since(start))
     }
 }

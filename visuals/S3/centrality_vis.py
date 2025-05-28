@@ -148,7 +148,7 @@ def plot_network_with_color_and_size(graph_path, csv_path, output_path, measure_
     node_colors = [norm_scores.get(node, 0) for node in G.nodes()]
     
     # Layout
-    pos = nx.spring_layout(G, seed=42)
+    pos = nx.spring_layout(G, iterations=20, seed=42)  
     
     # Draw edges
     fig, ax = plt.subplots(figsize=(12, 8))
@@ -184,16 +184,20 @@ def plot_network_with_color_and_size(graph_path, csv_path, output_path, measure_
 measure_files = {
      'Degree': 'centrality_ranking/degree_ranking.csv',
      'Closeness': 'centrality_ranking/closeness_ranking.csv',
+     'PowerC': 'centrality_ranking/power_closeness_ranking.csv',
+     'Organ Donor': 'centrality_ranking/exponential_closeness_ranking.csv',
+     'Power Iteration': 'centrality_ranking/power_iteration_ranking.csv',
+     #'Katz': 'centrality_ranking/katz_centrality_ranking.csv',
 
      # !! hier weitere Measures hinzufügen !! als Beispiel: das sieht in der Heatmap dann gut aus desto mehr desto besser
      #'Eigenvector': 'centrality_ranking/eigenvector_ranking.csv',
      #'MyMeasure': 'centrality_ranking/mymeasure_ranking.csv',
 }
-plot_kendall_heatmap(measure_files, 'kendall_heatmap.png')
+plot_kendall_heatmap(measure_files, 'kendall_heatmap_jena.png')
 
 # Scatter nur zwischen zwei measures möglich, denke da reicht es, wenn ich nur das für erdos mache (oder Straßennetz, wenn ihr das möchtet)
-plot_rank_scatter('centrality_ranking/degree_ranking.csv', 'centrality_ranking/closeness_ranking.csv', 'Degree', 'Closeness', 'degree_vs_closeness_scatter.png')
+# plot_rank_scatter('centrality_ranking/degree_ranking.csv', 'centrality_ranking/closeness_ranking.csv', 'Degree', 'Closeness', 'degree_vs_closeness_scatter.png')
 
 # genauso für Netzwerkanzeige 
-plot_network_with_color_and_size('../../exampleGraphs/out.pajek-erdos.graph', 'centrality_ranking/degree_ranking.csv', 'network_degree.png', 'Degree')
+plot_network_with_color_and_size('../../exampleGraphs/jena_road_unfolded_50.edgelist', 'centrality_ranking/exponential_closeness_ranking.csv', 'network_ExpoC.png', 'Organ Donor Centrality')
 
