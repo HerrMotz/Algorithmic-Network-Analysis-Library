@@ -15,7 +15,7 @@ import (
 
 // PowerIteration Executes a von Mises iteration for start vector x
 // for a fixed number of iterations.
-func (m *AdjMatSparse) PowerIteration(v *Vector, iterations int) error {
+func (m *AdjMatSparse) PowerIteration(v *Vector, delta float64, iterations int) error {
 	n := int(m.Dim())
 
 	if len(*v) != n {
@@ -23,6 +23,13 @@ func (m *AdjMatSparse) PowerIteration(v *Vector, iterations int) error {
 	}
 
 	var sum float64
+	// calculate the delta between iterations
+	var vOld = make(Vector, n)
+	for i := 0; i < n; i++ {
+		vOld[i] = 0
+	}
+
+	deltaSquared := delta * delta
 
 	for i := 0; i < iterations; i++ {
 		*v, _ = m.MulVec(v) // the error can be ignored because it is checked in this function as well
@@ -33,6 +40,21 @@ func (m *AdjMatSparse) PowerIteration(v *Vector, iterations int) error {
 		// in place
 		v.ScaleVector(1 / sum)
 		sum = 0
+
+		// ‖v1 – v2‖₂ convergence test
+		var diff float64
+		for i := 0; i < n; i++ {
+			d := vOld[i] - (*v)[i]
+			diff += d * d
+		}
+
+		if deltaSquared < delta { // spare the sqrt call
+			fmt.Println("[PowItRayleigh] delta criterion reached")
+			return nil
+		}
+
+		vOld = *v
+
 	}
 
 	return nil // this is not the vector, everything happens in place
@@ -75,7 +97,7 @@ func (m *AdjMatSparse) PowerIterationRayleigh(
 			diff += d * d
 		}
 
-		if deltaSquared < delta { // spare the sqrt call
+		if deltaSquared < diff { // spare the sqrt call
 			fmt.Println("[PowItRayleigh] delta criterion reached")
 			return nil
 		}
@@ -106,12 +128,12 @@ func (m *AdjMatSparse) KatzCentrality(v *Vector, alpha *Vector, beta *Vector, it
 			return err
 		}
 		// re-normalise
+		sum = 0
 		for _, v := range *v {
 			sum += v
 		}
 		// in place
 		v.ScaleVector(1 / sum)
-		sum = 0
 	}
 
 	return nil // this is not the vector, everything happens in place

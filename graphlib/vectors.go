@@ -38,7 +38,7 @@ func (v *Vector) FMA(a, b *Vector) error {
 	n := len(*a)
 
 	for i := 0; i < n; i++ {
-		(*v)[i] = math.FMA((*a)[i], (*v)[i], (*b)[i])
+		(*v)[i] = math.FMA((*v)[i], (*a)[i], (*b)[i])
 	}
 
 	return nil

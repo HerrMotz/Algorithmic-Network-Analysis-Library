@@ -131,7 +131,7 @@ func main() {
 	for i := range powerIterationScores {
 		powerIterationScores[i] = 1.0
 	}
-	err = m.PowerIteration(&powerIterationScores, 10000)
+	err = m.PowerIteration(&powerIterationScores, 0.001, 10000)
 	if err != nil {
 		log.Fatalf("PowerIteration: %v", err)
 	}
@@ -142,7 +142,7 @@ func main() {
 	}
 	alpha := graphlib.Vector(make([]float64, m.Dim()))
 	for i := range alpha {
-		alpha[i] = .8
+		alpha[i] = .02
 	}
 	beta := graphlib.Vector(make([]float64, m.Dim()))
 	for i := range alpha {
