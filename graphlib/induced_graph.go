@@ -10,6 +10,11 @@ type InducedGraph struct {
 	GoodVertices VertexSet
 }
 
+type PermanentInducedGraph struct {
+	IGraph            InducedGraph
+	PermanentVertices VertexSet
+}
+
 func (igraph *InducedGraph) Size() int {
 	return igraph.GoodVertices.Size()
 }
@@ -85,10 +90,10 @@ func (igraph *InducedGraph) Degree(v Vertex) (int, error) {
 	return len(neighbours), nil
 }
 
-// CreateReducedInducedGraph returns a new InducedGraph that shares the same
+// CreateReduced returns a new InducedGraph that shares the same
 // AdjList as igraph but whose GoodVertices set has been copied, filtered
 // and with vToRemove removed. The original igraph is not modified.
-func (igraph *InducedGraph) CreateReducedInducedGraph(
+func (igraph *InducedGraph) CreateReduced(
 	vToRemove Vertex,
 ) (*InducedGraph, error) {
 	if igraph.AdjList == nil || igraph.GoodVertices == nil {
@@ -106,4 +111,35 @@ func (igraph *InducedGraph) CreateReducedInducedGraph(
 		AdjList:      igraph.AdjList,
 		GoodVertices: newGood,
 	}, nil
+}
+
+// CreateReduced combines the necessary steps of PGraph and IGraph to create a new
+// PermanentInducedGraph that shares the same AdjList as pgraph.IGraph but
+// where vToRemove is removed from the GoodVertices set.
+func (pgraph *PermanentInducedGraph) CreateReduced(vToRemove, v1, v2 Vertex) (*PermanentInducedGraph, error) {
+	if pgraph.IGraph.AdjList == nil || pgraph.IGraph.GoodVertices == nil {
+		return nil, errors.New("permanent induced graph is not initialized")
+	}
+
+	rGraph, err := pgraph.IGraph.CreateReduced(vToRemove)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create reduced graph: %w", err)
+	}
+
+	// Create a new PermanentInducedGraph with the reduced InducedGraph
+	newPGraph := PermanentInducedGraph{
+		IGraph:            *rGraph,
+		PermanentVertices: pgraph.PermanentVertices.Copy(),
+	}
+
+	if v1.Id >= 0 {
+		// ignore the error if the vertex already exists
+		_ = newPGraph.PermanentVertices.AddVertex(v1)
+	}
+	if v2.Id >= 0 {
+		_ = newPGraph.PermanentVertices.AddVertex(v2)
+	}
+
+	return &newPGraph, nil
+
 }

@@ -1,5 +1,7 @@
 package graphlib
 
+import "errors"
+
 type VertexSet map[int]Naught
 
 // Size returns the number of vertices in the set.
@@ -8,6 +10,22 @@ func (v *VertexSet) Size() int {
 		return 0
 	}
 	return len(*v)
+}
+
+// AddVertex adds a vertex.
+func (v *VertexSet) AddVertex(vert Vertex) error {
+	if vert.Id < 0 {
+		return errors.New("vertex ID must be non-negative")
+	}
+	if v.HasVertex(vert) {
+		return errors.New("vertex already exists")
+	}
+
+	if *v == nil {
+		*v = make(VertexSet)
+	}
+	(*v)[vert.Id] = Naught{}
+	return nil
 }
 
 // HasVertex checks if the vertex with the given ID exists in the adjacency list.

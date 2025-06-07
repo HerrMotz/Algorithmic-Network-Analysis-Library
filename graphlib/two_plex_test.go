@@ -30,7 +30,7 @@ var wantPlex2 = 2
 func TestTwoPlexCorrectness(t *testing.T) {
 	H := AdjList{List: adj1, Size: len(adj1)}
 	inducedGraph := InducedGraph{AdjList: &H, GoodVertices: VertexSet{0: {}, 1: {}, 2: {}, 3: {}, 4: {}, 5: {}, 6: {}}}
-	plex, err := inducedGraph.TwoPlexRec()
+	plex, err := inducedGraph.TwoPlexNaive()
 	if err != nil {
 		t.Fatalf("TestTwoPlexCorrectness: unexpected error %v", err)
 	}
@@ -42,11 +42,23 @@ func TestTwoPlexCorrectness(t *testing.T) {
 	// test what happens if the induced graph is empty
 	H = AdjList{List: adj2, Size: len(adj2)}
 	inducedGraph = InducedGraph{AdjList: &H, GoodVertices: VertexSet{0: {}, 1: {}, 2: {}, 3: {}, 4: {}, 5: {}, 6: {}}}
-	plex, err = inducedGraph.TwoPlexRec()
+	plex, err = inducedGraph.TwoPlexNaive()
 	if err != nil {
 		t.Fatalf("TestTwoPlexCorrectness: unexpected error %v", err)
 	}
 	if plex.Size() != wantPlex2 {
 		t.Errorf("TestTwoPlexCorrectness: want %d got %d", wantPlex2, plex.Size())
+	}
+}
+
+func TestPermanentInducedGraph_TwoPlexPermanent(t *testing.T) {
+	H := AdjList{List: adj1, Size: len(adj1)}
+	permanentInducedGraph := PermanentInducedGraph{InducedGraph{AdjList: &H, GoodVertices: VertexSet{0: {}, 1: {}, 2: {}, 3: {}, 4: {}, 5: {}, 6: {}}}, VertexSet{}}
+	plex, err := permanentInducedGraph.TwoPlexPermanent()
+	if err != nil {
+		t.Fatalf("TestPermanentInducedGraph_TwoPlexPermanent: unexpected error %v", err)
+	}
+	if !reflect.DeepEqual(wantPlex1, plex) {
+		t.Errorf("TestPermanentInducedGraph_TwoPlexPermanent: want %v got %v", wantPlex1, plex)
 	}
 }
