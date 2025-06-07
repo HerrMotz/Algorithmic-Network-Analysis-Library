@@ -131,6 +131,13 @@ func runTwoPlexIf(pgraph *PermanentInducedGraph, testVertex Vertex, p1 Vertex, p
 
 var noV = Vertex{-1} // use -1 to indicate no vertex
 
+// TODO
+//  - Add more tests for the TwoPlexPermanent algorithm (bigger graphs for performance testing)
+//  - Add the minimal degree optimisation
+//  - Add distance improvement (remove all vertices that have distance >= 3 to a permanent vertex)
+//  - Store the size of the currently found 2-Plex (stop recursion if it is not larger than the current best)
+//  - Remove nodes with at most degree of n*-2
+
 // TwoPlexPermanent implements the algorithm with permanent set
 func (pgraph *PermanentInducedGraph) TwoPlexPermanent() (VertexSet, error) {
 	n := pgraph.IGraph.Size()
