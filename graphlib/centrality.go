@@ -13,14 +13,14 @@ import (
 // DegreeCentralityOf
 // returns the (optionally normalised) degree centrality of v.
 // Normalised value = deg(v)/(n-1); raw = deg(v).
-func (g *AdjList) DegreeCentralityOf(v Vertex, normalised bool) (float64, error) {
-	d, err := g.Degree(v)
+func (l *AdjList) DegreeCentralityOf(v Vertex, normalised bool) (float64, error) {
+	d, err := l.Degree(v)
 	if err != nil {
 		return 0, err
 	}
 
-	if normalised && g.Size > 1 {
-		return float64(d) / float64(g.Size-1), nil
+	if normalised && l.Size > 1 {
+		return float64(d) / float64(l.Size-1), nil
 	}
 
 	return float64(d), nil
@@ -29,15 +29,15 @@ func (g *AdjList) DegreeCentralityOf(v Vertex, normalised bool) (float64, error)
 // DegreeCentralityAll
 // returns the centrality for every vertex.
 // Pass normalised=true/false.
-func (g *AdjList) DegreeCentralityAll(normalised bool) ([]float64, error) {
-	scores := make([]float64, g.Size)
-	for i := 0; i < g.Size; i++ {
-		d, err := g.Degree(Vertex{i})
+func (l *AdjList) DegreeCentralityAll(normalised bool) ([]float64, error) {
+	scores := make([]float64, l.Size)
+	for i := 0; i < l.Size; i++ {
+		d, err := l.Degree(Vertex{i})
 		if err != nil { // should never fail for valid i
 			return nil, err
 		}
-		if normalised && g.Size > 1 {
-			scores[i] = float64(d) / float64(g.Size-1)
+		if normalised && l.Size > 1 {
+			scores[i] = float64(d) / float64(l.Size-1)
 		} else {
 			scores[i] = float64(d)
 		}
@@ -48,8 +48,8 @@ func (g *AdjList) DegreeCentralityAll(normalised bool) ([]float64, error) {
 // HighestDegreeCentrality
 // returns the vertex with maximum degree centrality;
 // ties are resolved by the smaller vertex id.
-func (g *AdjList) HighestDegreeCentrality(normalised bool) (Vertex, float64, error) {
-	scores, err := g.DegreeCentralityAll(normalised)
+func (l *AdjList) HighestDegreeCentrality(normalised bool) (Vertex, float64, error) {
+	scores, err := l.DegreeCentralityAll(normalised)
 	if err != nil {
 		return Vertex{}, 0, err
 	}
@@ -69,15 +69,15 @@ func (g *AdjList) HighestDegreeCentrality(normalised bool) (Vertex, float64, err
 // TopKDegreeCentrality
 // returns the k vertices with the highest degree centrality
 // ordered descending by centrality value.
-func (g *AdjList) TopKDegreeCentrality(k int, normalised bool) ([]Vertex, []float64, error) {
+func (l *AdjList) TopKDegreeCentrality(k int, normalised bool) ([]Vertex, []float64, error) {
 	if k <= 0 {
 		return nil, nil, nil
 	}
-	scores, err := g.DegreeCentralityAll(normalised)
+	scores, err := l.DegreeCentralityAll(normalised)
 	if err != nil {
 		return nil, nil, err
 	}
-	idx := make([]int, g.Size)
+	idx := make([]int, l.Size)
 	for i := range idx {
 		idx[i] = i
 	}
@@ -105,8 +105,8 @@ func (g *AdjList) TopKDegreeCentrality(k int, normalised bool) ([]Vertex, []floa
 // ClosenessCentralityOf
 // returns the closeness centrality of a single vertex v
 // It performs a single‑source BFS which is optimal for one‑off queries.
-func (g *AdjList) ClosenessCentralityOf(v Vertex, normalised bool) (float64, error) {
-	dist, err := g.SingleSourceShortestPath(v)
+func (l *AdjList) ClosenessCentralityOf(v Vertex, normalised bool) (float64, error) {
+	dist, err := l.SingleSourceShortestPath(v)
 	if err != nil {
 		return 0, err
 	}
@@ -135,9 +135,9 @@ func (g *AdjList) ClosenessCentralityOf(v Vertex, normalised bool) (float64, err
 // returns closeness centrality for every vertex
 // Internally it computes APSP once using the multithreaded BFS pool for speed.
 
-func (g *AdjList) ClosenessCentralityAll(normalised bool, workers int) ([]float64, error) {
-	n := g.Size
-	distMatrix := g.MultiThreadedNaiveAllPairsShortestPath(workers)
+func (l *AdjList) ClosenessCentralityAll(normalised bool, workers int) ([]float64, error) {
+	n := l.Size
+	distMatrix := l.MultiThreadedNaiveAllPairsShortestPath(workers)
 
 	res := make([]float64, n)
 	for i := 0; i < n; i++ {
@@ -173,8 +173,8 @@ func (g *AdjList) ClosenessCentralityAll(normalised bool, workers int) ([]float6
 
 // HighestClosenessCentrality
 // returns vertex with maximum closeness
-func (g *AdjList) HighestClosenessCentrality(normalised bool, workers int) (Vertex, float64, error) {
-	scores, err := g.ClosenessCentralityAll(normalised, workers)
+func (l *AdjList) HighestClosenessCentrality(normalised bool, workers int) (Vertex, float64, error) {
+	scores, err := l.ClosenessCentralityAll(normalised, workers)
 	if err != nil {
 		return Vertex{}, 0, err
 	}
@@ -189,11 +189,11 @@ func (g *AdjList) HighestClosenessCentrality(normalised bool, workers int) (Vert
 
 // TopKClosenessCentrality
 // returns the k vertices with highest closeness scores
-func (g *AdjList) TopKClosenessCentrality(k int, normalised bool, workers int) ([]Vertex, []float64, error) {
+func (l *AdjList) TopKClosenessCentrality(k int, normalised bool, workers int) ([]Vertex, []float64, error) {
 	if k <= 0 {
 		return nil, nil, nil
 	}
-	scores, err := g.ClosenessCentralityAll(normalised, workers)
+	scores, err := l.ClosenessCentralityAll(normalised, workers)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -225,8 +225,8 @@ func (g *AdjList) TopKClosenessCentrality(k int, normalised bool, workers int) (
 // PowerClosenessCentralityOf
 // returns the power closeness centrality of a single vertex v
 // It performs a single‑source BFS which is optimal for one‑off queries.
-func (g *AdjList) PowerClosenessCentralityOf(v Vertex, p float64, normalised bool) (float64, error) {
-	dist, err := g.SingleSourceShortestPath(v)
+func (l *AdjList) PowerClosenessCentralityOf(v Vertex, p float64, normalised bool) (float64, error) {
+	dist, err := l.SingleSourceShortestPath(v)
 	if err != nil {
 		return 0, err
 	}
@@ -255,9 +255,9 @@ func (g *AdjList) PowerClosenessCentralityOf(v Vertex, p float64, normalised boo
 // returns power closeness centrality for every vertex
 // Internally it computes APSP once using the multithreaded BFS pool for speed.
 
-func (g *AdjList) PowerClosenessCentralityAll(normalised bool, p float64, workers int) ([]float64, error) {
-	n := g.Size
-	distMatrix := g.MultiThreadedNaiveAllPairsShortestPath(workers)
+func (l *AdjList) PowerClosenessCentralityAll(normalised bool, p float64, workers int) ([]float64, error) {
+	n := l.Size
+	distMatrix := l.MultiThreadedNaiveAllPairsShortestPath(workers)
 
 	res := make([]float64, n)
 	for i := 0; i < n; i++ {
@@ -293,8 +293,8 @@ func (g *AdjList) PowerClosenessCentralityAll(normalised bool, p float64, worker
 
 // HighestPowerClosenessCentrality
 // returns vertex with maximum power closeness
-func (g *AdjList) HighestPowerClosenessCentrality(normalised bool, p float64, workers int) (Vertex, float64, error) {
-	scores, err := g.PowerClosenessCentralityAll(normalised, p, workers)
+func (l *AdjList) HighestPowerClosenessCentrality(normalised bool, p float64, workers int) (Vertex, float64, error) {
+	scores, err := l.PowerClosenessCentralityAll(normalised, p, workers)
 	if err != nil {
 		return Vertex{}, 0, err
 	}
@@ -309,11 +309,11 @@ func (g *AdjList) HighestPowerClosenessCentrality(normalised bool, p float64, wo
 
 // TopKPowerClosenessCentrality
 // returns the k vertices with the highest power closeness scores
-func (g *AdjList) TopKPowerClosenessCentrality(k int, normalised bool, p float64, workers int) ([]Vertex, []float64, error) {
+func (l *AdjList) TopKPowerClosenessCentrality(k int, normalised bool, p float64, workers int) ([]Vertex, []float64, error) {
 	if k <= 0 {
 		return nil, nil, nil
 	}
-	scores, err := g.PowerClosenessCentralityAll(normalised, p, workers)
+	scores, err := l.PowerClosenessCentralityAll(normalised, p, workers)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -345,8 +345,8 @@ func (g *AdjList) TopKPowerClosenessCentrality(k int, normalised bool, p float64
 // ExponentialClosenessCentralityOf
 // returns the exponential closeness centrality of a single vertex v
 // It performs a single‑source BFS which is optimal for one‑off queries.
-func (g *AdjList) ExponentialClosenessCentralityOf(v Vertex, lambda float64, normalised bool) (float64, error) {
-	dist, err := g.SingleSourceShortestPath(v)
+func (l *AdjList) ExponentialClosenessCentralityOf(v Vertex, lambda float64, normalised bool) (float64, error) {
+	dist, err := l.SingleSourceShortestPath(v)
 	if err != nil {
 		return 0, err
 	}
@@ -375,9 +375,9 @@ func (g *AdjList) ExponentialClosenessCentralityOf(v Vertex, lambda float64, nor
 // returns exponential closeness centrality for every vertex
 // Internally it computes APSP once using the multithreaded BFS pool for speed.
 
-func (g *AdjList) ExponentialClosenessCentralityAll(normalised bool, lambda float64, workers int) ([]float64, error) {
-	n := g.Size
-	distMatrix := g.MultiThreadedNaiveAllPairsShortestPath(workers)
+func (l *AdjList) ExponentialClosenessCentralityAll(normalised bool, lambda float64, workers int) ([]float64, error) {
+	n := l.Size
+	distMatrix := l.MultiThreadedNaiveAllPairsShortestPath(workers)
 
 	res := make([]float64, n)
 	for i := 0; i < n; i++ {
@@ -413,8 +413,8 @@ func (g *AdjList) ExponentialClosenessCentralityAll(normalised bool, lambda floa
 
 // HighestExponentialClosenessCentrality
 // returns vertex with maximum exponential closeness
-func (g *AdjList) HighestExponentialClosenessCentrality(normalised bool, lambda float64, workers int) (Vertex, float64, error) {
-	scores, err := g.ExponentialClosenessCentralityAll(normalised, lambda, workers)
+func (l *AdjList) HighestExponentialClosenessCentrality(normalised bool, lambda float64, workers int) (Vertex, float64, error) {
+	scores, err := l.ExponentialClosenessCentralityAll(normalised, lambda, workers)
 	if err != nil {
 		return Vertex{}, 0, err
 	}
@@ -429,11 +429,11 @@ func (g *AdjList) HighestExponentialClosenessCentrality(normalised bool, lambda 
 
 // TopKExponentialClosenessCentrality
 // returns the k vertices with the highest exponential closeness scores
-func (g *AdjList) TopKExponentialClosenessCentrality(k int, normalised bool, lambda float64, workers int) ([]Vertex, []float64, error) {
+func (l *AdjList) TopKExponentialClosenessCentrality(k int, normalised bool, lambda float64, workers int) ([]Vertex, []float64, error) {
 	if k <= 0 {
 		return nil, nil, nil
 	}
-	scores, err := g.PowerClosenessCentralityAll(normalised, lambda, workers)
+	scores, err := l.PowerClosenessCentralityAll(normalised, lambda, workers)
 	if err != nil {
 		return nil, nil, err
 	}

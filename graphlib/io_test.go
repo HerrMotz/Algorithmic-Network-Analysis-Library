@@ -15,7 +15,7 @@ import (
 //  Tests reading from edgelist and METIS
 // ---------------------------------------
 
-var wantAdj = []map[int]Naught{
+var wantAdj = []VertexSet{
 	{1: Naught{}, 2: Naught{}, 4: Naught{}},
 	{0: Naught{}, 2: Naught{}, 3: Naught{}},
 	{4: Naught{}, 3: Naught{}, 1: Naught{}, 0: Naught{}},
@@ -159,7 +159,7 @@ func benchReadGraph(b *testing.B, file string) {
 func TestWriteSizeInFile(t *testing.T) {
 	file := "write_test.graph"
 
-	adj := []map[int]Naught{
+	adj := []VertexSet{
 		{1: Naught{}},
 		{2: Naught{}},
 		{3: Naught{}},

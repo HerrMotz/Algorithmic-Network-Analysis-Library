@@ -47,7 +47,7 @@ func TestPowerIteration_Correctness_Against_Gonum(t *testing.T) {
 	x := make(Vector, n)
 	copy(x, start)
 
-	err = adj.PowerIteration(&x, iterations)
+	err = adj.PowerIteration(&x, 0.1, iterations)
 	if err != nil {
 		t.Fatalf("PowerIteration failed: %v", err)
 	}
@@ -126,7 +126,7 @@ func BenchmarkAdjMatSparse_PowerIteration(b *testing.B) {
 			v := make(Vector, len(baseVec))
 			copy(v, baseVec)
 
-			if err := (&A).PowerIteration(&v, iterations); err != nil {
+			if err := (&A).PowerIteration(&v, .1, iterations); err != nil {
 				b.Fatalf("PowerIteration failed: %v", err)
 			}
 		}

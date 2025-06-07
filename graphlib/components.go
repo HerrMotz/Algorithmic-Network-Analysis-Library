@@ -48,7 +48,7 @@ func (l *AdjList) naiveConnectedComponents() []int {
 // 0 … size‑1.
 //
 // The function works for disconnected graphs as well.
-func (l *AdjList) CutVertices(size int) (map[int]Naught, error) {
+func (l *AdjList) CutVertices(size int) (VertexSet, error) {
 	disc := make([]int, size) // time the node was discovered in the DFS
 	low := make([]int, size)  // the lowest possible discovery time of a node or his descendants possibly using back nodes
 	visited := make([]bool, size)
@@ -61,7 +61,7 @@ func (l *AdjList) CutVertices(size int) (map[int]Naught, error) {
 	}
 
 	//  “set” that will hold the result
-	cut := make(map[int]Naught)
+	cut := make(VertexSet)
 
 	//  DFS
 	time := 0

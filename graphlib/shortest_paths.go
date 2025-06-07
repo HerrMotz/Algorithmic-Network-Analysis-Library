@@ -105,20 +105,20 @@ func (l *AdjList) ImprovedAllPairsShortestPaths() ([][]int, error) {
 	distancesKnown := make([]bool, size)
 
 	// Build open and closed neighborhood sets
-	openNeighbourSets := make([]map[int]Naught, size)
-	closedNeighborSets := make([]map[int]Naught, size)
+	openNeighbourSets := make([]VertexSet, size)
+	closedNeighborSets := make([]VertexSet, size)
 	for u := 0; u < size; u++ {
 		neighMap, err := l.Neighbours(Vertex{u})
 		if err != nil {
 			return nil, err
 		}
-		open := make(map[int]Naught)
+		open := make(VertexSet)
 		for v := range neighMap {
 			open[v] = Naught{}
 		}
 		openNeighbourSets[u] = open
 
-		closed := make(map[int]Naught)
+		closed := make(VertexSet)
 		for v := range open {
 			closed[v] = Naught{}
 		}
@@ -206,7 +206,7 @@ func (l *AdjList) ImprovedAllPairsShortestPaths() ([][]int, error) {
 }
 
 // getSameNeighborhoodNodes finds other vertices with identical open or closed neighborhoods
-func getSameNeighborhoodNodes(node int, openNeighborSets, closedNeighborSets []map[int]Naught) []int {
+func getSameNeighborhoodNodes(node int, openNeighborSets, closedNeighborSets []VertexSet) []int {
 	size := len(openNeighborSets)
 	var same []int
 	for u := 0; u < size; u++ {
@@ -221,7 +221,7 @@ func getSameNeighborhoodNodes(node int, openNeighborSets, closedNeighborSets []m
 }
 
 // equalSets checks if two vertex sets are identical
-func equalSets(a, b map[int]Naught) bool {
+func equalSets(a, b VertexSet) bool {
 	if len(a) != len(b) {
 		return false
 	}

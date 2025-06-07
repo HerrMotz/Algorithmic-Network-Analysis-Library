@@ -2,6 +2,7 @@ package graphlib
 
 import (
 	"errors"
+	"fmt"
 	"sync"
 )
 
@@ -12,8 +13,8 @@ import (
 type Naught struct{}
 
 type AdjList struct {
-	Size int              `json:"size,omitempty"`
-	List []map[int]Naught `json:"list,omitempty"` // List[u] are neighbours of u
+	Size int         `json:"size,omitempty"`
+	List []VertexSet `json:"list,omitempty"` // List[u] are neighbours of u
 }
 
 // InitializeAdjList creates an adjacency list with *size* isolated vertices.
@@ -23,13 +24,13 @@ func InitializeAdjList(size int) (*AdjList, error) {
 	}
 	l := &AdjList{
 		Size: size,
-		List: make([]map[int]Naught, size),
+		List: make([]VertexSet, size),
 	}
 
 	// Initialise the adjacency list for each vertex
 	for i := 0; i < size; i++ {
 		// Todo: If we have knowledge of the average vertex degree, we could preallocate the map with a size.
-		l.List[i] = make(map[int]Naught, 4)
+		l.List[i] = make(VertexSet, 4)
 	}
 
 	return l, nil
@@ -84,7 +85,7 @@ func (l *AdjList) HasArc(arc Arc) bool {
 
 func (l *AdjList) AddVertex() {
 	l.Size++
-	l.List = append(l.List, make(map[int]Naught))
+	l.List = append(l.List, make(VertexSet))
 }
 
 func (l *AdjList) HasVertex(v Vertex) bool {
@@ -92,15 +93,33 @@ func (l *AdjList) HasVertex(v Vertex) bool {
 }
 
 func (l *AdjList) RemoveVertex(v Vertex) error {
+	// 1) check existence
 	if !l.HasVertex(v) {
-		return errors.New("vertex does not exist")
+		return fmt.Errorf("vertex %d does not exist", v.Id)
 	}
 
-	l.List[v.Id] = nil
+	// 2) delete any edges pointing to v
+	for u := range l.List {
+		delete(l.List[u], v.Id)
+	}
+
+	// 3) remove the v-th row from the slice
+	//    this shifts all later vertices “up” by one
+	l.List = append(l.List[:v.Id], l.List[v.Id+1:]...)
 	l.Size--
 
-	for i := 0; i < l.Size; i++ {
-		delete(l.List[i], v.Id)
+	// 4) re-build each adjacency‐map so that any neighbor ≥ v.Id
+	//    gets renumbered down by one
+	for u, nbrs := range l.List {
+		newMap := make(VertexSet, len(nbrs))
+		for w, mark := range nbrs {
+			if w > v.Id {
+				newMap[w-1] = mark
+			} else {
+				newMap[w] = mark
+			}
+		}
+		l.List[u] = newMap
 	}
 
 	return nil
@@ -141,7 +160,7 @@ func (l *AdjList) RemoveEdge(edge Edge) error {
 	return nil
 }
 
-func (l *AdjList) Neighbours(u Vertex) (map[int]Naught, error) {
+func (l *AdjList) Neighbours(u Vertex) (VertexSet, error) {
 	if !l.HasVertex(u) {
 		return nil, errors.New("vertex does not exist")
 	}
@@ -174,7 +193,7 @@ func (l *AdjList) TotalDegreeParallel(numWorkers int) int {
 		if end > size {
 			end = size
 		}
-		go func(sub []map[int]Naught) {
+		go func(sub []VertexSet) {
 			defer wg.Done()
 			s := 0
 			for _, m := range sub {

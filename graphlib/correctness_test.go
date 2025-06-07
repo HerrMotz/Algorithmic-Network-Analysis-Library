@@ -370,12 +370,12 @@ func TestDiameter(t *testing.T) {
 	}
 }
 
-var exAdj0 = []map[int]Naught{
+var exAdj0 = []VertexSet{
 	{1: Naught{}},
 	{0: Naught{}},
 }
-var wantCut0 = map[int]Naught{}
-var wantNbh0 = map[int]Naught{
+var wantCut0 = VertexSet{}
+var wantNbh0 = VertexSet{
 	0: {}, // this is the correct output only because the for loop starts at idx 0 in NeighbourhoodSubsets
 }
 var wantDist0 = [][]int{
@@ -383,15 +383,15 @@ var wantDist0 = [][]int{
 	{1, 0},
 }
 
-var exAdj1 = []map[int]Naught{
+var exAdj1 = []VertexSet{
 	{1: Naught{}, 2: Naught{}},
 	{0: Naught{}},
 	{0: Naught{}},
 	{},
 }
 
-var wantCut1 = map[int]Naught{0: {}}
-var wantNbh1 = map[int]Naught{
+var wantCut1 = VertexSet{0: {}}
+var wantNbh1 = VertexSet{
 	0: {},
 	1: {}, // this is the correct output only because the for loop starts at idx 0 in NeighbourhoodSubsets
 }
@@ -402,7 +402,7 @@ var wantDist1 = [][]int{
 	{INF, INF, INF, 0},
 }
 
-var exAdj2 = []map[int]Naught{
+var exAdj2 = []VertexSet{
 	{3: Naught{}, 5: Naught{}},
 	{2: Naught{}, 4: Naught{}},
 	{1: Naught{}, 4: Naught{}},
@@ -411,8 +411,8 @@ var exAdj2 = []map[int]Naught{
 	{0: Naught{}},
 }
 
-var wantCut2 = map[int]Naught{0: {}, 3: {}, 4: {}}
-var wantNbh2 = map[int]Naught{
+var wantCut2 = VertexSet{0: {}, 3: {}, 4: {}}
+var wantNbh2 = VertexSet{
 	0: {},
 	1: {},
 	// 2 not, because 1 and 2 have the same neighbourhood
@@ -433,7 +433,7 @@ func TestCutVertices(t *testing.T) {
 		name string
 		adj  AdjList
 		size int
-		want map[int]Naught
+		want VertexSet
 	}{
 		{"tiny cycle", AdjList{List: exAdj0, Size: len(exAdj0)}, 2, wantCut0},
 		{"star plus isolated", AdjList{List: exAdj1, Size: len(exAdj1)}, 4, wantCut1},
@@ -455,7 +455,7 @@ func TestNeighbourhoodSubsets(t *testing.T) {
 		name string
 		adj  AdjList
 		size int
-		want map[int]Naught
+		want VertexSet
 	}{
 		{"tiny cycle", AdjList{List: exAdj0, Size: len(exAdj0)}, 2, wantNbh0},
 		{"star plus isolated", AdjList{List: exAdj1, Size: len(exAdj1)}, 4, wantNbh1},

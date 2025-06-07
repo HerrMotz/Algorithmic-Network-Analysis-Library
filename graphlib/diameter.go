@@ -26,9 +26,9 @@ func (l *AdjList) NaiveDiameter() int {
 //
 // – Open neighbourhood   N(u)  := { w | {u,w} ∈ E }
 // – Closed neighbourhood N[u] := N(u) ∪ {u}
-func (l *AdjList) NeighbourhoodSubsets() (map[int]Naught, error) {
+func (l *AdjList) NeighbourhoodSubsets() (VertexSet, error) {
 	// Helper for the subset test
-	isSubset := func(sub, sup map[int]Naught) bool {
+	isSubset := func(sub, sup VertexSet) bool {
 		for x := range sub {
 			if _, ok := sup[x]; !ok {
 				return false
@@ -38,23 +38,23 @@ func (l *AdjList) NeighbourhoodSubsets() (map[int]Naught, error) {
 	}
 
 	// Main search
-	result := make(map[int]Naught)
+	result := make(VertexSet)
 
 	for u := 0; u < l.Size; u++ {
 		// --- collect candidates ( neighbours of u OR of any neighbour of u ) --
-		candidates := make(map[int]Naught)
+		candidates := make(VertexSet)
 
-		openU := make(map[int]Naught, 8) // todo: chance to add a heuristic
+		openU := make(VertexSet, 8) // todo: chance to add a heuristic
 		openU, _ = l.Neighbours(Vertex{u})
 
 		// we only need closedU, because the comparison works with only closedU
-		closedU := make(map[int]Naught, len(openU)+1)
+		closedU := make(VertexSet, len(openU)+1)
 		closedU = openU
 		closedU[u] = Naught{}
 
 		for v := range openU {
 			// only reference passing
-			openV := make(map[int]Naught, 8) // todo: chance to add a heuristic
+			openV := make(VertexSet, 8) // todo: chance to add a heuristic
 			openV, _ = l.Neighbours(Vertex{v})
 
 			candidates[v] = Naught{}
@@ -67,7 +67,7 @@ func (l *AdjList) NeighbourhoodSubsets() (map[int]Naught, error) {
 		// --- check each candidate --------------------------------------------
 		for v := range candidates {
 			// only reference passing
-			openV := make(map[int]Naught, 8) // todo: chance to add a heuristic
+			openV := make(VertexSet, 8) // todo: chance to add a heuristic
 			openV, _ = l.Neighbours(Vertex{v})
 
 			if _, already := result[v]; already {
