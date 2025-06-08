@@ -2,6 +2,7 @@ package graphlib
 
 import (
 	"fmt"
+	"sync"
 )
 
 // Copy Helper: Deep copy AdjList
@@ -115,6 +116,72 @@ func (igraph *InducedGraph) TwoPlexNaive() (VertexSet, error) {
 		}
 	}
 	return results[maxIdx], nil
+}
+
+// TwoPlexNaiveParallel explores the three recursive branches concurrently.
+// depth is the current recursion level; it lets us stop spawning new
+// goroutines once we are “deep enough” to keep the goroutine count in check.
+func (igraph *InducedGraph) TwoPlexNaiveParallel() (VertexSet, error) {
+	n := igraph.Size()
+	u, isTwoPlex := igraph.FirstBestDegree(n - 2)
+	if isTwoPlex {
+		return igraph.GoodVertices, nil
+	}
+
+	v, w, err := igraph.NotAdjacent(u)
+	if err != nil {
+		return nil, err
+	}
+
+	// Results struct for each branch
+	type result struct {
+		set        VertexSet
+		errA, errB error
+	}
+
+	var wg sync.WaitGroup
+	results := make([]result, 3)
+
+	// Launch parallel recursive calls
+	wg.Add(3)
+	go func() {
+		defer wg.Done()
+		H引くu, errA := igraph.CreateReduced(u)
+		set, errB := H引くu.TwoPlexNaiveParallel()
+		results[0] = result{set, errA, errB}
+	}()
+	go func() {
+		defer wg.Done()
+		H引くv, errA := igraph.CreateReduced(v)
+		set, errB := H引くv.TwoPlexNaiveParallel()
+		results[1] = result{set, errA, errB}
+	}()
+	go func() {
+		defer wg.Done()
+		H引くw, errA := igraph.CreateReduced(w)
+		set, errB := H引くw.TwoPlexNaiveParallel()
+		results[2] = result{set, errA, errB}
+	}()
+	wg.Wait()
+
+	// Error checking
+	for i, r := range results {
+		if r.errA != nil || r.errB != nil {
+			return nil, fmt.Errorf("failed to make recursion step: CreateReduced(%v), TwoPlexPermanent(%v) at branch %d", r.errA, r.errB, i)
+		}
+	}
+
+	// Find the largest node count
+	maxIdx := 0
+	maxNodes := results[0].set.Size()
+	for i := 1; i < 3; i++ {
+		nodes := results[i].set.Size()
+		if nodes > maxNodes {
+			maxIdx = i
+			maxNodes = nodes
+		}
+	}
+	return results[maxIdx].set, nil
 }
 
 func runTwoPlexIf(pgraph *PermanentInducedGraph, testVertex Vertex, p1 Vertex, p2 Vertex) (VertexSet, error) {
