@@ -188,9 +188,12 @@ func (iGraph *InducedGraph) TwoPlexNaiveParallel() (VertexSet, error) {
 func _runTwoPlexIfPermanentHelper(pGraph *PermanentInducedGraph, testVertex Vertex, p1 Vertex, p2 Vertex) (VertexSet, error) {
 	if !pGraph.PermanentVertices.HasVertex(testVertex) {
 		reduced, errA := pGraph.CreateReduced(testVertex, p1, p2)
+		if errA != nil {
+			return nil, fmt.Errorf("failed to make recursion step: CreateReduced(%v)", errA)
+		}
 		result, errB := reduced.TwoPlexPermanent()
-		if errA != nil || errB != nil {
-			return nil, fmt.Errorf("failed to make recursion step: CreateReduced(%v), TwoPlexPermanent(%v)", errA, errB)
+		if errB != nil {
+			return nil, fmt.Errorf("failed to make recursion step: TwoPlexPermanent(%v)", errB)
 		}
 		return result, nil
 	}
@@ -345,14 +348,17 @@ func (pGraph *PermanentInducedGraph) TwoPlexPermanentParallel() (VertexSet, erro
 	return nil, fmt.Errorf("no 2-Plex found")
 }
 
-func _runTwoPlexIfDistanceHelper(pGraph *PermanentInducedGraph, testVertex Vertex, p1 Vertex, p2 Vertex) (VertexSet, error) {
-	if !pGraph.PermanentVertices.HasVertex(testVertex) {
+func _runTwoPlexIfDistanceHelper(pGraph *PermanentInducedGraph, vToRemove Vertex, p1 Vertex, p2 Vertex) (VertexSet, error) {
+	if !pGraph.PermanentVertices.HasVertex(vToRemove) {
 		// ↓ the following line is the only change, the rest is the same as in _runTwoPlexIfPermanentHelper
-		reduced, errA := pGraph.CreateReducedWithDistance(testVertex, p1, p2)
+		reduced, errA := pGraph.CreateReducedWithDistance(vToRemove, p1, p2)
 		// ↑ changed line!
+		if errA != nil {
+			return nil, fmt.Errorf("failed to make recursion step: CreateReducedWithDistance(%v): %w", vToRemove, errA)
+		}
 		result, errB := reduced.TwoPlexDistance() // oh I forgot - this one changed as well.
-		if errA != nil || errB != nil {
-			return nil, fmt.Errorf("failed to make recursion step: CreateReducedWithDistance(%v), TwoPlexDistance(%v)", errA, errB)
+		if errB != nil {
+			return nil, fmt.Errorf("failed to make recursion step: TwoPlexDistance(%v)", errB)
 		}
 		return result, nil
 	}

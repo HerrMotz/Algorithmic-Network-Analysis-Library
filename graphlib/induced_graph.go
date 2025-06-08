@@ -115,7 +115,8 @@ func (iGraph *InducedGraph) CreateReduced(
 
 // CreateReduced combines the necessary steps of PGraph and IGraph to create a new
 // PermanentInducedGraph that shares the same AdjList as pgraph.IGraph but
-// where vToRemove is removed from the GoodVertices set.
+// where vToRemove is removed from the GoodVertices set and the v1, v2 are added
+// to the PermanentVertices set.
 func (pGraph *PermanentInducedGraph) CreateReduced(vToRemove, v1, v2 Vertex) (*PermanentInducedGraph, error) {
 	if pGraph.IGraph.AdjList == nil || pGraph.IGraph.GoodVertices == nil {
 		return nil, errors.New("permanent induced graph is not initialized")
@@ -144,14 +145,15 @@ func (pGraph *PermanentInducedGraph) CreateReduced(vToRemove, v1, v2 Vertex) (*P
 }
 
 func (pGraph *PermanentInducedGraph) MarkBadWithBfs(source Vertex, markBadAfterDistance int) error {
-	size := pGraph.IGraph.Size()
-	dist := make([]int, size)
-	for i := range dist {
-		dist[i] = INF
+	if source == noV {
+		return nil
 	}
+	size := pGraph.IGraph.Size()
+	// set because the igraph may contain a subset which does not have consecutive ids
+	dist := make(map[int]int, size) // graph is connected, so no initialisation is necessary
 	dist[source.Id] = 0
 	queue := NewQueue[int](10)
-	visited := make([]bool, size)
+	visited := make(map[int]bool, size)
 	visited[source.Id] = true
 
 	queue.enqueue(source.Id)
@@ -168,9 +170,9 @@ func (pGraph *PermanentInducedGraph) MarkBadWithBfs(source Vertex, markBadAfterD
 			if !visited[k] {
 				queue.enqueue(k)
 				visited[k] = true
-				dist[v] = dist[v] + 1
+				dist[k] = dist[v] + 1
 				// Mark the vertex as bad in the InducedGraph if the distance is larger than markBadAfterDistance
-				if dist[v] > markBadAfterDistance {
+				if dist[k] > markBadAfterDistance {
 					err := pGraph.IGraph.MarkVertexAsBad(Vertex{k})
 					if err != nil {
 						return err
@@ -205,18 +207,18 @@ func (pGraph *PermanentInducedGraph) CreateReducedWithDistance(vToRemove, v1, v2
 		// if a new vertex is added, we check, going from it, which can be marked as bad
 		// we only need to do this from the currently added vertex, because the search from the
 		// others has already been done and the results can not change.
-		err := pGraph.MarkBadWithBfs(vToRemove, 2)
-		if err != nil {
-			return nil, err
-		}
 	}
 	if v2.Id >= 0 {
 		_ = newPGraph.PermanentVertices.AddVertex(v2)
 		// this is the only change to the other function CreateReduced
-		err := pGraph.MarkBadWithBfs(vToRemove, 2)
-		if err != nil {
-			return nil, err
-		}
+	}
+	err = pGraph.MarkBadWithBfs(v1, 2)
+	if err != nil {
+		return nil, err
+	}
+	err = pGraph.MarkBadWithBfs(v2, 2)
+	if err != nil {
+		return nil, err
 	}
 
 	return &newPGraph, nil
