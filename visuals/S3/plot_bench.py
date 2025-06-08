@@ -8,7 +8,7 @@ metric_map = {
     "ClosenessCentralityAll": "ClosenessCentralityAll",
     "PowerClosenessCentralityAll": "PowerClosenessCentralityAll",
     "ExponentialClosenessCentralityAll": "OrganDonorCentrality",
-    "PowerIteration": "PowerIteration",
+    "PowerIteration": "PowerIteration (10k iterations)",
 }
 
 # Container for parsed records

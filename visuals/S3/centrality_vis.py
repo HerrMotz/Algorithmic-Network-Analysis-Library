@@ -193,11 +193,11 @@ measure_files = {
      #'Eigenvector': 'centrality_ranking/eigenvector_ranking.csv',
      #'MyMeasure': 'centrality_ranking/mymeasure_ranking.csv',
 }
-plot_kendall_heatmap(measure_files, 'kendall_heatmap_jena.png')
+plot_kendall_heatmap(measure_files, 'kendall_heatmap_erdos.png')
 
 # Scatter nur zwischen zwei measures möglich, denke da reicht es, wenn ich nur das für erdos mache (oder Straßennetz, wenn ihr das möchtet)
 # plot_rank_scatter('centrality_ranking/degree_ranking.csv', 'centrality_ranking/closeness_ranking.csv', 'Degree', 'Closeness', 'degree_vs_closeness_scatter.png')
 
 # genauso für Netzwerkanzeige 
-plot_network_with_color_and_size('../../exampleGraphs/jena_road_unfolded_50.edgelist', 'centrality_ranking/exponential_closeness_ranking.csv', 'network_ExpoC.png', 'Organ Donor Centrality')
+#plot_network_with_color_and_size('../../exampleGraphs/jena_road_unfolded_50.edgelist', 'centrality_ranking/exponential_closeness_ranking.csv', 'network_ExpoC.png', 'Organ Donor Centrality')
 
