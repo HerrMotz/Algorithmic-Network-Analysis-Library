@@ -15,41 +15,41 @@ type PermanentInducedGraph struct {
 	PermanentVertices VertexSet
 }
 
-func (igraph *InducedGraph) Size() int {
-	return igraph.GoodVertices.Size()
+func (iGraph *InducedGraph) Size() int {
+	return iGraph.GoodVertices.Size()
 }
 
-func (igraph *InducedGraph) RemoveVertex(v Vertex) error {
-	return igraph.MarkVertexAsBad(v)
+func (iGraph *InducedGraph) RemoveVertex(v Vertex) error {
+	return iGraph.MarkVertexAsBad(v)
 }
 
-func (igraph *InducedGraph) MarkVertexAsBad(v Vertex) error {
+func (iGraph *InducedGraph) MarkVertexAsBad(v Vertex) error {
 	// marks vertex v as bad in the induced graph
-	if igraph.AdjList == nil || igraph.GoodVertices == nil {
+	if iGraph.AdjList == nil || iGraph.GoodVertices == nil {
 		return errors.New("induced graph is not initialized")
 	}
-	if !igraph.GoodVertices.HasVertex(v) {
+	if !iGraph.GoodVertices.HasVertex(v) {
 		return errors.New(fmt.Sprintf("Vertex %v does not exist", v))
 	}
 
 	// Remove vertex from GoodVertices
-	igraph.GoodVertices.RemoveVertex(v)
+	iGraph.GoodVertices.RemoveVertex(v)
 
 	// Remove vertex from AdjList
-	igraph.AdjList = igraph.AdjList.RemoveVertexCopy(v)
+	iGraph.AdjList = iGraph.AdjList.RemoveVertexCopy(v)
 	return nil
 }
 
-func (igraph *InducedGraph) Neighbours(v Vertex) (VertexSet, error) {
+func (iGraph *InducedGraph) Neighbours(v Vertex) (VertexSet, error) {
 	// returns the neighbours of vertex v in the induced graph
-	if igraph.AdjList == nil || igraph.GoodVertices == nil {
+	if iGraph.AdjList == nil || iGraph.GoodVertices == nil {
 		return nil, errors.New("induced graph is not initialized")
 	}
-	if !igraph.GoodVertices.HasVertex(v) {
+	if !iGraph.GoodVertices.HasVertex(v) {
 		return nil, errors.New(fmt.Sprintf("Vertex %v does not exist", v))
 	}
 
-	neighbours, err := igraph.AdjList.Neighbours(v)
+	neighbours, err := iGraph.AdjList.Neighbours(v)
 	if err != nil {
 		return nil, err
 	}
@@ -57,9 +57,9 @@ func (igraph *InducedGraph) Neighbours(v Vertex) (VertexSet, error) {
 	neighbours = neighbours.Copy()
 
 	// Filter neighbours to only include those that are in GoodVertices
-	if igraph.GoodVertices.Size() < igraph.AdjList.Size { // only check if node set is smaller than the original graph
+	if iGraph.GoodVertices.Size() < iGraph.AdjList.Size { // only check if node set is smaller than the original graph
 		for k := range neighbours {
-			if !igraph.GoodVertices.HasVertex(Vertex{k}) {
+			if !iGraph.GoodVertices.HasVertex(Vertex{k}) {
 				neighbours.RemoveVertex(Vertex{k})
 			}
 		}
@@ -67,23 +67,23 @@ func (igraph *InducedGraph) Neighbours(v Vertex) (VertexSet, error) {
 	return neighbours, nil
 }
 
-func (igraph *InducedGraph) HasVertex(v Vertex) bool {
-	if igraph.GoodVertices == nil {
+func (iGraph *InducedGraph) HasVertex(v Vertex) bool {
+	if iGraph.GoodVertices == nil {
 		return false
 	}
-	return igraph.GoodVertices.HasVertex(v)
+	return iGraph.GoodVertices.HasVertex(v)
 }
 
-func (igraph *InducedGraph) Degree(v Vertex) (int, error) {
+func (iGraph *InducedGraph) Degree(v Vertex) (int, error) {
 	// returns the degree of vertex v in the induced graph
-	if igraph.AdjList == nil || igraph.GoodVertices == nil {
+	if iGraph.AdjList == nil || iGraph.GoodVertices == nil {
 		return 0, errors.New("induced graph is not initialized")
 	}
-	if !igraph.GoodVertices.HasVertex(v) {
+	if !iGraph.GoodVertices.HasVertex(v) {
 		return 0, errors.New(fmt.Sprintf("Vertex %v does not exist", v))
 	}
 
-	neighbours, err := igraph.Neighbours(v)
+	neighbours, err := iGraph.Neighbours(v)
 	if err != nil {
 		return 0, err
 	}
@@ -93,22 +93,22 @@ func (igraph *InducedGraph) Degree(v Vertex) (int, error) {
 // CreateReduced returns a new InducedGraph that shares the same
 // AdjList as igraph but whose GoodVertices set has been copied, filtered
 // and with vToRemove removed. The original igraph is not modified.
-func (igraph *InducedGraph) CreateReduced(
+func (iGraph *InducedGraph) CreateReduced(
 	vToRemove Vertex,
 ) (*InducedGraph, error) {
-	if igraph.AdjList == nil || igraph.GoodVertices == nil {
+	if iGraph.AdjList == nil || iGraph.GoodVertices == nil {
 		return nil, errors.New("induced graph is not initialized")
 	}
-	if !igraph.GoodVertices.HasVertex(vToRemove) {
+	if !iGraph.GoodVertices.HasVertex(vToRemove) {
 		return nil, fmt.Errorf("vertex %v does not exist in good vertices", vToRemove)
 	}
 
 	// Copy the GoodVertices set and remove the specified vertex
-	newGood := igraph.GoodVertices.CopyAndRemoveVertex(vToRemove)
+	newGood := iGraph.GoodVertices.CopyAndRemoveVertex(vToRemove)
 
 	// Return a brand-new InducedGraph sharing the same AdjList
 	return &InducedGraph{
-		AdjList:      igraph.AdjList,
+		AdjList:      iGraph.AdjList,
 		GoodVertices: newGood,
 	}, nil
 }
@@ -116,12 +116,12 @@ func (igraph *InducedGraph) CreateReduced(
 // CreateReduced combines the necessary steps of PGraph and IGraph to create a new
 // PermanentInducedGraph that shares the same AdjList as pgraph.IGraph but
 // where vToRemove is removed from the GoodVertices set.
-func (pgraph *PermanentInducedGraph) CreateReduced(vToRemove, v1, v2 Vertex) (*PermanentInducedGraph, error) {
-	if pgraph.IGraph.AdjList == nil || pgraph.IGraph.GoodVertices == nil {
+func (pGraph *PermanentInducedGraph) CreateReduced(vToRemove, v1, v2 Vertex) (*PermanentInducedGraph, error) {
+	if pGraph.IGraph.AdjList == nil || pGraph.IGraph.GoodVertices == nil {
 		return nil, errors.New("permanent induced graph is not initialized")
 	}
 
-	rGraph, err := pgraph.IGraph.CreateReduced(vToRemove)
+	rGraph, err := pGraph.IGraph.CreateReduced(vToRemove)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create reduced graph: %w", err)
 	}
@@ -129,7 +129,7 @@ func (pgraph *PermanentInducedGraph) CreateReduced(vToRemove, v1, v2 Vertex) (*P
 	// Create a new PermanentInducedGraph with the reduced InducedGraph
 	newPGraph := PermanentInducedGraph{
 		IGraph:            *rGraph,
-		PermanentVertices: pgraph.PermanentVertices.Copy(),
+		PermanentVertices: pGraph.PermanentVertices.Copy(),
 	}
 
 	if v1.Id >= 0 {

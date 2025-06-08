@@ -34,9 +34,9 @@ func (l *AdjList) RemoveVertexCopy(v Vertex) *AdjList {
 
 // FirstBestDegree returns the first node with a degree lower than d or returns 0 and true
 // if none of the nodes has degree <= d, then the Graph is a 2-plex
-func (igraph *InducedGraph) FirstBestDegree(d int) (Vertex, bool) {
-	for i := range igraph.GoodVertices {
-		cmp, err := igraph.Degree(Vertex{i})
+func (iGraph *InducedGraph) FirstBestDegree(d int) (Vertex, bool) {
+	for i := range iGraph.GoodVertices {
+		cmp, err := iGraph.Degree(Vertex{i})
 
 		if err != nil {
 			continue
@@ -49,13 +49,13 @@ func (igraph *InducedGraph) FirstBestDegree(d int) (Vertex, bool) {
 }
 
 // NotAdjacent returns two vertices not adjacent to u and not u
-func (igraph *InducedGraph) NotAdjacent(u Vertex) (Vertex, Vertex, error) {
-	neigh, err := igraph.Neighbours(u)
+func (iGraph *InducedGraph) NotAdjacent(u Vertex) (Vertex, Vertex, error) {
+	neigh, err := iGraph.Neighbours(u)
 	if err != nil {
 		return Vertex{-1}, Vertex{-1}, fmt.Errorf("failed to get neighbours of vertex %v: %w", u, err)
 	}
 	found := make([]int, 0, 2)
-	for v := range igraph.GoodVertices {
+	for v := range iGraph.GoodVertices {
 		if v == u.Id {
 			continue // skip the vertex itself
 		}
@@ -70,14 +70,14 @@ func (igraph *InducedGraph) NotAdjacent(u Vertex) (Vertex, Vertex, error) {
 }
 
 // TwoPlexNaive implements the naive algorithm
-func (igraph *InducedGraph) TwoPlexNaive() (VertexSet, error) {
-	n := igraph.Size()
-	u, isTwoPlex := igraph.FirstBestDegree(n - 2)
+func (iGraph *InducedGraph) TwoPlexNaive() (VertexSet, error) {
+	n := iGraph.Size()
+	u, isTwoPlex := iGraph.FirstBestDegree(n - 2)
 	if isTwoPlex {
-		return igraph.GoodVertices, nil
+		return iGraph.GoodVertices, nil
 	}
 
-	v, w, err := igraph.NotAdjacent(u)
+	v, w, err := iGraph.NotAdjacent(u)
 	if err != nil {
 		// this can usually not occur, else it would have been a 2-plex
 		return nil, err
@@ -86,19 +86,19 @@ func (igraph *InducedGraph) TwoPlexNaive() (VertexSet, error) {
 	// we need three new copies of InducedGraph, but the
 	// reference to AdjList must stay the same so it does not get copied
 
-	H引くu, err1A := igraph.CreateReduced(u) // add no permanent vertex to set
+	H引くu, err1A := iGraph.CreateReduced(u) // add no permanent vertex to set
 	R1, err1B := H引くu.TwoPlexNaive()
 	if err1A != nil || err1B != nil {
 		return nil, fmt.Errorf("failed to make recursion step: CreateReduced(%v), TwoPlexPermanent(%v)", err1A, err1B)
 	}
 
-	H引くv, err2A := igraph.CreateReduced(v) // add u as permanent vertex
+	H引くv, err2A := iGraph.CreateReduced(v) // add u as permanent vertex
 	R2, err2B := H引くv.TwoPlexNaive()
 	if err2A != nil || err2B != nil {
 		return nil, fmt.Errorf("failed to make recursion step: CreateReduced(%v), TwoPlexPermanent(%v)", err2A, err2B)
 	}
 
-	H引くw, err3A := igraph.CreateReduced(w) // add u and v as permanent vertices
+	H引くw, err3A := iGraph.CreateReduced(w) // add u and v as permanent vertices
 	R3, err3B := H引くw.TwoPlexNaive()
 	if err3A != nil || err3B != nil {
 		return nil, fmt.Errorf("failed to make recursion step: CreateReduced(%v), TwoPlexPermanent(%v)", err3A, err3B)
@@ -121,14 +121,14 @@ func (igraph *InducedGraph) TwoPlexNaive() (VertexSet, error) {
 // TwoPlexNaiveParallel explores the three recursive branches concurrently.
 // depth is the current recursion level; it lets us stop spawning new
 // goroutines once we are “deep enough” to keep the goroutine count in check.
-func (igraph *InducedGraph) TwoPlexNaiveParallel() (VertexSet, error) {
-	n := igraph.Size()
-	u, isTwoPlex := igraph.FirstBestDegree(n - 2)
+func (iGraph *InducedGraph) TwoPlexNaiveParallel() (VertexSet, error) {
+	n := iGraph.Size()
+	u, isTwoPlex := iGraph.FirstBestDegree(n - 2)
 	if isTwoPlex {
-		return igraph.GoodVertices, nil
+		return iGraph.GoodVertices, nil
 	}
 
-	v, w, err := igraph.NotAdjacent(u)
+	v, w, err := iGraph.NotAdjacent(u)
 	if err != nil {
 		return nil, err
 	}
@@ -146,19 +146,19 @@ func (igraph *InducedGraph) TwoPlexNaiveParallel() (VertexSet, error) {
 	wg.Add(3)
 	go func() {
 		defer wg.Done()
-		H引くu, errA := igraph.CreateReduced(u)
+		H引くu, errA := iGraph.CreateReduced(u)
 		set, errB := H引くu.TwoPlexNaiveParallel()
 		results[0] = result{set, errA, errB}
 	}()
 	go func() {
 		defer wg.Done()
-		H引くv, errA := igraph.CreateReduced(v)
+		H引くv, errA := iGraph.CreateReduced(v)
 		set, errB := H引くv.TwoPlexNaiveParallel()
 		results[1] = result{set, errA, errB}
 	}()
 	go func() {
 		defer wg.Done()
-		H引くw, errA := igraph.CreateReduced(w)
+		H引くw, errA := iGraph.CreateReduced(w)
 		set, errB := H引くw.TwoPlexNaiveParallel()
 		results[2] = result{set, errA, errB}
 	}()
@@ -184,9 +184,9 @@ func (igraph *InducedGraph) TwoPlexNaiveParallel() (VertexSet, error) {
 	return results[maxIdx].set, nil
 }
 
-func runTwoPlexIf(pgraph *PermanentInducedGraph, testVertex Vertex, p1 Vertex, p2 Vertex) (VertexSet, error) {
-	if !pgraph.PermanentVertices.HasVertex(testVertex) {
-		reduced, errA := pgraph.CreateReduced(testVertex, p1, p2)
+func runTwoPlexIf(pGraph *PermanentInducedGraph, testVertex Vertex, p1 Vertex, p2 Vertex) (VertexSet, error) {
+	if !pGraph.PermanentVertices.HasVertex(testVertex) {
+		reduced, errA := pGraph.CreateReduced(testVertex, p1, p2)
 		result, errB := reduced.TwoPlexPermanent()
 		if errA != nil || errB != nil {
 			return nil, fmt.Errorf("failed to make recursion step: CreateReduced(%v), TwoPlexPermanent(%v)", errA, errB)
@@ -206,14 +206,14 @@ var noV = Vertex{-1} // use -1 to indicate no vertex
 //  - Remove nodes with at most degree of n*-2
 
 // TwoPlexPermanent implements the algorithm with permanent set
-func (pgraph *PermanentInducedGraph) TwoPlexPermanent() (VertexSet, error) {
-	n := pgraph.IGraph.Size()
-	u, isTwoPlex := pgraph.IGraph.FirstBestDegree(n - 2)
+func (pGraph *PermanentInducedGraph) TwoPlexPermanent() (VertexSet, error) {
+	n := pGraph.IGraph.Size()
+	u, isTwoPlex := pGraph.IGraph.FirstBestDegree(n - 2)
 	if isTwoPlex {
-		return pgraph.IGraph.GoodVertices, nil
+		return pGraph.IGraph.GoodVertices, nil
 	}
 
-	v, w, err := pgraph.IGraph.NotAdjacent(u)
+	v, w, err := pGraph.IGraph.NotAdjacent(u)
 	if err != nil {
 		// this can usually not occur, else it would have been a 2-plex
 		return nil, err
@@ -222,30 +222,30 @@ func (pgraph *PermanentInducedGraph) TwoPlexPermanent() (VertexSet, error) {
 	// special case: if u, v, w are all in the permanent vertex set,
 	// then we can return a trivial 2-Plex. If there is a larger 2-Plex,
 	// it will be found in the other recursive calls.
-	if pgraph.PermanentVertices.HasVertex(u) &&
-		pgraph.PermanentVertices.HasVertex(v) &&
-		pgraph.PermanentVertices.HasVertex(w) {
+	if pGraph.PermanentVertices.HasVertex(u) &&
+		pGraph.PermanentVertices.HasVertex(v) &&
+		pGraph.PermanentVertices.HasVertex(w) {
 		return VertexSet{0: Naught{}, 1: Naught{}}, nil
 	}
 
 	var results = make([]VertexSet, 0, 3)
 
 	// only call to u if it is not in the permanent vertex set
-	if r, err := runTwoPlexIf(pgraph, u, noV, noV); err != nil { // noV means "no vertex"
+	if r, err := runTwoPlexIf(pGraph, u, noV, noV); err != nil { // noV means "no vertex"
 		return nil, fmt.Errorf("failed to make recursion step: runTwoPlexIf(%v, %v, %v): %w", u, noV, noV, err)
 	} else if r != nil {
 		results = append(results, r)
 	}
 
 	// only call to v if it is not in the permanent vertex set
-	if r, err := runTwoPlexIf(pgraph, v, u, noV); err != nil {
+	if r, err := runTwoPlexIf(pGraph, v, u, noV); err != nil {
 		return nil, fmt.Errorf("failed to make recursion step: runTwoPlexIf(%v, %v, %v): %w", v, u, noV, err)
 	} else if r != nil {
 		results = append(results, r)
 	}
 
 	// same for w
-	if r, err := runTwoPlexIf(pgraph, w, u, v); err != nil {
+	if r, err := runTwoPlexIf(pGraph, w, u, v); err != nil {
 		return nil, fmt.Errorf("failed to make recursion step: runTwoPlexIf(%v, %v, %v): %w", w, u, v, err)
 	} else if r != nil {
 		results = append(results, r)
@@ -258,6 +258,94 @@ func (pgraph *PermanentInducedGraph) TwoPlexPermanent() (VertexSet, error) {
 	// Find the largest node count
 	maxIdx := 0
 	maxNodes := len(results[0])
+	for i := 1; i < len(results); i++ {
+		nodes := results[i].Size()
+		if nodes > maxNodes {
+			maxIdx = i
+			maxNodes = nodes
+		}
+	}
+	return results[maxIdx], nil
+}
+
+func (pGraph *PermanentInducedGraph) TwoPlexPermanentParallel() (VertexSet, error) {
+	n := pGraph.IGraph.Size()
+	u, isTwoPlex := pGraph.IGraph.FirstBestDegree(n - 2)
+	if isTwoPlex {
+		return pGraph.IGraph.GoodVertices, nil
+	}
+
+	v, w, err := pGraph.IGraph.NotAdjacent(u)
+	if err != nil {
+		return nil, err
+	}
+
+	if pGraph.PermanentVertices.HasVertex(u) &&
+		pGraph.PermanentVertices.HasVertex(v) &&
+		pGraph.PermanentVertices.HasVertex(w) {
+		return VertexSet{0: Naught{}, 1: Naught{}}, nil
+	}
+
+	type plexResult struct {
+		result VertexSet
+		err    error
+	}
+
+	var results []VertexSet
+	resultCh := make(chan plexResult, 3)
+
+	calls := []struct {
+		vertex, block1, block2 Vertex
+	}{
+		{u, noV, noV},
+		{v, u, noV},
+		{w, u, v},
+	}
+
+	launchCount := 0
+	for _, call := range calls {
+		if !pGraph.PermanentVertices.HasVertex(call.vertex) {
+			// this does the same as runTwoPlexIf,
+			// but we want the information whether the branch is going to be launched,
+			// and we can reduce one call by expliciting it here.
+			launchCount++
+			go func(vertex, block1, block2 Vertex) {
+				reduced, errA := pGraph.CreateReduced(vertex, block1, block2)
+				if errA != nil {
+					resultCh <- plexResult{result: nil, err: errA}
+				}
+				r, errB := reduced.TwoPlexPermanent()
+				if errB != nil {
+					resultCh <- plexResult{result: nil, err: errA}
+				}
+				resultCh <- plexResult{result: r, err: err}
+			}(call.vertex, call.block1, call.block2)
+		}
+	}
+
+	var firstErr error
+	// Always collect all results, even if we encounter an error.
+	for i := 0; i < launchCount; i++ {
+		res := <-resultCh
+		if res.err != nil && firstErr == nil {
+			firstErr = res.err // record first error
+		}
+		if res.result != nil {
+			results = append(results, res.result)
+		}
+	}
+	close(resultCh) // Not strictly necessary here, but good practice
+
+	if firstErr != nil {
+		return nil, fmt.Errorf("failed to make recursion step: %w", firstErr)
+	}
+	if len(results) == 0 {
+		return nil, fmt.Errorf("no 2-Plex found")
+	}
+
+	// Find the largest
+	maxIdx := 0
+	maxNodes := results[0].Size()
 	for i := 1; i < len(results); i++ {
 		nodes := results[i].Size()
 		if nodes > maxNodes {

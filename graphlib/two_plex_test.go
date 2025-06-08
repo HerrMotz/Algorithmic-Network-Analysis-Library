@@ -131,3 +131,25 @@ func BenchmarkPermanentInducedGraph_TwoPlexPermanent(b *testing.B) {
 		b.Fatalf("BenchmarkPermanentInducedGraph_TwoPlexPermanent: unexpected error %v", err)
 	}
 }
+
+func BenchmarkInducedGraph_TwoPlexPermanentParallel(b *testing.B) {
+	H, err := ReadGraphAdjList("../exampleGraphs/metis_4elt.mgraph", false)
+	if err != nil {
+		b.Fatalf("failed to read erdos graph: %v", err)
+	}
+	// create vertex set from H
+	GoodVertices := make(VertexSet, H.Size)
+	for v := 0; v < H.Size; v++ {
+		GoodVertices[v] = Naught{}
+	}
+	pGraph := PermanentInducedGraph{InducedGraph{AdjList: H, GoodVertices: GoodVertices}, VertexSet{}}
+	plex, err := pGraph.TwoPlexPermanentParallel()
+	if plex != nil {
+		b.Logf("PermanentInducedGraph_TwoPlexPermanent: %v", plex.Size())
+	} else {
+		b.Fatalf("PermanentInducedGraph_TwoPlexPermanent: No plex returned!")
+	}
+	if err != nil {
+		b.Fatalf("BenchmarkInducedGraph_TwoPlexNaive: unexpected error %v", err)
+	}
+}
