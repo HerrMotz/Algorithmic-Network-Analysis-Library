@@ -1,6 +1,7 @@
 package graphlib
 
 import (
+	"container/heap"
 	"fmt"
 	"sync"
 )
@@ -49,6 +50,57 @@ func (iGraph *InducedGraph) FirstBestDegree(d int) (Vertex, bool) {
 	return Vertex{0}, true // the graph is a 2-plex
 }
 
+type VertexDegree struct {
+	Vertex Vertex // your Vertex type
+	Degree int
+}
+
+type PriorityQueue []VertexDegree
+
+func (pq *PriorityQueue) Len() int           { return len(*pq) }
+func (pq *PriorityQueue) Less(i, j int) bool { return (*pq)[i].Degree < (*pq)[j].Degree }
+func (pq *PriorityQueue) Swap(i, j int)      { (*pq)[i], (*pq)[j] = (*pq)[j], (*pq)[i] }
+func (pq *PriorityQueue) Push(x interface{}) { *pq = append(*pq, x.(VertexDegree)) }
+func (pq *PriorityQueue) Pop() interface{} {
+	old := *pq
+	n := len(old)
+	item := old[n-1]
+	*pq = old[0 : n-1]
+	return item
+}
+
+// MinBestDegree returns the node with the minimal degree < d,
+// or (0, true) if all nodes have degree >= d (i.e., the graph is a 2-plex)
+//
+//	Todo: Add a 2-plex algorithm which uses this function
+func (iGraph *InducedGraph) MinBestDegree(d int) (Vertex, bool) {
+	pq := make(PriorityQueue, 0, len(iGraph.GoodVertices))
+
+	// Build the priority queue
+	for i := range iGraph.GoodVertices {
+		deg, err := iGraph.Degree(Vertex{i})
+		if err != nil {
+			continue // skip nodes with error
+		}
+		pq = append(pq, VertexDegree{Vertex: Vertex{i}, Degree: deg})
+	}
+	if len(pq) == 0 {
+		return Vertex{0}, true
+	}
+
+	heap.Init(&pq)
+
+	// Extract the minimal-degree node < d
+	for pq.Len() > 0 {
+		vd := heap.Pop(&pq).(VertexDegree)
+		if vd.Degree < d {
+			return vd.Vertex, false
+		}
+	}
+	// No node with degree < d found
+	return noV, true
+}
+
 // NotAdjacent returns two vertices not adjacent to u and not u
 func (iGraph *InducedGraph) NotAdjacent(u Vertex) (Vertex, Vertex, error) {
 	neigh, err := iGraph.Neighbours(u)
@@ -62,6 +114,40 @@ func (iGraph *InducedGraph) NotAdjacent(u Vertex) (Vertex, Vertex, error) {
 		}
 		if _, ok := neigh[v]; !ok {
 			found = append(found, v)
+			if len(found) == 2 {
+				return Vertex{found[0]}, Vertex{found[1]}, nil
+			}
+		}
+	}
+	return Vertex{-1}, Vertex{-1}, fmt.Errorf("not enough non-neighbors")
+}
+
+// NotAdjacentWithDistanceTwo returns two vertices not adjacent to u and not u
+// and have a maximal distance of 2 to u
+func (iGraph *InducedGraph) NotAdjacentWithDistanceTwo(u Vertex) (Vertex, Vertex, error) {
+	neigh1, err := iGraph.Neighbours(u)
+	if err != nil {
+		return Vertex{-1}, Vertex{-1}, fmt.Errorf("failed to get neighbours of vertex %v: %w", u, err)
+	}
+	found := make([]int, 0, 2)
+
+	visited := make(map[int]bool, iGraph.Size())
+	visited[u.Id] = true
+
+	for n1 := range neigh1 {
+		visited[n1] = true
+	}
+
+	for n1 := range visited {
+		neigh2, err := iGraph.Neighbours(Vertex{n1})
+		// todo maybe a priority queue, but not that essential
+		if err != nil {
+			return Vertex{-1}, Vertex{-1}, fmt.Errorf("failed to get neighbours of vertex %v: %w", Vertex{n1}, err)
+		}
+		for n2 := range neigh2 {
+			if !visited[n2] {
+				found = append(found, n1)
+			}
 			if len(found) == 2 {
 				return Vertex{found[0]}, Vertex{found[1]}, nil
 			}
@@ -212,7 +298,7 @@ var noV = Vertex{-1} // use -1 to indicate no vertex
 // TwoPlexPermanent implements the algorithm with permanent set
 func (pGraph *PermanentInducedGraph) TwoPlexPermanent() (VertexSet, error) {
 	n := pGraph.IGraph.Size()
-	u, isTwoPlex := pGraph.IGraph.FirstBestDegree(n - 2)
+	u, isTwoPlex := pGraph.IGraph.MinBestDegree(n - 2)
 	if isTwoPlex {
 		return pGraph.IGraph.GoodVertices, nil
 	}
@@ -274,7 +360,7 @@ func (pGraph *PermanentInducedGraph) TwoPlexPermanent() (VertexSet, error) {
 
 func (pGraph *PermanentInducedGraph) TwoPlexPermanentParallel() (VertexSet, error) {
 	n := pGraph.IGraph.Size()
-	u, isTwoPlex := pGraph.IGraph.FirstBestDegree(n - 2)
+	u, isTwoPlex := pGraph.IGraph.MinBestDegree(n - 2)
 	if isTwoPlex {
 		return pGraph.IGraph.GoodVertices, nil
 	}
