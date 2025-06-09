@@ -354,7 +354,7 @@ func _runTwoPlexIfDistanceHelper(pGraph *PermanentInducedGraph, vToRemove Vertex
 		reduced, errA := pGraph.CreateReducedWithDistance(vToRemove, p1, p2)
 		// ↑ changed line!
 		if errA != nil {
-			return nil, fmt.Errorf("failed to make recursion step: CreateReducedWithDistance(%v): %w", vToRemove, errA)
+			return nil, fmt.Errorf("failed to make recursion step: CreateReducedWithDistance(%v, %v, %v): %w", vToRemove, p1, p2, errA)
 		}
 		result, errB := reduced.TwoPlexDistance() // oh I forgot - this one changed as well.
 		if errB != nil {

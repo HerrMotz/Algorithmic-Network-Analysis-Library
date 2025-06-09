@@ -20,16 +20,16 @@ func (iGraph *InducedGraph) Size() int {
 }
 
 func (iGraph *InducedGraph) RemoveVertex(v Vertex) error {
-	return iGraph.MarkVertexAsBad(v)
+	return iGraph.MarkBad(v)
 }
 
-func (iGraph *InducedGraph) MarkVertexAsBad(v Vertex) error {
+func (iGraph *InducedGraph) MarkBad(v Vertex) error {
 	// marks vertex v as bad in the induced graph
 	if iGraph.AdjList == nil || iGraph.GoodVertices == nil {
 		return errors.New("induced graph is not initialized")
 	}
 	if !iGraph.GoodVertices.HasVertex(v) {
-		return errors.New(fmt.Sprintf("Vertex %v does not exist", v))
+		return errors.New(fmt.Sprintf("MarkBad: Vertex %v does not exist", v))
 	}
 
 	// Remove vertex from GoodVertices
@@ -46,7 +46,7 @@ func (iGraph *InducedGraph) Neighbours(v Vertex) (VertexSet, error) {
 		return nil, errors.New("induced graph is not initialized")
 	}
 	if !iGraph.GoodVertices.HasVertex(v) {
-		return nil, errors.New(fmt.Sprintf("Vertex %v does not exist", v))
+		return nil, errors.New(fmt.Sprintf("Nghbrs: Vertex %v does not exist", v))
 	}
 
 	neighbours, err := iGraph.AdjList.Neighbours(v)
@@ -80,7 +80,7 @@ func (iGraph *InducedGraph) Degree(v Vertex) (int, error) {
 		return 0, errors.New("induced graph is not initialized")
 	}
 	if !iGraph.GoodVertices.HasVertex(v) {
-		return 0, errors.New(fmt.Sprintf("Vertex %v does not exist", v))
+		return 0, errors.New(fmt.Sprintf("Deg: Vertex %v does not exist", v))
 	}
 
 	neighbours, err := iGraph.Neighbours(v)
@@ -100,7 +100,7 @@ func (iGraph *InducedGraph) CreateReduced(
 		return nil, errors.New("induced graph is not initialized")
 	}
 	if !iGraph.GoodVertices.HasVertex(vToRemove) {
-		return nil, fmt.Errorf("vertex %v does not exist in good vertices", vToRemove)
+		return nil, fmt.Errorf("CrRed: vertex %v does not exist in good vertices", vToRemove)
 	}
 
 	// Copy the GoodVertices set and remove the specified vertex
@@ -157,6 +157,7 @@ func (pGraph *PermanentInducedGraph) MarkBadWithBfs(source Vertex, markBadAfterD
 	visited[source.Id] = true
 
 	queue.enqueue(source.Id)
+	markAsBad := make([]int, size-2)
 
 	for queue.size > 0 {
 		v := queue.pop()
@@ -173,12 +174,15 @@ func (pGraph *PermanentInducedGraph) MarkBadWithBfs(source Vertex, markBadAfterD
 				dist[k] = dist[v] + 1
 				// Mark the vertex as bad in the InducedGraph if the distance is larger than markBadAfterDistance
 				if dist[k] > markBadAfterDistance {
-					err := pGraph.IGraph.MarkVertexAsBad(Vertex{k})
-					if err != nil {
-						return err
-					}
+					markAsBad = append(markAsBad, k)
 				}
 			}
+		}
+	}
+
+	for i := range markAsBad {
+		if err := pGraph.IGraph.MarkBad(Vertex{i}); err != nil {
+			return fmt.Errorf("failed to mark vertex %d as bad: %w", i, err)
 		}
 	}
 	return nil
