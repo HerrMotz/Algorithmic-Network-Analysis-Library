@@ -477,7 +477,29 @@ func (pGraph *PermanentInducedGraph) TwoPlexDistance() (VertexSet, error) {
 		return pGraph.IGraph.GoodVertices, nil
 	}
 
+	var results = make([]VertexSet, 0, 3)
+
+	// branch on u even if there are not two vertices with distance two to it
+	// only call to u if it is not in the permanent vertex set
+	if r, err := _runTwoPlexIfDistanceHelper(pGraph, u, noV, noV); err != nil { // noV means "no vertex"
+		return nil, fmt.Errorf("failed to make recursion step: _runTwoPlexIfDistanceHelper(%v, %v, %v): %w", u, noV, noV, err)
+	} else if r != nil {
+		results = append(results, r)
+	}
+
 	v, w, err := pGraph.IGraph.NotAdjacentWithDistanceTwo(u)
+	if err != nil {
+		// if NotAdjacentWithDistanceTwo(u) encounters an error (it couldn't find
+		// two vertices v and w), return the 2-plex from the H-u branch.
+		if len(results) > 0 {
+			return results[0], nil
+		}
+		// Otherwise, propagate the error as before.
+		return nil, err
+	}
+
+	//old code that didn't return the result from the u-branch
+	/*v, w, err := pGraph.IGraph.NotAdjacentWithDistanceTwo(u)
 	if err != nil {
 		if v == specialNoV { // isolated vertex, 2 plex of size 1
 			return VertexSet{0: Naught{}}, nil
@@ -485,7 +507,7 @@ func (pGraph *PermanentInducedGraph) TwoPlexDistance() (VertexSet, error) {
 			return VertexSet{v.Id: Naught{}, w.Id: Naught{}}, nil
 		}
 		return nil, err
-	}
+	}*/
 
 	// special case: if u, v, w are all in the permanent vertex set,
 	// then we can return a trivial 2-Plex. If there is a larger 2-Plex,
@@ -494,15 +516,6 @@ func (pGraph *PermanentInducedGraph) TwoPlexDistance() (VertexSet, error) {
 		pGraph.PermanentVertices.HasVertex(v) &&
 		pGraph.PermanentVertices.HasVertex(w) {
 		return VertexSet{0: Naught{}, 1: Naught{}}, nil
-	}
-
-	var results = make([]VertexSet, 0, 3)
-
-	// only call to u if it is not in the permanent vertex set
-	if r, err := _runTwoPlexIfDistanceHelper(pGraph, u, noV, noV); err != nil { // noV means "no vertex"
-		return nil, fmt.Errorf("failed to make recursion step: _runTwoPlexIfDistanceHelper(%v, %v, %v): %w", u, noV, noV, err)
-	} else if r != nil {
-		results = append(results, r)
 	}
 
 	// only call to v if it is not in the permanent vertex set

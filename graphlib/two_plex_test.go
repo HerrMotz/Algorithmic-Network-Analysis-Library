@@ -84,13 +84,13 @@ func TestTwoPlexCorrectness(t *testing.T) {
 	// =========================
 	// Test PermanentInducedGraph.TwoPlexDistance
 	// =========================
-	/*plex, err = pGraph.TwoPlexDistance()
+	plex, err = pGraph.TwoPlexDistance()
 	if err != nil {
 		t.Fatalf("TwoPlexDistance unexpected error %v", err)
 	}
 	if !reflect.DeepEqual(wantPlex1, plex) {
 		t.Errorf("TwoPlexDistance: want %v got %v", wantPlex1, plex)
-	}*/
+	}
 
 }
 
