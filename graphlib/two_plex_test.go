@@ -78,6 +78,26 @@ func TestTwoPlexCorrectness(t *testing.T) {
 		t.Errorf("TwoPlexNaiveMinDegree: want %d got %d", wantPlex2, plex.Size())
 	}
 
+	// ================================
+	// Test TwoPlexNStar
+	// ================================
+	plex, err = iGraph1.TwoPlexNStar()
+	if err != nil {
+		t.Fatalf("TwoPlexNStar: unexpected error %v", err)
+	}
+
+	if !reflect.DeepEqual(wantPlex1, plex) {
+		t.Errorf("TwoPlexNStar: want %v got %v", wantPlex1, plex)
+	}
+
+	plex, err = iGraph2.TwoPlexNStar()
+	if err != nil {
+		t.Fatalf("TwoPlexNStar: unexpected error %v", err)
+	}
+	if plex.Size() != wantPlex2 {
+		t.Errorf("TwoPlexNStar: want %d got %d", wantPlex2, plex.Size())
+	}
+
 	// =========================
 	// Test TwoPlexNaiveParallel
 	// =========================

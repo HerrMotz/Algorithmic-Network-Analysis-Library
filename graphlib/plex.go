@@ -597,3 +597,152 @@ func (pGraph *PermanentInducedGraph) TwoPlexDistance() (VertexSet, error) {
 	}
 	return results[maxIdx], nil
 }
+
+// TwoPlexNStar implements the algorithm with storing the size (nStar) of the current biggest 2-plex found
+// initializes nStar := 0 and calls the recursive helper.
+func (iGraph *InducedGraph) TwoPlexNStar() (VertexSet, error) {
+	// declare a local variable for nStar and initialize it to 0.
+	initialNStar := 0
+
+	// Call the recursive helper function, passing the address of initialNStar.
+	// The helper function will modify initialNStar directly.
+	return iGraph.TwoPlexNStarRecursive(&initialNStar)
+}
+
+// TwoPlexNStarRecursive recursive function that performs the 2-plex finding
+// takes a pointer to nStar, allowing it to be updated globally across the recursion tree.
+// vertices with degree at most nStar - 2 are removed from the graph
+// cancel branches with at most nStar vertices
+func (iGraph *InducedGraph) TwoPlexNStarRecursive(nStarPtr *int) (VertexSet, error) { // nStarPtr is a pointer
+	n := iGraph.Size() // initial size
+
+	// initial size check:
+	if n <= *nStarPtr {
+		return VertexSet{}, nil // return an empty set, indicating no larger 2-plex found in this branch
+	}
+
+	// create a new VertexSet to hold the vertices that will remain in the graph after deleting these with a
+	//degree <= nStar - 2 (building a new GoodVertices set)
+	currentGoodVertices := iGraph.GoodVertices.Copy() // copy of the current good vertices
+
+	// iterate through all vertices in the current GoodVertices
+	for vertexID := range currentGoodVertices {
+		// calculate the degree of the vertex in the current induced graph
+		degree, err := iGraph.Degree(Vertex{vertexID})
+		if err != nil {
+			return nil, fmt.Errorf("error getting degree for vertex %d during simple pruning: %w", vertexID, err)
+		}
+		// if degree is too small, remove it.
+		if degree < *nStarPtr-1 {
+			// remove the vertex directly from the currentGoodVertices set
+			delete(currentGoodVertices, vertexID)
+		}
+	}
+
+	// update iGraph.GoodVertices to the new vertex set.
+	iGraph.GoodVertices = currentGoodVertices
+
+	n = iGraph.Size() // update graph size
+
+	// Re-check the graph size after deleting vertices
+	if n <= *nStarPtr {
+		return VertexSet{}, nil
+	}
+
+	u, isTwoPlex := iGraph.MinBestDegree(n - 2)
+	if isTwoPlex {
+		// if it's a 2-plex, check if it's larger than nStarPtr's value (it always should be...)
+		if iGraph.GoodVertices.Size() > *nStarPtr {
+			*nStarPtr = iGraph.GoodVertices.Size() // update global nStarPtr
+		}
+		return iGraph.GoodVertices, nil //return found 2-plex
+	}
+
+	v, w, err := iGraph.NotAdjacent(u)
+	if err != nil {
+		// This can usually not occur, else it would have been a 2-plex.
+		return nil, err
+	}
+
+	var results []VertexSet
+
+	// branch 1: exclude u
+	H引くu, err1A := iGraph.CreateReduced(u) // add no permanent vertex to set
+	if err1A != nil {
+		return nil, fmt.Errorf("failed to make recursion step: CreateReduced(exclude %v): %w", u, err1A)
+	}
+	// Only recurse if the reduced graph might contain a larger 2-plex than the current global nStar
+	if H引くu.Size() > *nStarPtr { // check against global nStar
+		R1, err1B := H引くu.TwoPlexNStarRecursive(nStarPtr) // pass the pointer down
+		if err1B != nil {
+			return nil, fmt.Errorf("failed to make recursion step: twoPlexNStarRecursive(exclude %v): %w", u, err1B)
+		}
+		if R1.Size() > 0 { // Only add if a valid 2-plex was found in this branch
+			results = append(results, R1)
+			// the global nStarPtr is updated inside the recursive call, but we re-check here for consistency if R1 itself is the new max.
+			if R1.Size() > *nStarPtr { // This check is mostly for clarity; the child call should have updated it.
+				*nStarPtr = R1.Size()
+			}
+		}
+	}
+
+	// branch 2: exclude v
+	H引くv, err2A := iGraph.CreateReduced(v) // add u as permanent vertex
+	if err2A != nil {
+		return nil, fmt.Errorf("failed to make recursion step: CreateReduced(exclude %v, permanent %v): %w", v, u, err2A)
+	}
+	// Only recurse if the reduced graph might contain a larger 2-plex than the current global nStar
+	if H引くv.Size() > *nStarPtr { // check against global nStar
+		R2, err2B := H引くv.TwoPlexNStarRecursive(nStarPtr)
+		if err2B != nil {
+			return nil, fmt.Errorf("failed to make recursion step: twoPlexNStarRecursive(exclude %v, permanent %v): %w", v, u, err2B)
+		}
+		if R2.Size() > 0 {
+			results = append(results, R2)
+			if R2.Size() > *nStarPtr {
+				*nStarPtr = R2.Size()
+			}
+		}
+	}
+
+	// branch 3: exclude w
+	H引くw, err3A := iGraph.CreateReduced(w) // Add u and v as permanent vertices (implies u and v are kept, w is excluded)
+	if err3A != nil {
+		return nil, fmt.Errorf("failed to make recursion step: CreateReduced(exclude %v, permanent %v, %v): %w", w, u, v, err3A)
+	}
+	// Only recurse if the reduced graph might contain a larger 2-plex than the current global nStar
+	if H引くw.Size() > *nStarPtr { // check against global nStar
+		R3, err3B := H引くw.TwoPlexNStarRecursive(nStarPtr)
+		if err3B != nil {
+			return nil, fmt.Errorf("failed to make recursion step: twoPlexNStarRecursive(exclude %v, permanent %v, %v): %w", w, u, v, err3B)
+		}
+		if R3.Size() > 0 {
+			results = append(results, R3)
+			if R3.Size() > *nStarPtr {
+				*nStarPtr = R3.Size()
+			}
+		}
+	}
+
+	if len(results) == 0 {
+		return VertexSet{}, nil
+	}
+
+	// find the largest node count among the current branch's results
+	maxIdx := 0
+	maxNodes := results[0].Size()
+	for i := 1; i < len(results); i++ {
+		nodes := results[i].Size()
+		if nodes > maxNodes {
+			maxIdx = i
+			maxNodes = nodes
+		}
+	}
+
+	// After finding the local maximum, update the global nStar if this local max is larger
+	if maxNodes > *nStarPtr {
+		*nStarPtr = maxNodes
+	}
+
+	return results[maxIdx], nil
+}
