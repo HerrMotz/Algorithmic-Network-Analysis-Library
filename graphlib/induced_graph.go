@@ -144,45 +144,45 @@ func (pGraph *PermanentInducedGraph) CreateReduced(vToRemove, v1, v2 Vertex) (*P
 	return &newPGraph, nil
 }
 
-func (pGraph *PermanentInducedGraph) MarkBadWithBfs(source Vertex, markBadAfterDistance int) error {
+// MarkBadAfterDistanceTwo Is basically the same code as NotAdjacentWithDistanceTwo,
+// but it works on the pGraph and looks from a permanent vertex and marks
+// all vertices that were not seen in distance-2-BFS as bad.
+// For that it iterates over the GoodVertices in the induced graph and marks
+// all unseen as bad.
+func (pGraph *PermanentInducedGraph) MarkBadAfterDistanceTwo(source Vertex) error {
 	if source == noV {
 		return nil
 	}
-	size := pGraph.IGraph.Size()
-	// set because the igraph may contain a subset which does not have consecutive ids
-	dist := make(map[int]int, size) // graph is connected, so no initialisation is necessary
-	dist[source.Id] = 0
-	queue := NewQueue[int](10)
-	visited := make(map[int]bool, size)
+	neigh1, err := pGraph.IGraph.Neighbours(source)
+	if err != nil {
+		return fmt.Errorf("failed to get neighbours of vertex %v: %w", source, err)
+	}
+
+	visited := make(map[int]bool, pGraph.IGraph.Size())
 	visited[source.Id] = true
 
-	queue.enqueue(source.Id)
-	markAsBad := make([]int, size-2)
+	for n1 := range neigh1 {
+		visited[n1] = true // distance 1 to u
+	}
 
-	for queue.size > 0 {
-		v := queue.pop()
-		// Iterate over all neighbours of v
-		neighbours, err := pGraph.IGraph.Neighbours(Vertex{v})
+	for n1 := range visited { // you can iterate over the slice and change it, because the loop uses a copy
+		neigh2, err := pGraph.IGraph.Neighbours(Vertex{n1}) // distance 2 to u
 		if err != nil {
-			return err
+			return fmt.Errorf("MarkBadAfterDistanceTwo: failed to get neighbours of vertex %v: %w", Vertex{n1}, err)
 		}
-
-		for k := range neighbours {
-			if !visited[k] {
-				queue.enqueue(k)
-				visited[k] = true
-				dist[k] = dist[v] + 1
-				// Mark the vertex as bad in the InducedGraph if the distance is larger than markBadAfterDistance
-				if dist[k] > markBadAfterDistance {
-					markAsBad = append(markAsBad, k)
-				}
-			}
+		for n2 := range neigh2 { // distance 2 to u
+			visited[n2] = true
 		}
 	}
 
-	for i := range markAsBad {
-		if err := pGraph.IGraph.MarkBad(Vertex{i}); err != nil {
-			return fmt.Errorf("failed to mark vertex %d as bad: %w", i, err)
+	// now we have visited all nodes with distance exactly two
+	// we can iterate over all vertices in the induced graph
+	for i := range pGraph.IGraph.GoodVertices {
+		if !visited[i] {
+			err := pGraph.IGraph.MarkBad(Vertex{i})
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return nil
@@ -216,11 +216,12 @@ func (pGraph *PermanentInducedGraph) CreateReducedWithDistance(vToRemove, v1, v2
 		_ = newPGraph.PermanentVertices.AddVertex(v2)
 		// this is the only change to the other function CreateReduced
 	}
-	err = pGraph.MarkBadWithBfs(v1, 2)
+
+	err = pGraph.MarkBadAfterDistanceTwo(v1)
 	if err != nil {
 		return nil, err
 	}
-	err = pGraph.MarkBadWithBfs(v2, 2)
+	err = pGraph.MarkBadAfterDistanceTwo(v2)
 	if err != nil {
 		return nil, err
 	}
