@@ -222,6 +222,55 @@ func (iGraph *InducedGraph) TwoPlexNaive() (VertexSet, error) {
 	return results[maxIdx], nil
 }
 
+// TwoPlexNaiveMinDegree implements the naive algorithm but chooses vertex u with minimal degree
+func (iGraph *InducedGraph) TwoPlexNaiveMinDegree() (VertexSet, error) {
+	n := iGraph.Size()
+	u, isTwoPlex := iGraph.MinBestDegree(n - 2)
+	if isTwoPlex {
+		return iGraph.GoodVertices, nil
+	}
+
+	v, w, err := iGraph.NotAdjacent(u)
+	if err != nil {
+		// this can usually not occur, else it would have been a 2-plex
+		return nil, err
+	}
+
+	// we need three new copies of InducedGraph, but the
+	// reference to AdjList must stay the same so it does not get copied
+
+	H引くu, err1A := iGraph.CreateReduced(u) // add no permanent vertex to set
+	R1, err1B := H引くu.TwoPlexNaiveMinDegree()
+	if err1A != nil || err1B != nil {
+		return nil, fmt.Errorf("failed to make recursion step: CreateReduced(%v), TwoPlexPermanent(%v)", err1A, err1B)
+	}
+
+	H引くv, err2A := iGraph.CreateReduced(v) // add u as permanent vertex
+	R2, err2B := H引くv.TwoPlexNaiveMinDegree()
+	if err2A != nil || err2B != nil {
+		return nil, fmt.Errorf("failed to make recursion step: CreateReduced(%v), TwoPlexPermanent(%v)", err2A, err2B)
+	}
+
+	H引くw, err3A := iGraph.CreateReduced(w) // add u and v as permanent vertices
+	R3, err3B := H引くw.TwoPlexNaiveMinDegree()
+	if err3A != nil || err3B != nil {
+		return nil, fmt.Errorf("failed to make recursion step: CreateReduced(%v), TwoPlexPermanent(%v)", err3A, err3B)
+	}
+
+	// Find the largest node count
+	results := []VertexSet{R1, R2, R3}
+	maxIdx := 0
+	maxNodes := len(results[0])
+	for i := 1; i < 3; i++ {
+		nodes := results[i].Size()
+		if nodes > maxNodes {
+			maxIdx = i
+			maxNodes = nodes
+		}
+	}
+	return results[maxIdx], nil
+}
+
 // TwoPlexNaiveParallel explores the three recursive branches concurrently.
 // depth is the current recursion level; it lets us stop spawning new
 // goroutines once we are “deep enough” to keep the goroutine count in check.

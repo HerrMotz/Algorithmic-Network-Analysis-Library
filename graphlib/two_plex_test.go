@@ -58,6 +58,26 @@ func TestTwoPlexCorrectness(t *testing.T) {
 		t.Errorf("TwoPlexNaive: want %d got %d", wantPlex2, plex.Size())
 	}
 
+	// ================================
+	// Test TwoPlexNaiveMinDegree (not parallel)
+	// ================================
+	plex, err = iGraph1.TwoPlexNaiveMinDegree()
+	if err != nil {
+		t.Fatalf("TwoPlexNaiveMinDegree: unexpected error %v", err)
+	}
+
+	if !reflect.DeepEqual(wantPlex1, plex) {
+		t.Errorf("TwoPlexNaiveMinDegree: want %v got %v", wantPlex1, plex)
+	}
+
+	plex, err = iGraph2.TwoPlexNaiveMinDegree()
+	if err != nil {
+		t.Fatalf("TwoPlexNaiveMinDegree: unexpected error %v", err)
+	}
+	if plex.Size() != wantPlex2 {
+		t.Errorf("TwoPlexNaiveMinDegree: want %d got %d", wantPlex2, plex.Size())
+	}
+
 	// =========================
 	// Test TwoPlexNaiveParallel
 	// =========================
