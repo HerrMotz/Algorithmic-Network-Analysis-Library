@@ -222,6 +222,55 @@ func (iGraph *InducedGraph) TwoPlexNaive() (VertexSet, error) {
 	return results[maxIdx], nil
 }
 
+// TwoPlexNaiveMinDegree implements the naive algorithm but chooses vertex u with minimal degree
+func (iGraph *InducedGraph) TwoPlexNaiveMinDegree() (VertexSet, error) {
+	n := iGraph.Size()
+	u, isTwoPlex := iGraph.MinBestDegree(n - 2)
+	if isTwoPlex {
+		return iGraph.GoodVertices, nil
+	}
+
+	v, w, err := iGraph.NotAdjacent(u)
+	if err != nil {
+		// this can usually not occur, else it would have been a 2-plex
+		return nil, err
+	}
+
+	// we need three new copies of InducedGraph, but the
+	// reference to AdjList must stay the same so it does not get copied
+
+	H引くu, err1A := iGraph.CreateReduced(u) // add no permanent vertex to set
+	R1, err1B := H引くu.TwoPlexNaiveMinDegree()
+	if err1A != nil || err1B != nil {
+		return nil, fmt.Errorf("failed to make recursion step: CreateReduced(%v), TwoPlexPermanent(%v)", err1A, err1B)
+	}
+
+	H引くv, err2A := iGraph.CreateReduced(v) // add u as permanent vertex
+	R2, err2B := H引くv.TwoPlexNaiveMinDegree()
+	if err2A != nil || err2B != nil {
+		return nil, fmt.Errorf("failed to make recursion step: CreateReduced(%v), TwoPlexPermanent(%v)", err2A, err2B)
+	}
+
+	H引くw, err3A := iGraph.CreateReduced(w) // add u and v as permanent vertices
+	R3, err3B := H引くw.TwoPlexNaiveMinDegree()
+	if err3A != nil || err3B != nil {
+		return nil, fmt.Errorf("failed to make recursion step: CreateReduced(%v), TwoPlexPermanent(%v)", err3A, err3B)
+	}
+
+	// Find the largest node count
+	results := []VertexSet{R1, R2, R3}
+	maxIdx := 0
+	maxNodes := len(results[0])
+	for i := 1; i < 3; i++ {
+		nodes := results[i].Size()
+		if nodes > maxNodes {
+			maxIdx = i
+			maxNodes = nodes
+		}
+	}
+	return results[maxIdx], nil
+}
+
 // TwoPlexNaiveParallel explores the three recursive branches concurrently.
 // depth is the current recursion level; it lets us stop spawning new
 // goroutines once we are “deep enough” to keep the goroutine count in check.
@@ -477,7 +526,29 @@ func (pGraph *PermanentInducedGraph) TwoPlexDistance() (VertexSet, error) {
 		return pGraph.IGraph.GoodVertices, nil
 	}
 
+	var results = make([]VertexSet, 0, 3)
+
+	// branch on u even if there are not two vertices with distance two to it
+	// only call to u if it is not in the permanent vertex set
+	if r, err := _runTwoPlexIfDistanceHelper(pGraph, u, noV, noV); err != nil { // noV means "no vertex"
+		return nil, fmt.Errorf("failed to make recursion step: _runTwoPlexIfDistanceHelper(%v, %v, %v): %w", u, noV, noV, err)
+	} else if r != nil {
+		results = append(results, r)
+	}
+
 	v, w, err := pGraph.IGraph.NotAdjacentWithDistanceTwo(u)
+	if err != nil {
+		// if NotAdjacentWithDistanceTwo(u) encounters an error (it couldn't find
+		// two vertices v and w), return the 2-plex from the H-u branch.
+		if len(results) > 0 {
+			return results[0], nil
+		}
+		// Otherwise, propagate the error as before.
+		return nil, err
+	}
+
+	//old code that didn't return the result from the u-branch
+	/*v, w, err := pGraph.IGraph.NotAdjacentWithDistanceTwo(u)
 	if err != nil {
 		if v == specialNoV { // isolated vertex, 2 plex of size 1
 			return VertexSet{0: Naught{}}, nil
@@ -485,7 +556,7 @@ func (pGraph *PermanentInducedGraph) TwoPlexDistance() (VertexSet, error) {
 			return VertexSet{v.Id: Naught{}, w.Id: Naught{}}, nil
 		}
 		return nil, err
-	}
+	}*/
 
 	// special case: if u, v, w are all in the permanent vertex set,
 	// then we can return a trivial 2-Plex. If there is a larger 2-Plex,
@@ -494,15 +565,6 @@ func (pGraph *PermanentInducedGraph) TwoPlexDistance() (VertexSet, error) {
 		pGraph.PermanentVertices.HasVertex(v) &&
 		pGraph.PermanentVertices.HasVertex(w) {
 		return VertexSet{0: Naught{}, 1: Naught{}}, nil
-	}
-
-	var results = make([]VertexSet, 0, 3)
-
-	// only call to u if it is not in the permanent vertex set
-	if r, err := _runTwoPlexIfDistanceHelper(pGraph, u, noV, noV); err != nil { // noV means "no vertex"
-		return nil, fmt.Errorf("failed to make recursion step: _runTwoPlexIfDistanceHelper(%v, %v, %v): %w", u, noV, noV, err)
-	} else if r != nil {
-		results = append(results, r)
 	}
 
 	// only call to v if it is not in the permanent vertex set
