@@ -18,7 +18,7 @@ def main():
             sparse_matrix = sparse_matrix.tocoo()
         G = nx.Graph()
         for i, j, w in zip(sparse_matrix.row, sparse_matrix.col, sparse_matrix.data):
-            if i != j:  # Avoid self-loops if not needed
+            if i != j:  
                 G.add_edge(i, j)
     else:
         G = nx.read_edgelist(args.graph, nodetype=int)
@@ -52,7 +52,7 @@ def main():
     nx.draw_networkx_edges(G, pos, edgelist=other_edges, edge_color='black', alpha=0.3, width=0.5)
 
     # Define a colormap for different cliques
-    colors = plt.cm.tab10.colors  # 10 distinct colors
+    colors = plt.cm.tab10.colors  
 
     # Draw each max clique with a different color
     for i, clique in enumerate(max_cliques):
@@ -84,7 +84,7 @@ def main():
         nx.draw_networkx_nodes(
             G, pos,
             nodelist=list(overlapping_nodes),
-            node_size=120,  # Slightly larger to emphasize
+            node_size=120,  
             node_color='red',
             label=f'Overlapping Nodes ({len(overlapping_nodes)})'
         )

@@ -1,5 +1,0 @@
-graph_name,nodes,edges,density,degeneracy,max_clique_size,clique_count,moon_moser_bound,adjusted_omega_bound,degeneracy_bound,rel_to_moon_moser,rel_to_adjusted_omega,rel_to_degeneracy_bound
-soc-karate.mtx,34,79,0.140820,0,5,36,1.771e+05,9.000e+01,3.400e+01,2.032e-04,4.000e-01,1.059e+00
-soc-dolphins.mtx,62,160,0.084611,0,5,84,3.487e+09,1.740e+02,6.200e+01,2.409e-08,4.828e-01,1.355e+00
-abi.edgelist,63,966,0.494624,23,20,30,1.046e+10,3.208e+04,4.133e+05,2.868e-09,9.353e-04,7.258e-05
-out.dimacs10-netscie.graph,1463,2743,0.002565,19,20,613,2.281e+232,1.053e+06,1.067e+06,2.688e-230,5.823e-04,5.748e-04

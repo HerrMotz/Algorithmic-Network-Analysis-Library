@@ -7,7 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"graphlib/graphlib" // <-- an dein go module anpassen
+	"graphlib/graphlib" 
 )
 
 // ----------------------------------------------------------------------------

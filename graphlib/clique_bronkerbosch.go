@@ -52,8 +52,8 @@ func addClique(res *[][]int, seen map[string]struct{}, R map[int]struct{}) {
     for v := range R {
         clique = append(clique, v)
     }
-    sort.Ints(clique)              // kanonische Ordnung
-    key := fmt.Sprint(clique)      // einfacher String‑Key
+    sort.Ints(clique)              
+    key := fmt.Sprint(clique)      
     if _, ok := seen[key]; !ok {
         *res = append(*res, clique)
         seen[key] = struct{}{}
@@ -75,7 +75,7 @@ func (g *AdjList) BronKerboschSimple() [][]int {
             addClique(&res, seen, R)
             return
         }
-        for v := range copySet(P) { // über Kopie iterieren
+        for v := range copySet(P) { 
             R2 := copySet(R)
             R2[v] = struct{}{}
             Nv := g.neighSet(v)
@@ -95,20 +95,19 @@ func (g *AdjList) BronKerboschSimple() [][]int {
 
 // BronKerboschSimpleIter – pivotlose Iteration ohne Rekursion
 func (g *AdjList) BronKerboschSimpleIter() [][]int {
-    // --- 0) Nachbarschaften einmal puffern
     nbr := make([]map[int]struct{}, g.Size)
     for i := 0; i < g.Size; i++ {
         nbr[i] = g.neighSet(i)
     }
 
-    // --- 1) eigener Stack-Frame-Typ
+    // Stack-Frame-Typ
     type frame struct {
         R        []int
         P, X     map[int]struct{}
         toVisit  []int   // verbleibende Kandidaten
     }
 
-    // --- 2) Start-Frame erzeugen
+    // Start-Frame 
     initP := make(map[int]struct{}, g.Size)
     for v := 0; v < g.Size; v++ {
         initP[v] = struct{}{}
@@ -118,7 +117,7 @@ func (g *AdjList) BronKerboschSimpleIter() [][]int {
     var cliques [][]int
     seen := make(map[string]struct{})
 
-    // --- 3) Tiefensuche per while-Schleife
+    // Tiefensuche per while-Schleife
     for len(stack) > 0 {
         f := &stack[len(stack)-1]
 
@@ -143,7 +142,7 @@ func (g *AdjList) BronKerboschSimpleIter() [][]int {
             for v := range f.P { f.toVisit = append(f.toVisit, v) }
         }
 
-        // 3b) Keine Kandidaten mehr ⇒ Frame fertig
+        // 3b) Keine Kandidaten mehr -> Frame fertig
         if len(f.toVisit) == 0 {
             stack = stack[:len(stack)-1]
             continue
@@ -171,7 +170,6 @@ func (g *AdjList) BronKerboschSimpleIter() [][]int {
 
 
 // BronKerboschPivot – Tomita‑Pivotregel
-// BronKerboschPivot – Tomita-Pivotregel, jetzt ohne Seiteneffekte auf P/X
 func (g *AdjList) BronKerboschPivot() [][]int {
     var res [][]int
     seen := make(map[string]struct{})
@@ -183,7 +181,7 @@ func (g *AdjList) BronKerboschPivot() [][]int {
             return
         }
 
-        // --- Pivot u aus P ∪ X mit maximaler Schnittmenge P∩N(u)
+        // --- Pivot u aus P ∪ X mit maximaler Schnittmenge P ∩ N(u)
         U := union(P, X)
         var pivot, maxDeg int
         first := true
@@ -203,7 +201,7 @@ func (g *AdjList) BronKerboschPivot() [][]int {
 
             // (2) frische Kandidaten- und Exklusionsmengen
             Nv  := g.neighSet(v)
-            P2  := intersect(P, Nv) // NEU: eigene Kopien
+            P2  := intersect(P, Nv) 
             X2  := intersect(X, Nv)
 
             // (3) Rekursion
@@ -341,7 +339,7 @@ func (g *AdjList) neighSet(u int) map[int]struct{} {
     n, _ := g.Neighbours(Vertex{Id: u})
     res := make(map[int]struct{}, len(n))
     for v := range n {
-        if v != u {               // ← Self-Loop unterdrücken
+        if v != u {               
             res[v] = struct{}{}
         }
     }
@@ -360,7 +358,7 @@ func (l *AdjList) MakeUndirected() {
     }
 }
 
-// Degeneracy‑Ordering (einfache O(n²)‑Implementierung)
+// Degeneracy‑Ordering (einfache O(n^2)‑Implementierung)
 func (g *AdjList) degeneracyOrder() []int {
     order := make([]int, 0, g.Size)
     degree := make([]int, g.Size)
