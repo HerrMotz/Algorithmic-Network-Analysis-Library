@@ -83,6 +83,7 @@ func main() {
     }
 
     // 4) ── 2‑Plex erst jetzt ────────────────────────────────────────
+    /*
     induced := graphlib.InducedGraph{
         AdjList:      g,
         GoodVertices: make(graphlib.VertexSet),
@@ -104,6 +105,7 @@ func main() {
     }
     fmt.Printf("Größter 2‑Plex: Größe %d  |  Zeit: %v\n",
         len(plex), plexDur)
+    */
 
     // 5) ── Zusammenfassung der I/O‑Zeit etc. ───────────────────────
     fmt.Println("\n===== Laufzeiten (I/O) =====")

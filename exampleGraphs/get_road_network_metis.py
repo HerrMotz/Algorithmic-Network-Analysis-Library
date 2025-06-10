@@ -1,5 +1,5 @@
-input_file = "fb-pages-public-figure.edges"
-output_file = "fb-pages-public-figure2.edges"
+input_file = "fb-pages-media.edges"
+output_file = "fb-pages-media2.edges"
 
 with open(input_file, "r") as infile, open(output_file, "w") as outfile:
     for line in infile:
