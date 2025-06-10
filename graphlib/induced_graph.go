@@ -175,9 +175,11 @@ func (pGraph *PermanentInducedGraph) MarkBadAfterDistanceTwo(source Vertex) erro
 		}
 	}
 
+	GoodVerticesCopy := pGraph.IGraph.GoodVertices.Copy() //to iterate save over the GoodVertices
+
 	// now we have visited all nodes with distance exactly two
 	// we can iterate over all vertices in the induced graph
-	for i := range pGraph.IGraph.GoodVertices {
+	for i := range GoodVerticesCopy {
 		if !visited[i] {
 			err := pGraph.IGraph.MarkBad(Vertex{i})
 			if err != nil {

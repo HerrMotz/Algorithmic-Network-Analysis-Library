@@ -35,7 +35,6 @@ func (l *AdjList) RemoveVertexCopy(v Vertex) *AdjList {
 
 // FirstBestDegree returns the first node with a degree lower than d or returns 0 and true
 // if none of the nodes has degree <= d, then the Graph is a 2-plex
-// TODO add a function which select minimal degree using a priority queue
 func (iGraph *InducedGraph) FirstBestDegree(d int) (Vertex, bool) {
 	for i := range iGraph.GoodVertices {
 		cmp, err := iGraph.Degree(Vertex{i})
@@ -73,8 +72,6 @@ func (pq *PriorityQueue) Pop() interface{} {
 
 // MinBestDegree returns the node with the minimal degree < d,
 // or (0, true) if all nodes have degree >= d (i.e., the graph is a 2-plex)
-//
-//	Todo: Add a 2-plex algorithm which uses this function
 func (iGraph *InducedGraph) MinBestDegree(d int) (Vertex, bool) {
 	pq := make(PriorityQueue, 0, iGraph.GoodVertices.Size())
 
@@ -356,11 +353,7 @@ var noV = Vertex{-1}        // use -1 to indicate no vertex
 var specialNoV = Vertex{-2} // used to indicate isolated node in distance function
 
 // TODO
-//  - Add more tests for the TwoPlexPermanent algorithm (bigger graphs for performance testing)
-//  - Add the minimal degree optimisation
 //  - Add distance improvement (remove all vertices that have distance >= 3 to a permanent vertex)
-//  - Store the size of the currently found 2-Plex (stop recursion if it is not larger than the current best)
-//  - Remove nodes with at most degree of n*-2
 
 // TwoPlexPermanent implements the algorithm with permanent set
 func (pGraph *PermanentInducedGraph) TwoPlexPermanent() (VertexSet, error) {
@@ -543,7 +536,7 @@ func (pGraph *PermanentInducedGraph) TwoPlexDistance() (VertexSet, error) {
 		if len(results) > 0 {
 			return results[0], nil
 		}
-		// Otherwise, propagate the error as before.
+		// otherwise, propagate the error as before.
 		return nil, err
 	}
 
@@ -603,8 +596,7 @@ func (pGraph *PermanentInducedGraph) TwoPlexDistance() (VertexSet, error) {
 func (iGraph *InducedGraph) TwoPlexNStar() (VertexSet, error) {
 	// declare a local variable for nStar and initialize it to 0.
 	initialNStar := 0
-
-	// Call the recursive helper function, passing the address of initialNStar.
+	// call the recursive helper function, passing the address of initialNStar.
 	// The helper function will modify initialNStar directly.
 	return iGraph.TwoPlexNStarRecursive(&initialNStar)
 }
@@ -622,7 +614,7 @@ func (iGraph *InducedGraph) TwoPlexNStarRecursive(nStarPtr *int) (VertexSet, err
 	}
 
 	// create a new VertexSet to hold the vertices that will remain in the graph after deleting these with a
-	//degree <= nStar - 2 (building a new GoodVertices set)
+	// degree <= nStar - 2 (building a new GoodVertices set)
 	currentGoodVertices := iGraph.GoodVertices.Copy() // copy of the current good vertices
 
 	// iterate through all vertices in the current GoodVertices
@@ -644,7 +636,7 @@ func (iGraph *InducedGraph) TwoPlexNStarRecursive(nStarPtr *int) (VertexSet, err
 
 	n = iGraph.Size() // update graph size
 
-	// Re-check the graph size after deleting vertices
+	// re-check the graph size after deleting vertices
 	if n <= *nStarPtr {
 		return VertexSet{}, nil
 	}
@@ -660,7 +652,7 @@ func (iGraph *InducedGraph) TwoPlexNStarRecursive(nStarPtr *int) (VertexSet, err
 
 	v, w, err := iGraph.NotAdjacent(u)
 	if err != nil {
-		// This can usually not occur, else it would have been a 2-plex.
+		// this can usually not occur, else it would have been a 2-plex.
 		return nil, err
 	}
 
@@ -671,7 +663,7 @@ func (iGraph *InducedGraph) TwoPlexNStarRecursive(nStarPtr *int) (VertexSet, err
 	if err1A != nil {
 		return nil, fmt.Errorf("failed to make recursion step: CreateReduced(exclude %v): %w", u, err1A)
 	}
-	// Only recurse if the reduced graph might contain a larger 2-plex than the current global nStar
+	// only recurse if the reduced graph might contain a larger 2-plex than the current global nStar
 	if H引くu.Size() > *nStarPtr { // check against global nStar
 		R1, err1B := H引くu.TwoPlexNStarRecursive(nStarPtr) // pass the pointer down
 		if err1B != nil {
@@ -691,7 +683,7 @@ func (iGraph *InducedGraph) TwoPlexNStarRecursive(nStarPtr *int) (VertexSet, err
 	if err2A != nil {
 		return nil, fmt.Errorf("failed to make recursion step: CreateReduced(exclude %v, permanent %v): %w", v, u, err2A)
 	}
-	// Only recurse if the reduced graph might contain a larger 2-plex than the current global nStar
+	// only recurse if the reduced graph might contain a larger 2-plex than the current global nStar
 	if H引くv.Size() > *nStarPtr { // check against global nStar
 		R2, err2B := H引くv.TwoPlexNStarRecursive(nStarPtr)
 		if err2B != nil {
@@ -710,7 +702,7 @@ func (iGraph *InducedGraph) TwoPlexNStarRecursive(nStarPtr *int) (VertexSet, err
 	if err3A != nil {
 		return nil, fmt.Errorf("failed to make recursion step: CreateReduced(exclude %v, permanent %v, %v): %w", w, u, v, err3A)
 	}
-	// Only recurse if the reduced graph might contain a larger 2-plex than the current global nStar
+	// only recurse if the reduced graph might contain a larger 2-plex than the current global nStar
 	if H引くw.Size() > *nStarPtr { // check against global nStar
 		R3, err3B := H引くw.TwoPlexNStarRecursive(nStarPtr)
 		if err3B != nil {
@@ -739,7 +731,7 @@ func (iGraph *InducedGraph) TwoPlexNStarRecursive(nStarPtr *int) (VertexSet, err
 		}
 	}
 
-	// After finding the local maximum, update the global nStar if this local max is larger
+	// after finding the local maximum, update the global nStar if this local max is larger
 	if maxNodes > *nStarPtr {
 		*nStarPtr = maxNodes
 	}
