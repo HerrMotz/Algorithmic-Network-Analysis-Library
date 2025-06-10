@@ -55,6 +55,8 @@ type VertexDegree struct {
 	Degree int
 }
 
+// PriorityQueue Is not a real queue or priority queue even, you
+// have to use the heap function builtin to Go.
 type PriorityQueue []VertexDegree
 
 func (pq *PriorityQueue) Len() int           { return len(*pq) }
@@ -74,7 +76,7 @@ func (pq *PriorityQueue) Pop() interface{} {
 //
 //	Todo: Add a 2-plex algorithm which uses this function
 func (iGraph *InducedGraph) MinBestDegree(d int) (Vertex, bool) {
-	pq := make(PriorityQueue, 0, len(iGraph.GoodVertices))
+	pq := make(PriorityQueue, 0, iGraph.GoodVertices.Size())
 
 	// Build the priority queue
 	for i := range iGraph.GoodVertices {
@@ -129,31 +131,46 @@ func (iGraph *InducedGraph) NotAdjacentWithDistanceTwo(u Vertex) (Vertex, Vertex
 	if err != nil {
 		return Vertex{-1}, Vertex{-1}, fmt.Errorf("failed to get neighbours of vertex %v: %w", u, err)
 	}
-	found := make([]int, 0, 2)
 
 	visited := make(map[int]bool, iGraph.Size())
 	visited[u.Id] = true
+	pq := make(PriorityQueue, 0, iGraph.Size()) // todo chance to add a better heuristic
 
 	for n1 := range neigh1 {
-		visited[n1] = true
+		visited[n1] = true // distance 1 to u
 	}
 
-	for n1 := range visited {
-		neigh2, err := iGraph.Neighbours(Vertex{n1})
-		// todo maybe a priority queue, but not that essential
+	for n1 := range visited { // you can iterate over the slice and change it, because the loop uses a copy
+		neigh2, err := iGraph.Neighbours(Vertex{n1}) // distance 2 to u
 		if err != nil {
-			return Vertex{-1}, Vertex{-1}, fmt.Errorf("failed to get neighbours of vertex %v: %w", Vertex{n1}, err)
+			return noV, noV, fmt.Errorf("NotAdjWithDistanceTwo: failed to get neighbours of vertex %v: %w", Vertex{n1}, err)
 		}
-		for n2 := range neigh2 {
-			if !visited[n2] {
-				found = append(found, n1)
-			}
-			if len(found) == 2 {
-				return Vertex{found[0]}, Vertex{found[1]}, nil
+		for n2 := range neigh2 { // distance 2 to u
+			if !visited[n2] { // they do not also have distance 1 or 0 to u
+				deg, err := iGraph.Degree(Vertex{n2})
+				if err != nil {
+					return noV, noV, err
+				}
+				pq = append(pq, VertexDegree{Vertex: Vertex{n2}, Degree: deg}) // from these we want to select two nodes v and w which have minimal degree
 			}
 		}
 	}
-	return Vertex{-1}, Vertex{-1}, fmt.Errorf("not enough non-neighbors")
+
+	heap.Init(&pq)
+
+	found := make([]int, 0, 2) // return slice
+	for i := 0; i < pq.Len(); i++ {
+		vd := heap.Pop(&pq).(VertexDegree)
+		found = append(found, vd.Vertex.Id)
+		if len(found) == 2 {
+			return Vertex{found[0]}, Vertex{found[1]}, nil
+		}
+	}
+	if len(found) == 0 {
+		return specialNoV, u, fmt.Errorf("not enough non-neighbours (isolated vertex, 2-plex of size 1)")
+	} else {
+		return u, Vertex{found[0]}, fmt.Errorf("not enough neighbors (2-plex of size 2)")
+	}
 }
 
 // TwoPlexNaive implements the naive algorithm
@@ -286,7 +303,8 @@ func _runTwoPlexIfPermanentHelper(pGraph *PermanentInducedGraph, testVertex Vert
 	return nil, nil
 }
 
-var noV = Vertex{-1} // use -1 to indicate no vertex
+var noV = Vertex{-1}        // use -1 to indicate no vertex
+var specialNoV = Vertex{-2} // used to indicate isolated node in distance function
 
 // TODO
 //  - Add more tests for the TwoPlexPermanent algorithm (bigger graphs for performance testing)
@@ -358,7 +376,7 @@ func (pGraph *PermanentInducedGraph) TwoPlexPermanent() (VertexSet, error) {
 	return results[maxIdx], nil
 }
 
-func (pGraph *PermanentInducedGraph) TwoPlexPermanentParallel() (VertexSet, error) {
+func (pGraph *PermanentInducedGraph) TwoPlexPermanentParallelKaputt() (VertexSet, error) {
 	n := pGraph.IGraph.Size()
 	u, isTwoPlex := pGraph.IGraph.MinBestDegree(n - 2)
 	if isTwoPlex {
@@ -454,14 +472,18 @@ func _runTwoPlexIfDistanceHelper(pGraph *PermanentInducedGraph, vToRemove Vertex
 // TwoPlexDistance implement the algorithm with permanent set and distance improvement
 func (pGraph *PermanentInducedGraph) TwoPlexDistance() (VertexSet, error) {
 	n := pGraph.IGraph.Size()
-	u, isTwoPlex := pGraph.IGraph.FirstBestDegree(n - 2)
+	u, isTwoPlex := pGraph.IGraph.MinBestDegree(n - 2)
 	if isTwoPlex {
 		return pGraph.IGraph.GoodVertices, nil
 	}
 
-	v, w, err := pGraph.IGraph.NotAdjacent(u)
+	v, w, err := pGraph.IGraph.NotAdjacentWithDistanceTwo(u)
 	if err != nil {
-		// this can usually not occur, else it would have been a 2-plex
+		if v == specialNoV { // isolated vertex, 2 plex of size 1
+			return VertexSet{0: Naught{}}, nil
+		} else if v.Id >= 0 && w.Id >= 0 { // 2 plex of size 2
+			return VertexSet{v.Id: Naught{}, w.Id: Naught{}}, nil
+		}
 		return nil, err
 	}
 

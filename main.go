@@ -1,14 +1,6 @@
 package main
 
-import (
-    "fmt"
-    "runtime"
-    "time"
-
-    "graphlib/graphlib"
-)
-
-func main() {
+/*func main() {
     const rho = 0.15
     sizes := []int{}
     for n := 100; n <= 1000; n += 100 {
@@ -44,7 +36,7 @@ func main() {
 
         // Exponential Closeness
         start = time.Now()
-        if _, err := g.ExponentialClosenessCentralityAll(true, 1.5, runtime.NumCPU()); err != nil { 
+        if _, err := g.ExponentialClosenessCentralityAll(true, 1.5, runtime.NumCPU()); err != nil {
             panic(err)
         }
         fmt.Printf("n=%4d ExponentialClosenessCentralityAll: %v\n", n, time.Since(start))
@@ -64,3 +56,4 @@ func main() {
         fmt.Printf("n=%4d PowerIteration: %v\n", n, time.Since(start))
     }
 }
+*/
