@@ -1,0 +1,10 @@
+===== Bron–Kerbosch Varianten =====
+BronKerboschSimpleIter           ⇒ Cliques: 36  |  Größte Clique: 5  |  Zeit: 496.708µs
+BronKerboschPivot                ⇒ Cliques: 36  |  Größte Clique: 5  |  Zeit: 401.791µs
+BronKerboschDegeneracy           ⇒ Cliques: 36  |  Größte Clique: 5  |  Zeit: 461.666µs
+BronKerboschOwnPivotDegeneracy   ⇒ Cliques: 36  |  Größte Clique: 5  |  Zeit: 496.75µs
+
+===== 2-Plex Varianten =====
+TwoPlexPermanent                 ⇒ 2-Plex Größe: 6  |  Zeit: 8.285938166s
+TwoPlexNStar                     ⇒ 2-Plex Größe: 6  |  Zeit: 1.415417ms
+
