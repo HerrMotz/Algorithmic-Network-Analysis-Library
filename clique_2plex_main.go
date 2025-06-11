@@ -100,7 +100,7 @@ func main() {
 			PermanentVertices: make(graphlib.VertexSet),
 		}
 	}
-	
+	/*
 	makeIGraph := func() *graphlib.InducedGraph {
 		ig := &graphlib.InducedGraph{
 			AdjList:      g,
@@ -110,7 +110,7 @@ func main() {
 			ig.GoodVertices[i] = struct{}{}
 		}
 		return ig
-	}
+	}*/
 	
 
 	// ── 2-Plex Varianten ───────────────────────────────────────────────────
@@ -118,7 +118,7 @@ func main() {
 	plexVariants := []struct {
 		name string
 		run  func() (graphlib.VertexSet, error)
-	}{
+	}{/*
 		{"TwoPlexNaive", func() (graphlib.VertexSet, error) {
 		      pg := makeIGraph()
 		      return pg.TwoPlexNaive()
@@ -142,7 +142,7 @@ func main() {
 		{"TwoPlexDistance", func() (graphlib.VertexSet, error) {
 			pg := makePGraph()
 			return pg.TwoPlexDistance()
-		}},
+		}},*/
 		{"TwoPlexNStar", func() (graphlib.VertexSet, error) {
 			ig := makePGraph().IGraph
 			return ig.TwoPlexNStar()

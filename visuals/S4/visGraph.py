@@ -96,7 +96,7 @@ def main():
     nx.draw_networkx_nodes(G, pos, nodelist=other_nodes, node_size=50, node_color='black')
 
     # Final touches
-    plt.title(f'Dolphin with {len(max_cliques)} Maximum Cliques (Size {max_size})')
+    plt.title(f'Baboon with {len(max_cliques)} Maximum Cliques (Size {max_size})')
     plt.legend(loc='upper right')
     plt.axis('off')
     plt.tight_layout()
