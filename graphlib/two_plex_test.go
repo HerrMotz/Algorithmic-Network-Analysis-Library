@@ -58,6 +58,46 @@ func TestTwoPlexCorrectness(t *testing.T) {
 		t.Errorf("TwoPlexNaive: want %d got %d", wantPlex2, plex.Size())
 	}
 
+	// ================================
+	// Test TwoPlexNaiveMinDegree (not parallel)
+	// ================================
+	plex, err = iGraph1.TwoPlexNaiveMinDegree()
+	if err != nil {
+		t.Fatalf("TwoPlexNaiveMinDegree: unexpected error %v", err)
+	}
+
+	if !reflect.DeepEqual(wantPlex1, plex) {
+		t.Errorf("TwoPlexNaiveMinDegree: want %v got %v", wantPlex1, plex)
+	}
+
+	plex, err = iGraph2.TwoPlexNaiveMinDegree()
+	if err != nil {
+		t.Fatalf("TwoPlexNaiveMinDegree: unexpected error %v", err)
+	}
+	if plex.Size() != wantPlex2 {
+		t.Errorf("TwoPlexNaiveMinDegree: want %d got %d", wantPlex2, plex.Size())
+	}
+
+	// ================================
+	// Test TwoPlexNStar
+	// ================================
+	plex, err = iGraph1.TwoPlexNStar()
+	if err != nil {
+		t.Fatalf("TwoPlexNStar: unexpected error %v", err)
+	}
+
+	if !reflect.DeepEqual(wantPlex1, plex) {
+		t.Errorf("TwoPlexNStar: want %v got %v", wantPlex1, plex)
+	}
+
+	plex, err = iGraph2.TwoPlexNStar()
+	if err != nil {
+		t.Fatalf("TwoPlexNStar: unexpected error %v", err)
+	}
+	if plex.Size() != wantPlex2 {
+		t.Errorf("TwoPlexNStar: want %d got %d", wantPlex2, plex.Size())
+	}
+
 	// =========================
 	// Test TwoPlexNaiveParallel
 	// =========================
@@ -79,27 +119,6 @@ func TestTwoPlexCorrectness(t *testing.T) {
 	}
 	if !reflect.DeepEqual(wantPlex1, plex) {
 		t.Errorf("TwoPlexPermanentInduced: want %v got %v", wantPlex1, plex)
-	}
-
-	// =========================
-	// Test PermanentInducedGraph.TwoPlexPermanentParallel
-	// =========================
-	plex, err = pGraph.TwoPlexPermanentParallel()
-	if err != nil {
-		t.Fatalf("TwoPlexPermanentParallel unexpected error %v", err)
-	}
-	if !reflect.DeepEqual(wantPlex1, plex) {
-		t.Errorf("TwoPlexPermanentParallel: want %v got %v", wantPlex1, plex)
-	}
-
-	// Test PermanentInducedGraph.TwoPlexPermanentParallel on empty graph
-	pGraph2 := PermanentInducedGraph{iGraph2, VertexSet{}}
-	plex, err = pGraph2.TwoPlexPermanentParallel()
-	if err != nil {
-		t.Fatalf("TwoPlexPermanentParallel on empty graph: unexpected error %v", err)
-	}
-	if plex.Size() != wantPlex2 {
-		t.Errorf("TwoPlexPermanentParallel on empty graph: want %d got %d", wantPlex2, plex.Size())
 	}
 
 	// =========================
@@ -193,27 +212,5 @@ func BenchmarkPermanentInducedGraph_TwoPlexPermanent(b *testing.B) {
 	}
 	if err != nil {
 		b.Fatalf("BenchmarkPermanentInducedGraph_TwoPlexPermanent: unexpected error %v", err)
-	}
-}
-
-func BenchmarkInducedGraph_TwoPlexPermanentParallel(b *testing.B) {
-	H, err := ReadGraphAdjList("../exampleGraphs/metis_4elt.mgraph", false)
-	if err != nil {
-		b.Fatalf("failed to read erdos graph: %v", err)
-	}
-	// create vertex set from H
-	GoodVertices := make(VertexSet, H.Size)
-	for v := 0; v < H.Size; v++ {
-		GoodVertices[v] = Naught{}
-	}
-	pGraph := PermanentInducedGraph{InducedGraph{AdjList: H, GoodVertices: GoodVertices}, VertexSet{}}
-	plex, err := pGraph.TwoPlexPermanentParallel()
-	if plex != nil {
-		b.Logf("PermanentInducedGraph_TwoPlexPermanent: %v", plex.Size())
-	} else {
-		b.Fatalf("PermanentInducedGraph_TwoPlexPermanent: No plex returned!")
-	}
-	if err != nil {
-		b.Fatalf("BenchmarkInducedGraph_TwoPlexNaive: unexpected error %v", err)
 	}
 }

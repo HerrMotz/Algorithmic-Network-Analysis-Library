@@ -66,7 +66,8 @@ func ReadGraphSparseMatrix(path string, directed bool) (*AdjMatSparse, error) {
 // buildAdjFromArcs turns a vertex count and arc slice into an *AdjList*.
 // It ignores duplicate arcs.
 func buildAdjFromArcs(n int, arcs []Arc, subtract int) (*AdjList, error) {
-	adjList, err := InitializeAdjList(n)
+	size := n - subtract + 1
+	adjList, err := InitializeAdjList(size)
 	if err != nil {
 		return nil, err
 	}
@@ -81,7 +82,8 @@ func buildAdjFromArcs(n int, arcs []Arc, subtract int) (*AdjList, error) {
 // buildAdjFromEdges turns a vertex count and arc slice into an *AdjList*.
 // it ignores duplicate edges.
 func buildAdjFromEdges(n int, edges []Edge, subtract int) (*AdjList, error) {
-	adjList, err := InitializeAdjList(n)
+	size := n - subtract + 1
+	adjList, err := InitializeAdjList(size)
 	if err != nil {
 		return nil, err
 	}

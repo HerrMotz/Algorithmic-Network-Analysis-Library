@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"sort"
+	"time"
 
 	"graphlib/graphlib"
 )
@@ -28,47 +29,126 @@ func setToSortedSlice(vs graphlib.VertexSet) []int {
 	return nodes
 }
 
+func benchmarkCliques(name string, run func() [][]int) {
+	start := time.Now()
+	cliques := run()
+	dur := time.Since(start)
+	num := len(cliques)
+	largest := largestClique(cliques)
+
+	fmt.Printf("%-32s ⇒ Cliques: %d  |  Größte Clique: %d  |  Zeit: %v\n",
+		name, num, len(largest), dur)
+}
+
+func benchmarkPlex(name string, run func() (graphlib.VertexSet, error)) {
+	start := time.Now()
+	plex, err := run()
+	dur := time.Since(start)
+	if err != nil {
+		fmt.Printf("%-32s ⇒ Fehler: %v\n", name, err)
+		return
+	}
+	fmt.Printf("%-32s ⇒ 2-Plex Größe: %d  |  Zeit: %v\n",
+		name, plex.Size(), dur)
+}
+
 func main() {
+	// CLI
 	graphPath := flag.String("graph", "", "Pfad zur Graph-Datei (Adjazenzlistenformat)")
 	flag.Parse()
-
 	if *graphPath == "" {
 		fmt.Println("Bitte gib den Pfad zum Graphen an mit -graph=...")
 		os.Exit(1)
 	}
 
-	// 1) Graph laden 
+	// Einlesen
+	fmt.Println("Einlesen des Graphen…")
 	g, err := graphlib.ReadGraphAdjList(*graphPath, false)
 	if err != nil {
 		fmt.Printf("Fehler beim Einlesen: %v\n", err)
 		os.Exit(1)
 	}
-	fmt.Println("graph eingelesen")
+	fmt.Println("Graph eingelesen")
 
-	// 2) Maximalen Cliquen finden
-	cliques := g.BronKerboschDegeneracy()
-	numCliques := len(cliques)
-	largest := largestClique(cliques)
-	sort.Ints(largest)
+	// ── Bron–Kerbosch Varianten ────────────────────────────────────────────
+	fmt.Println("\n===== Bron–Kerbosch Varianten =====")
+	bkVariants := []struct {
+		name string
+		run  func() [][]int
+	}{
+		{"BronKerboschSimpleIter", func() [][]int { return g.BronKerboschSimpleIter() }},
+		{"BronKerboschPivot", func() [][]int { return g.BronKerboschPivot() }},
+		{"BronKerboschDegeneracy", func() [][]int { return g.BronKerboschDegeneracy() }},
+		{"BronKerboschOwnPivotDegeneracy", func() [][]int { return g.BronKerboschOwnPivotDegeneracy() }},
+	}
+	for _, v := range bkVariants {
+		benchmarkCliques(v.name, v.run)
+	}
 
-	// 3) Größten 2-Plex finden
-	induced := graphlib.InducedGraph{
-		AdjList:     g,
-		GoodVertices: make(graphlib.VertexSet),
+	// Hilfsfunktion: Initialen PermanentInducedGraph erzeugen
+	makePGraph := func() graphlib.PermanentInducedGraph {
+		// GoodVertices = alle Knoten
+		ig := graphlib.InducedGraph{
+			AdjList:      g,
+			GoodVertices: make(graphlib.VertexSet),
+		}
+		for i := 0; i < g.Size; i++ {
+			ig.GoodVertices[i] = struct{}{}
+		}
+		return graphlib.PermanentInducedGraph{
+			IGraph:            ig,
+			PermanentVertices: make(graphlib.VertexSet),
+		}
 	}
-	for i := 0; i < g.Size; i++ {
-		induced.GoodVertices[i] = struct{}{}
-	}
-	plex, err := induced.TwoPlexNaive()
-	if err != nil {
-		fmt.Printf("Fehler bei TwoPlexNaive: %v\n", err)
-		os.Exit(1)
-	}
-	plexNodes := setToSortedSlice(plex)
+	/*
+	makeIGraph := func() *graphlib.InducedGraph {
+		ig := &graphlib.InducedGraph{
+			AdjList:      g,
+			GoodVertices: make(graphlib.VertexSet),
+		}
+		for i := 0; i < g.Size; i++ {
+			ig.GoodVertices[i] = struct{}{}
+		}
+		return ig
+	}*/
+	
 
-	// 5) "Menschenlesbare" Ausgabe
-	fmt.Printf("==== Auswertung für %s ====\n", *graphPath)
-	fmt.Printf("Anzahl (inclusion-)maximaler Cliquen: %d\n", numCliques)
-	fmt.Printf("Größte Clique (Größe %d): %v\n", len(largest), largest)
-	fmt.Printf("Größter 2-Plex (Größe %d): %v\n", len(plexNodes), plexNodes)
+	// ── 2-Plex Varianten ───────────────────────────────────────────────────
+	fmt.Println("\n===== 2-Plex Varianten =====")
+	plexVariants := []struct {
+		name string
+		run  func() (graphlib.VertexSet, error)
+	}{/*
+		{"TwoPlexNaive", func() (graphlib.VertexSet, error) {
+		      pg := makeIGraph()
+		      return pg.TwoPlexNaive()
+		}},
+		{"TwoPlexNaiveMinDegree", func() (graphlib.VertexSet, error) {
+			pg := makeIGraph()
+			return pg.TwoPlexNaiveMinDegree()
+		}},
+		{"TwoPlexNaiveParallel", func() (graphlib.VertexSet, error) {
+		    pg := makeIGraph()
+		    return pg.TwoPlexNaiveParallel()
+		}},
+		{"TwoPlexPermanent", func() (graphlib.VertexSet, error) {
+			pg := makePGraph()
+			return pg.TwoPlexPermanent()
+		}}, 
+		{"TwoPlexPermanentParallelKaputt", func() (graphlib.VertexSet, error) {
+			pg := makePGraph()
+			return pg.TwoPlexPermanentParallelKaputt()
+		}},
+		{"TwoPlexDistance", func() (graphlib.VertexSet, error) {
+			pg := makePGraph()
+			return pg.TwoPlexDistance()
+		}},*/
+		{"TwoPlexNStar", func() (graphlib.VertexSet, error) {
+			ig := makePGraph().IGraph
+			return ig.TwoPlexNStar()
+		}},
+	}
+	for _, v := range plexVariants {
+		benchmarkPlex(v.name, v.run)
+	}
 }

@@ -1,0 +1,88 @@
+go run clique_2plex_main.go -graph="exampleGraphs/soc-karate.mtx"              
+Graph eingelesen
+
+===== Bron–Kerbosch Varianten (laufen nacheinander) =====
+BronKerboschSimpleIter           ⇒ Cliques: 36  |  Größte Clique: 5  |  Zeit: 113.25µs
+BronKerboschPivot                ⇒ Cliques: 36  |  Größte Clique: 5  |  Zeit: 145.25µs
+BronKerboschDegeneracy           ⇒ Cliques: 36  |  Größte Clique: 5  |  Zeit: 158.208µs
+BronKerboschOwnPivotDegeneracy   ⇒ Cliques: 36  |  Größte Clique: 5  |  Zeit: 182.125µs
+
+===== Laufzeiten (I/O) =====
+Einlesen des Graphen:  43.542µs
+
+go run clique_2plex_main.go -graph="exampleGraphs/soc-dolphins.mtx"
+Graph eingelesen
+
+===== Bron–Kerbosch Varianten (laufen nacheinander) =====
+BronKerboschSimpleIter           ⇒ Cliques: 84  |  Größte Clique: 5  |  Zeit: 212.667µs
+BronKerboschPivot                ⇒ Cliques: 84  |  Größte Clique: 5  |  Zeit: 306.875µs
+BronKerboschDegeneracy           ⇒ Cliques: 84  |  Größte Clique: 5  |  Zeit: 294.208µs
+BronKerboschOwnPivotDegeneracy   ⇒ Cliques: 84  |  Größte Clique: 5  |  Zeit: 322.125µs
+
+===== Laufzeiten (I/O) =====
+Einlesen des Graphen:  51.5µs
+Gesamtlaufzeit:       1.229625ms
+
+go run clique_2plex_main.go -graph="exampleGraphs/abi.edgelist"                
+Graph eingelesen
+
+===== Bron–Kerbosch Varianten (laufen nacheinander) =====
+BronKerboschSimpleIter           ⇒ Cliques: 30  |  Größte Clique: 20  |  Zeit: 764.604208ms
+BronKerboschPivot                ⇒ Cliques: 30  |  Größte Clique: 20  |  Zeit: 4.186625ms
+BronKerboschDegeneracy           ⇒ Cliques: 30  |  Größte Clique: 20  |  Zeit: 4.983291ms
+BronKerboschOwnPivotDegeneracy   ⇒ Cliques: 30  |  Größte Clique: 20  |  Zeit: 15.741042ms
+
+===== Laufzeiten (I/O) =====
+Einlesen des Graphen:  380.583µs
+Gesamtlaufzeit:       790.034ms
+
+go run clique_2plex_main.go -graph="exampleGraphs/out.dimacs10-netscie.graph"
+Graph eingelesen
+
+===== Bron–Kerbosch Varianten (laufen nacheinander) =====
+BronKerboschSimpleIter           ⇒ Cliques: 613  |  Größte Clique: 20  |  Zeit: 432.703125ms
+BronKerboschPivot                ⇒ Cliques: 613  |  Größte Clique: 20  |  Zeit: 34.486667ms
+BronKerboschDegeneracy           ⇒ Cliques: 613  |  Größte Clique: 20  |  Zeit: 7.577542ms
+BronKerboschOwnPivotDegeneracy   ⇒ Cliques: 613  |  Größte Clique: 20  |  Zeit: 9.18325ms
+
+===== Laufzeiten (I/O) =====
+Einlesen des Graphen:  372.083µs
+Gesamtlaufzeit:       484.39125ms
+
+go run clique_2plex_main.go -graph="exampleGraphs/out.pajek-erdos.graph"
+Graph eingelesen
+
+===== Bron–Kerbosch Varianten (laufen nacheinander) =====
+BronKerboschSimpleIter           ⇒ Cliques: 9210  |  Größte Clique: 8  |  Zeit: 306.283458ms
+BronKerboschPivot                ⇒ Cliques: 9210  |  Größte Clique: 8  |  Zeit: 606.386416ms
+BronKerboschDegeneracy           ⇒ Cliques: 9210  |  Größte Clique: 8  |  Zeit: 151.284459ms
+BronKerboschOwnPivotDegeneracy   ⇒ Cliques: 9210  |  Größte Clique: 8  |  Zeit: 185.715917ms
+
+===== Laufzeiten (I/O) =====
+Einlesen des Graphen:  2.006917ms
+Gesamtlaufzeit:       1.2517695s
+
+go run clique_2plex_main.go -graph="exampleGraphs/fb-pages-public-figure.edges"
+Graph eingelesen
+
+===== Bron–Kerbosch Varianten (laufen nacheinander) =====
+BronKerboschSimpleIter           ⇒ Cliques: 150772  |  Größte Clique: 21  |  Zeit: 34.014250541s
+BronKerboschPivot                ⇒ Cliques: 150772  |  Größte Clique: 21  |  Zeit: 5.682854958s
+BronKerboschDegeneracy           ⇒ Cliques: 150772  |  Größte Clique: 21  |  Zeit: 3.527308625s
+BronKerboschOwnPivotDegeneracy   ⇒ Cliques: 150772  |  Größte Clique: 21  |  Zeit: 10.765782375s
+
+===== Laufzeiten (I/O) =====
+Einlesen des Graphen:  16.769042ms
+
+go run clique_2plex_main.go -graph="exampleGraphs/fb-pages-media.edges"                            
+Graph eingelesen
+
+===== Bron–Kerbosch Varianten (laufen nacheinander) =====
+BronKerboschSimpleIter           ⇒ Cliques: 126862  |  Größte Clique: 31  |  Zeit: 1h8m21.094288916s
+BronKerboschPivot                ⇒ Cliques: 126862  |  Größte Clique: 31  |  Zeit: 15.335881083s
+BronKerboschDegeneracy           ⇒ Cliques: 126862  |  Größte Clique: 31  |  Zeit: 6.681045042s
+BronKerboschOwnPivotDegeneracy   ⇒ Cliques: 126862  |  Größte Clique: 31  |  Zeit: 7.827507792s
+
+===== Laufzeiten (I/O) =====
+Einlesen des Graphen:  31.380125ms
+Gesamtlaufzeit:       1h8m50.970459125s
