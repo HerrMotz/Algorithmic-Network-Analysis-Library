@@ -90,3 +90,141 @@ func PartialDisagreementCompare(a, b float64) bool {
 	}
 	return true
 }
+
+// ComponentClustering returns a clustering of the graph where each connected component is its own cluster.
+// Each cluster is a set (VertexSet) of vertices.
+func (l *AdjList) ComponentClustering() []VertexSet {
+	componentIDs := l.naiveConnectedComponents()
+	if componentIDs == nil {
+		return nil // graph might be invalid or an error occurred
+	}
+
+	clusters := make(map[int]VertexSet)
+
+	for vertex, compID := range componentIDs {
+		if _, exists := clusters[compID]; !exists {
+			clusters[compID] = make(VertexSet)
+		}
+		clusters[compID][vertex] = struct{}{}
+	}
+
+	// Convert map to slice of sets
+	result := make([]VertexSet, 0, len(clusters))
+	for _, cluster := range clusters {
+		result = append(result, cluster)
+	}
+
+	return result
+}
+
+// BFSWithDepth returns all vertices in an induced subgraph that have a certain max.
+// distance to a given start node using BFS
+func (iGraph *InducedGraph) BFSWithDepth(start int, depth int) VertexSet {
+	visited := make(VertexSet)
+	queue := []struct {
+		v, d int
+	}{{start, 0}}
+	visited[start] = struct{}{}
+	for len(queue) > 0 {
+		item := queue[0]
+		queue = queue[1:]
+		if item.d >= depth {
+			continue
+		}
+		for neighbor := range iGraph.AdjList.List[item.v] {
+			if _, good := iGraph.GoodVertices[neighbor]; !good {
+				continue // skip nodes not in the induced subgraph
+			}
+			if _, seen := visited[neighbor]; !seen {
+				visited[neighbor] = struct{}{}
+				queue = append(queue, struct{ v, d int }{neighbor, item.d + 1})
+			}
+		}
+	}
+	return visited
+}
+
+func (l *AdjList) HalveClustering(metric func(VertexSet) float64, partialModularityCompare func(a, b float64) bool) []VertexSet {
+	var clustering []VertexSet
+	clusteringToDo := l.ComponentClustering() // Initial clusters: each connected component
+
+	for len(clusteringToDo) > 0 {
+		// Pop a cluster
+		cluster := clusteringToDo[len(clusteringToDo)-1]
+		clusteringToDo = clusteringToDo[:len(clusteringToDo)-1]
+
+		// If cluster is too small to split, just keep it
+		if len(cluster) <= 1 {
+			clustering = append(clustering, cluster)
+			continue
+		}
+
+		// Build induced subgraph for this cluster
+		iGraph := &InducedGraph{
+			AdjList:      l,
+			GoodVertices: cluster,
+		}
+
+		// Get distance matrix
+		distMatrix := iGraph.NaiveAllPairsShortestPath()
+
+		// Get slice of vertices in this cluster
+		vertexIDs := make([]int, 0, len(cluster))
+		vertexIndex := make(map[int]int)
+		idx := 0
+		for v := range cluster {
+			vertexIDs = append(vertexIDs, v)
+			vertexIndex[v] = idx
+			idx++
+		}
+
+		// Find the pair (u, v) with maximal distance d
+		maxDist := -1
+		var uIdx, vIdx int
+		for i := 0; i < len(vertexIDs); i++ {
+			for j := 0; j < len(vertexIDs); j++ {
+				if distMatrix[i][j] > maxDist {
+					maxDist = distMatrix[i][j]
+					uIdx, vIdx = i, j
+				}
+			}
+		}
+
+		// If cannot split further (isolated node, or all unreachable), add as is
+		if maxDist <= 0 {
+			clustering = append(clustering, cluster)
+			continue
+		}
+
+		// BFS from u and v (in induced subgraph) for ceil(maxDist/2) steps
+		depth := (maxDist + 1) / 2
+		u := vertexIDs[uIdx]
+		v := vertexIDs[vIdx]
+
+		cluster1 := iGraph.BFSWithDepth(u, depth)
+		cluster2 := iGraph.BFSWithDepth(v, depth)
+
+		// Assign overlapping nodes arbitrarily (here: to cluster1)
+		for node := range cluster2 {
+			if _, in1 := cluster1[node]; in1 {
+				delete(cluster2, node)
+			}
+		}
+
+		// Remove empty clusters
+		if len(cluster1) == 0 || len(cluster2) == 0 {
+			clustering = append(clustering, cluster)
+			continue
+		}
+
+		// Metric comparison
+		if partialModularityCompare(metric(cluster), metric(cluster1)+metric(cluster2)) {
+			clustering = append(clustering, cluster)
+		} else {
+			clusteringToDo = append(clusteringToDo, cluster1)
+			clusteringToDo = append(clusteringToDo, cluster2)
+		}
+	}
+
+	return clustering
+}

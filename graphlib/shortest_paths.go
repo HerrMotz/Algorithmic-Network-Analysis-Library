@@ -76,6 +76,36 @@ func (l *AdjList) SingleSourceShortestPath(source Vertex) ([]int, error) {
 	return dist, nil
 }
 
+func (iGraph *InducedGraph) SingleSourceShortestPath(source Vertex) ([]int, error) {
+	size := iGraph.Size()
+	dist := make([]int, size)
+	for i := range dist {
+		dist[i] = INF
+	}
+	dist[source.Id] = 0
+	queue := NewQueue[int](10) // todo heuristic chance
+	visited := make([]bool, iGraph.Size())
+	visited[source.Id] = true
+
+	queue.enqueue(source.Id)
+	for queue.size > 0 {
+		u := queue.pop()
+
+		neighbours, err := iGraph.Neighbours(Vertex{u})
+		if err != nil {
+			return nil, err
+		}
+		for v := range neighbours {
+			if !visited[v] {
+				visited[v] = true
+				dist[v] = dist[u] + 1
+				queue.enqueue(v)
+			}
+		}
+	}
+	return dist, nil
+}
+
 // NaiveAllPairsShortestPath return the full distance matrix for a given adjacency list
 func (l *AdjList) NaiveAllPairsShortestPath() [][]int {
 	// we return a full matrix, because the distance from each node to each other is well-defined,
@@ -84,6 +114,18 @@ func (l *AdjList) NaiveAllPairsShortestPath() [][]int {
 	distanceMatrix := make([][]int, l.Size)
 	for i := 0; i < l.Size; i++ {
 		distanceMatrix[i], _ = l.SingleSourceShortestPath(Vertex{i})
+	}
+
+	return distanceMatrix
+}
+
+func (iGraph *InducedGraph) NaiveAllPairsShortestPath() [][]int {
+	// we return a full matrix, because the distance from each node to each other is well-defined,
+	// even if they are not in the same connected component
+
+	distanceMatrix := make([][]int, iGraph.Size())
+	for i := 0; i < iGraph.Size(); i++ {
+		distanceMatrix[i], _ = iGraph.SingleSourceShortestPath(Vertex{i})
 	}
 
 	return distanceMatrix
