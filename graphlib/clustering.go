@@ -95,45 +95,135 @@ func PartialDisagreementCompare(a, b float64) bool {
 // Heuristic & Operation 1 - Merge
 // --------------------------------------------------------------------
 
-type ClusterIndex [2]int // [bucketKey, sliceIdx]
+func (l *AdjList) MergeClustering(
+	metric func(VertexSet) float64,
+	compare func(newMetric, oldMetric float64) bool,
+) ([]VertexSet, error) {
 
-func (l *AdjList) FindAdjacentClusters(
-	k, i int,
-	clusters *map[int][]VertexSet,
-) []ClusterIndex {
-	result := make(map[ClusterIndex]struct{})
-	clusterBuckets := *clusters
-	currCluster := clusterBuckets[k][i]
+	// STEP 1: Initialize each vertex as its own cluster
+	clusters := make([]VertexSet, l.Size)
+	vertexToCluster := make(map[int]int)
+	for i := 0; i < l.Size; i++ {
+		clusters[i] = VertexSet{i: Naught{}}
+		vertexToCluster[i] = i
+	}
+	activeClusters := make(map[int]Naught) // this is the same type as a VertexSet, but this was confusing to read.
+	for i := 0; i < l.Size; i++ {
+		activeClusters[i] = Naught{}
+	}
 
-	// For each vertex in the current cluster
-	for v := range currCluster {
-		// For each neighbor of v
-		neighbors, err := l.Neighbours(Vertex{v})
-		if err != nil {
+	// STEP 2: Identify isolated vertices
+	isolated := make(VertexSet)
+	for i := 0; i < l.Size; i++ {
+		neigh, _ := l.Neighbours(Vertex{i})
+		if len(neigh) == 0 {
+			isolated[i] = Naught{}
+		}
+	}
+	// STEP 3: Merge all leaves with their single neighbour
+	for i := 0; i < l.Size; i++ {
+		if _, ok := isolated[i]; ok {
 			continue
 		}
-		for u := range neighbors {
-			// Search all clusters except this one
-			for k2, clustersOfSize := range clusterBuckets {
-				for i2, otherCluster := range clustersOfSize {
-					// skip itself
-					if k2 == k && i2 == i {
-						continue
-					}
-					// if u is in otherCluster, add its [bucket,slice] to result
-					if _, found := otherCluster[u]; found {
-						idx := ClusterIndex{k2, i2}
-						result[idx] = struct{}{}
-					}
+		neigh, _ := l.Neighbours(Vertex{i})
+		if len(neigh) == 1 {
+			var n int
+			for u := range neigh {
+				n = u
+			}
+			idxV := vertexToCluster[i]
+			idxN := vertexToCluster[n]
+			_, okV := activeClusters[idxV]
+			_, okN := activeClusters[idxN]
+			if idxV != idxN && okV && okN {
+				// Merge V into N
+				for u := range clusters[idxV] {
+					clusters[idxN][u] = Naught{}
+					vertexToCluster[u] = idxN
 				}
+				clusters[idxV] = nil
+				delete(activeClusters, idxV)
 			}
 		}
 	}
 
-	// convert result map to a slice
-	out := make([]ClusterIndex, 0, len(result))
-	for idx := range result {
-		out = append(out, idx)
+	// STEP 4: Main merging procedure
+	n := l.Size
+	for k := 2; k <= n; k++ {
+		var toMerge [][2]int
+		// Only consider active clusters of size k
+		var clusterIndices []int
+		for idx := range activeClusters {
+			if len(clusters[idx]) == k {
+				clusterIndices = append(clusterIndices, idx)
+			}
+		}
+		for _, i := range clusterIndices {
+			cluster := clusters[i]
+			neighborClusters := make(VertexSet)
+			for v := range cluster {
+				neigh, _ := l.Neighbours(Vertex{v})
+				for n := range neigh {
+					j := vertexToCluster[n]
+					if j != i {
+						if _, ok := activeClusters[j]; ok {
+							neighborClusters[j] = Naught{}
+						}
+					}
+				}
+			}
+			// Find best neighbouring cluster to merge
+			bestJ := -1
+			var bestImprovement float64
+			foundImprovement := false
+			for j := range neighborClusters {
+				other := clusters[j]
+				mergedCluster := cluster.Copy()
+				for u := range other {
+					mergedCluster[u] = Naught{}
+				}
+				oldMetric := metric(cluster) + metric(other)
+				newMetric := metric(mergedCluster)
+				if compare(newMetric, oldMetric) {
+					improvement := oldMetric - newMetric
+					if !foundImprovement || improvement > bestImprovement {
+						bestImprovement = improvement
+						bestJ = j
+						foundImprovement = true
+					}
+				}
+			}
+			if bestJ != -1 {
+				toMerge = append(toMerge, [2]int{i, bestJ})
+			}
+		}
+		// Apply merges (each cluster at most once)
+		mergedThisRound := make(map[int]Naught)
+		for _, pair := range toMerge {
+			i, j := pair[0], pair[1]
+			_, okI := activeClusters[i]
+			_, okJ := activeClusters[j]
+			_, mergedI := mergedThisRound[i]
+			_, mergedJ := mergedThisRound[j]
+			if okI && okJ && !mergedI && !mergedJ {
+				for u := range clusters[j] {
+					clusters[i][u] = Naught{}
+					vertexToCluster[u] = i
+				}
+				clusters[j] = nil
+				delete(activeClusters, j)
+				mergedThisRound[i] = Naught{}
+				mergedThisRound[j] = Naught{}
+			}
+		}
 	}
-	return out
+
+	// Return active clusters as VertexSets
+	var result []VertexSet
+	for idx := range activeClusters {
+		if clusters[idx] != nil && len(clusters[idx]) > 0 {
+			result = append(result, clusters[idx])
+		}
+	}
+	return result, nil
 }
