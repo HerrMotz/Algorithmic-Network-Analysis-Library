@@ -90,3 +90,50 @@ func PartialDisagreementCompare(a, b float64) bool {
 	}
 	return true
 }
+
+// --------------------------------------------------------------------
+// Heuristic & Operation 1 - Merge
+// --------------------------------------------------------------------
+
+type ClusterIndex [2]int // [bucketKey, sliceIdx]
+
+func (l *AdjList) FindAdjacentClusters(
+	k, i int,
+	clusters *map[int][]VertexSet,
+) []ClusterIndex {
+	result := make(map[ClusterIndex]struct{})
+	clusterBuckets := *clusters
+	currCluster := clusterBuckets[k][i]
+
+	// For each vertex in the current cluster
+	for v := range currCluster {
+		// For each neighbor of v
+		neighbors, err := l.Neighbours(Vertex{v})
+		if err != nil {
+			continue
+		}
+		for u := range neighbors {
+			// Search all clusters except this one
+			for k2, clustersOfSize := range clusterBuckets {
+				for i2, otherCluster := range clustersOfSize {
+					// skip itself
+					if k2 == k && i2 == i {
+						continue
+					}
+					// if u is in otherCluster, add its [bucket,slice] to result
+					if _, found := otherCluster[u]; found {
+						idx := ClusterIndex{k2, i2}
+						result[idx] = struct{}{}
+					}
+				}
+			}
+		}
+	}
+
+	// convert result map to a slice
+	out := make([]ClusterIndex, 0, len(result))
+	for idx := range result {
+		out = append(out, idx)
+	}
+	return out
+}
