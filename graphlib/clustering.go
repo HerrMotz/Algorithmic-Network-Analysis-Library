@@ -5,9 +5,19 @@ import (
 	"math"
 )
 
-// PartialModularity calculates the modularity q(C) of a community C in the graph.
+// Dummy metric: just size of cluster (for easy testing)
+func clusterSizeMetric(_ *AdjList, C VertexSet) float64 {
+	return float64(len(C))
+}
+
+// Simple compare: merge if merged cluster is not smaller (just for testing)
+func clusterSizeCompare(newMetric, oldMetric float64) bool {
+	return newMetric >= oldMetric
+}
+
+// partialModularityMetric calculates the modularity q(C) of a community C in the graph.
 // It essentially gets an induced subgraph, but for simplicity the special type was avoided.
-func (l *AdjList) PartialModularity(C VertexSet) (float64, error) {
+func partialModularityMetric(l *AdjList, C VertexSet) (float64, error) {
 	if l.Size == 0 || len(C) == 0 {
 		return 0, errors.New("graph or community is empty")
 	}
@@ -38,13 +48,13 @@ func (l *AdjList) PartialModularity(C VertexSet) (float64, error) {
 	}
 	eC /= 2 // each edge was counted twice
 
-	// PartialModularity formula:
+	// partialModularityMetric formula:
 	// q(C) = |E(C)| / m - (sum_deg(v) for v in C)^2 / (4 * m^2)
 	q := float64(eC)/float64(m) - math.Pow(float64(degreeSum), 2)/(4.0*math.Pow(float64(m), 2))
 	return q, nil
 }
 
-func PartialModularityCompare(a, b float64) bool {
+func partialModularityCompare(a, b float64) bool {
 	// Compare two modularity values
 	if a < b {
 		return false
@@ -52,10 +62,10 @@ func PartialModularityCompare(a, b float64) bool {
 	return true
 }
 
-// PartialDisagreement calculates d(C) = (|C| choose 2) - 2 * |E(C)|
+// partialDisagreementMetric calculates d(C) = (|C| choose 2) - 2 * |E(C)|
 // It measures how far a subgraph is from being a complete graph.
 // It essentially gets an induced subgraph, but for simplicity the special type was avoided.
-func (l *AdjList) PartialDisagreement(C VertexSet) (int, error) {
+func partialDisagreementMetric(l *AdjList, C VertexSet) (int, error) {
 	if len(C) < 2 {
 		return 0, nil
 	}
