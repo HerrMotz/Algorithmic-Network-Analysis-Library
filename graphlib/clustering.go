@@ -96,7 +96,7 @@ func PartialDisagreementCompare(a, b float64) bool {
 // --------------------------------------------------------------------
 
 func (l *AdjList) MergeClustering(
-	metric func(VertexSet) float64,
+	metric func(*AdjList, VertexSet) (float64, error),
 	compare func(newMetric, oldMetric float64) bool,
 ) ([]VertexSet, error) {
 
@@ -113,7 +113,7 @@ func (l *AdjList) MergeClustering(
 	}
 
 	// STEP 2: Identify isolated vertices
-	isolated := make(VertexSet)
+	isolated := make(map[int]Naught)
 	for i := 0; i < l.Size; i++ {
 		neigh, _ := l.Neighbours(Vertex{i})
 		if len(neigh) == 0 {
@@ -149,7 +149,7 @@ func (l *AdjList) MergeClustering(
 
 	// STEP 4: Main merging procedure
 	n := l.Size
-	for k := 2; k <= n; k++ {
+	for k := 1; k <= n; k++ {
 		var toMerge [][2]int
 		// Only consider active clusters of size k
 		var clusterIndices []int
@@ -182,8 +182,20 @@ func (l *AdjList) MergeClustering(
 				for u := range other {
 					mergedCluster[u] = Naught{}
 				}
-				oldMetric := metric(cluster) + metric(other)
-				newMetric := metric(mergedCluster)
+				// Calculate metrics
+				m1, err := metric(l, cluster)
+				if err != nil {
+					return nil, err
+				}
+				m2, err := metric(l, other)
+				if err != nil {
+					return nil, err
+				}
+				newMetric, err := metric(l, mergedCluster)
+				if err != nil {
+					return nil, err
+				}
+				oldMetric := m1 + m2
 				if compare(newMetric, oldMetric) {
 					improvement := oldMetric - newMetric
 					if !foundImprovement || improvement > bestImprovement {
