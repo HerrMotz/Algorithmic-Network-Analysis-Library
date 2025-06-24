@@ -4,6 +4,7 @@ import (
 	"errors"
 	"math"
 	"math/rand"
+	"sort"
 )
 
 // Dummy metric: just size of cluster (for easy testing)
@@ -20,7 +21,7 @@ func clusterSizeCompare(newMetric, oldMetric float64) (bool, error) {
 // It essentially gets an induced subgraph, but for simplicity the special type was avoided.
 func PartialModularityMetric(l *AdjList, C VertexSet) (float64, error) {
 	if l.Size == 0 || len(C) == 0 {
-		return 0, errors.New("graph or community is empty")
+		return 0, errors.New("partialModularityMetric: cluster is empty")
 	}
 
 	var (
@@ -474,6 +475,10 @@ func (iGraph *InducedGraph) BFSWithDepth(start int, depth int) VertexSet {
 func (l *AdjList) HalveClustering(metric func(*AdjList, VertexSet) (float64, error), compare func(a, b float64) bool) ([]VertexSet, error) {
 	var clustering []VertexSet
 	clusteringToDo := l.ComponentClustering() // Initial clusters: each connected component
+	distMatrix, err := l.ImprovedAllPairsShortestPaths()
+	if err != nil {
+		return nil, err
+	}
 
 	for len(clusteringToDo) > 0 {
 		// Pop a cluster
@@ -492,20 +497,17 @@ func (l *AdjList) HalveClustering(metric func(*AdjList, VertexSet) (float64, err
 			GoodVertices: cluster,
 		}
 
-		// Get distance matrix
-		distMatrix := iGraph.SpecialAllPairsShortestPath()
-
-		// Find the pair (u, v) with maximal distance d
+		// Find the pair (u, v) with maximal distance d in the current cluster using the precomputed distance matrix
 		maxDist := -1
-		var uIdx, vIdx int
-		for i := 0; i < l.Size; i++ {
-			if distMatrix[i] == nil {
-				continue
-			}
-			for j := 0; j < l.Size; j++ {
-				if distMatrix[i][j] > maxDist {
-					maxDist = distMatrix[i][j]
-					uIdx, vIdx = i, j
+		var u, v int
+		for x := range cluster {
+			for y := range cluster {
+				if x == y {
+					continue
+				}
+				if distMatrix[x][y] > maxDist {
+					maxDist = distMatrix[x][y]
+					u, v = x, y
 				}
 			}
 		}
@@ -521,8 +523,8 @@ func (l *AdjList) HalveClustering(metric func(*AdjList, VertexSet) (float64, err
 		cluster2 := make(VertexSet)
 
 		for w := range iGraph.GoodVertices {
-			// Compare distances from u and v (using indices uIdx and vIdx)
-			if distMatrix[uIdx][w] <= distMatrix[vIdx][w] {
+			// Compare distances from u and v
+			if distMatrix[u][w] <= distMatrix[v][w] {
 				cluster1[w] = struct{}{}
 			} else {
 				cluster2[w] = struct{}{}
@@ -559,4 +561,157 @@ func (l *AdjList) HalveClustering(metric func(*AdjList, VertexSet) (float64, err
 	}
 
 	return clustering, nil
+}
+
+func (l *AdjList) ICEClustering(
+	metric func(*AdjList, VertexSet) (float64, error),
+	compare func(a, b float64) bool,
+) ([]VertexSet, error) {
+	n := l.Size
+	assigned := make(map[int]bool)
+	var clusters []VertexSet
+
+	// 1. Sort vertices by ascending degree
+	verticesSortedByDegree := make([]int, n)
+	for k := range l.List {
+		verticesSortedByDegree[k] = k
+	}
+	sort.Slice(verticesSortedByDegree, func(i, j int) bool {
+		n1, _ := l.Neighbours(Vertex{verticesSortedByDegree[i]})
+		n2, _ := l.Neighbours(Vertex{verticesSortedByDegree[j]})
+		return len(n1) < len(n2)
+	})
+
+	// 2. Initial clustering: group each vertex and its neighbors if not already clustered
+	for _, v := range verticesSortedByDegree {
+		// this also puts isolated vertices into their own cluster
+		if assigned[v] {
+			continue
+		}
+		cluster := make(VertexSet)
+		cluster[v] = Naught{}
+		neigh, err := l.Neighbours(Vertex{v})
+		if err != nil {
+			return nil, err
+		}
+		for u := range neigh {
+			cluster[u] = Naught{}
+		}
+		// Skip if all already assigned
+		skip := true
+		for u := range cluster {
+			if !assigned[u] {
+				skip = false
+				break
+			}
+		}
+		if skip {
+			continue
+		}
+		for u := range cluster {
+			assigned[u] = true
+		}
+		clusters = append(clusters, cluster)
+	}
+
+	// For marking finished clusters
+	done := make(map[int]bool)
+
+	for {
+		// Find the largest unfinished cluster
+		maxIdx, maxSize := -1, -1
+		for i, c := range clusters {
+			if done[i] {
+				continue
+			}
+			if len(c) > maxSize {
+				maxSize = len(c)
+				maxIdx = i
+			}
+		}
+		if maxIdx == -1 {
+			break // all done
+		}
+
+		// Pick candidate vertex to move from the biggest cluster
+		c := clusters[maxIdx]
+		bestV, maxOutside, minDegree := -1, -1, INF
+		for v := range c {
+			outside := 0
+			neigh, err := l.Neighbours(Vertex{v})
+			if err != nil {
+				return nil, err
+			}
+			for u := range neigh {
+				inSame := false
+				for w := range c {
+					if u == w {
+						inSame = true
+						break
+					}
+				}
+				if !inSame {
+					outside++
+				}
+			}
+			deg := len(neigh)
+			if outside > maxOutside || (outside == maxOutside && deg < minDegree) {
+				bestV = v
+				maxOutside = outside
+				minDegree = deg
+			}
+		}
+		if bestV == -1 {
+			done[maxIdx] = true
+			continue
+		}
+
+		// Prepare affected clusters
+		oldCluster := clusters[maxIdx]
+		// Remove bestV from current cluster
+		newCluster := make(VertexSet)
+		for u := range oldCluster {
+			if u != bestV {
+				newCluster[u] = Naught{}
+			}
+		}
+		// Add bestV as its own cluster
+		soloCluster := make(VertexSet)
+		soloCluster[bestV] = Naught{}
+
+		// Compute metric sums for affected clusters before and after
+		oldMetric, err := metric(l, oldCluster)
+		if err != nil {
+			return nil, err
+		}
+		newMetric1, err := metric(l, newCluster)
+		if err != nil {
+			return nil, err
+		}
+		newMetric2, err := metric(l, soloCluster)
+		if err != nil {
+			return nil, err
+		}
+
+		// todo It should be EITHER newmetric1 >= oldMetric OR newMetric2 >= oldMetric and
+		//  then the appropriate action is taken (replacing the extended cluster and removing from the old cluster)
+		//  OR removing from the old cluster and adding the new cluster
+		if compare(newMetric1+newMetric2, oldMetric) {
+			// Accept the move
+			clusters[maxIdx] = newCluster
+			clusters = append(clusters, soloCluster)
+			// Remove any empty clusters
+			pruned := clusters[:0]
+			for _, c := range clusters {
+				if len(c) > 0 {
+					pruned = append(pruned, c)
+				}
+			}
+			clusters = pruned
+		} else {
+			done[maxIdx] = true
+		}
+	}
+
+	return clusters, nil
 }
