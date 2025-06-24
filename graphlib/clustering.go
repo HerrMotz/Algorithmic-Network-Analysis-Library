@@ -282,7 +282,7 @@ func (l *AdjList) MergeClusteringGreedyBFS(
 }
 
 // MergeClusteringMetricWithRandomPivot merges clusters by picking a random active cluster
-// and merging it with the best possible neighboring cluster according to the metric.
+// and merging it with the best possible neighbouring cluster according to the metric.
 func (l *AdjList) MergeClusteringMetricWithRandomPivot(
 	metric func(*AdjList, VertexSet) (float64, error),
 	compare func(newMetric, oldMetric float64) bool,
@@ -307,7 +307,7 @@ func (l *AdjList) MergeClusteringMetricWithRandomPivot(
 			isolated[i] = Naught{}
 		}
 	}
-	// STEP 3: Merge all leaves with their single neighbor
+	// STEP 3: Merge all leaves with their single neighbour
 	for i := 0; i < l.Size; i++ {
 		if _, ok := isolated[i]; ok {
 			continue
@@ -354,31 +354,31 @@ func (l *AdjList) MergeClusteringMetricWithRandomPivot(
 		for _, chosenIdx := range clusterIndices {
 			cluster := clusters[chosenIdx]
 
-			// Find neighbor clusters
-			neighborClusters := make(VertexSet)
+			// Find neighbour clusters
+			neighbourClusters := make(VertexSet)
 			for v := range cluster {
 				neigh, _ := l.Neighbours(Vertex{v})
 				for n := range neigh {
 					j := vertexToCluster[n]
 					if j != chosenIdx {
 						if _, ok := activeClusters[j]; ok {
-							neighborClusters[j] = Naught{}
+							neighbourClusters[j] = Naught{}
 						}
 					}
 				}
 			}
 
-			// Gather all neighbor indices
-			var neighborIndices []int
-			for j := range neighborClusters {
-				neighborIndices = append(neighborIndices, j)
+			// Gather all neighbour indices
+			var neighbourIndices []int
+			for j := range neighbourClusters {
+				neighbourIndices = append(neighbourIndices, j)
 			}
-			if len(neighborIndices) == 0 {
-				continue // No neighbors to merge with, try next cluster
+			if len(neighbourIndices) == 0 {
+				continue // No neighbours to merge with, try next cluster
 			}
 
-			// Find the best neighbor according to the metric
-			bestNeighbor := -1
+			// Find the best neighbour according to the metric
+			bestNeighbour := -1
 			bestImprovement := 0.0
 			foundImprovement := false
 			m1, err := metric(l, cluster)
@@ -386,7 +386,7 @@ func (l *AdjList) MergeClusteringMetricWithRandomPivot(
 				return nil, err
 			}
 
-			for _, j := range neighborIndices {
+			for _, j := range neighbourIndices {
 				other := clusters[j]
 
 				mergedCluster := cluster.Copy()
@@ -408,20 +408,20 @@ func (l *AdjList) MergeClusteringMetricWithRandomPivot(
 					improvement := oldMetric - newMetric
 					if !foundImprovement || improvement > bestImprovement {
 						bestImprovement = improvement
-						bestNeighbor = j
+						bestNeighbour = j
 						foundImprovement = true
 					}
 				}
 			}
 
-			if foundImprovement && bestNeighbor != -1 {
-				// Merge clusters: chosenIdx <- bestNeighbor
-				for u := range clusters[bestNeighbor] {
+			if foundImprovement && bestNeighbour != -1 {
+				// Merge clusters: chosenIdx <- bestNeighbour
+				for u := range clusters[bestNeighbour] {
 					clusters[chosenIdx][u] = Naught{}
 					vertexToCluster[u] = chosenIdx
 				}
-				clusters[bestNeighbor] = nil
-				delete(activeClusters, bestNeighbor)
+				clusters[bestNeighbour] = nil
+				delete(activeClusters, bestNeighbour)
 				merged = true
 				break // Merge only one pair per iteration
 			}
@@ -485,13 +485,13 @@ func (iGraph *InducedGraph) BFSWithDepth(start int, depth int) VertexSet {
 		if item.d >= depth {
 			continue
 		}
-		for neighbor := range iGraph.AdjList.List[item.v] {
-			if _, good := iGraph.GoodVertices[neighbor]; !good {
+		for neighbour := range iGraph.AdjList.List[item.v] {
+			if _, good := iGraph.GoodVertices[neighbour]; !good {
 				continue // skip nodes not in the induced subgraph
 			}
-			if _, seen := visited[neighbor]; !seen {
-				visited[neighbor] = struct{}{}
-				queue = append(queue, struct{ v, d int }{neighbor, item.d + 1})
+			if _, seen := visited[neighbour]; !seen {
+				visited[neighbour] = struct{}{}
+				queue = append(queue, struct{ v, d int }{neighbour, item.d + 1})
 			}
 		}
 	}
@@ -608,7 +608,7 @@ func (l *AdjList) ICEClustering(
 		return len(n1) < len(n2)
 	})
 
-	// 2. Initial clustering: group each vertex and its neighbors if not already clustered
+	// 2. Initial clustering: group each vertex and its neighbours if not already clustered
 	for _, v := range verticesSortedByDegree {
 		// this also puts isolated vertices into their own cluster
 		if assigned[v] {
