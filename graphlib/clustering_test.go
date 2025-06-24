@@ -115,6 +115,7 @@ func TestPartialModularity(t *testing.T) {
 	}
 }
 
+// todo delete this function
 func TestPartialModularityTemporary(t *testing.T) {
 	adj := &AdjList{
 		List: testAdjTwoCliquesBridge,
@@ -333,6 +334,82 @@ func TestHalveClustering(t *testing.T) {
 			// Check that every wanted cluster is present in the result, order does not matter
 			if len(got) != len(tc.want) {
 				t.Errorf("HalveClustering failed: got %d clusters, want %d", len(got), len(tc.want))
+			}
+			for _, wantCluster := range tc.want {
+				found := false
+				for _, gotCluster := range got {
+					if reflect.DeepEqual(gotCluster, wantCluster) {
+						found = true
+						break
+					}
+				}
+				if !found {
+					t.Errorf("Expected cluster %v not found in result %v", wantCluster, got)
+				}
+			}
+			// Optionally check size as well
+			if len(got) != len(tc.want) {
+				t.Errorf("Got %d clusters, want %d", len(got), len(tc.want))
+			}
+		})
+	}
+}
+
+func TestICEClustering(t *testing.T) {
+	tests := []struct {
+		name string
+		adj  []VertexSet
+		want []VertexSet // expected clusters
+	}{
+		{
+			name: "two cliques and bridge",
+			adj:  testAdjTwoCliquesBridge,
+			want: []VertexSet{
+				{0: Naught{}, 1: Naught{}, 2: Naught{}},
+				{3: Naught{}, 4: Naught{}, 5: Naught{}},
+			},
+		},
+		{
+			name: "clique and isolates",
+			adj:  testAdjCliqueIsolates,
+			want: []VertexSet{
+				{0: Naught{}, 1: Naught{}, 2: Naught{}}, // clique
+				{3: Naught{}},                           // isolate
+				{4: Naught{}},                           // isolate
+			},
+		},
+		{
+			name: "weird circle", // test the special case where leafs are put in a cluster with their neighbours
+			adj:  weirdCircle,
+			want: []VertexSet{
+				{0: Naught{}, 3: Naught{}}, // leaf 3 is in a cluster with 0
+				{1: Naught{}, 4: Naught{}}, // leaf 4 is in a cluster with 1
+				{2: Naught{}, 5: Naught{}}, // leaf 5 is in a cluster with 2
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			adj := &AdjList{
+				List: make([]VertexSet, len(tc.adj)),
+				Size: len(tc.adj),
+			}
+			for i, neighbors := range tc.adj {
+				adj.List[i] = make(VertexSet)
+				for n := range neighbors {
+					adj.List[i][n] = Naught{}
+				}
+			}
+
+			got, err := adj.ICEClustering(partialModularityMetric, partialModularityCompare)
+			if err != nil {
+				t.Fatalf("ICEClustering failed: %v", err)
+			}
+
+			// Check that every wanted cluster is present in the result, order does not matter
+			if len(got) != len(tc.want) {
+				t.Errorf("ICEClustering failed: got %d clusters, want %d", len(got), len(tc.want))
 			}
 			for _, wantCluster := range tc.want {
 				found := false
