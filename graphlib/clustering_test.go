@@ -43,7 +43,7 @@ var testAdjCliqueIsolates = []VertexSet{
 //	/       \
 //
 // 3         4
-var weirdCircle = []VertexSet{
+var testBeyblade = []VertexSet{
 	// 0
 	{1: Naught{}, 2: Naught{}, 3: Naught{}},
 	// 1
@@ -100,7 +100,7 @@ func TestPartialModularity(t *testing.T) {
 		2: Naught{},
 	}
 
-	modularity, err := partialModularityMetric(graph, C)
+	modularity, err := PartialModularityMetric(graph, C)
 	if err != nil {
 		t.Fatalf("partialModularityMetric calculation failed: %v", err)
 	}
@@ -126,7 +126,7 @@ func TestPartialModularityTemporary(t *testing.T) {
 		0: Naught{}, 1: Naught{}, 2: Naught{}, 3: Naught{}, 4: Naught{}, 5: Naught{},
 	}
 
-	got, err := partialModularityMetric(adj, lol)
+	got, err := PartialModularityMetric(adj, lol)
 
 	lol21 := VertexSet{
 		0: Naught{}, 1: Naught{}, 2: Naught{},
@@ -135,8 +135,8 @@ func TestPartialModularityTemporary(t *testing.T) {
 		3: Naught{}, 4: Naught{}, 5: Naught{},
 	}
 
-	got1, err := partialModularityMetric(adj, lol21)
-	got2, err := partialModularityMetric(adj, lol22)
+	got1, err := PartialModularityMetric(adj, lol21)
+	got2, err := PartialModularityMetric(adj, lol22)
 	t.Logf("Metric when cliques are clusters: %f", got1+got2)
 
 	if err != nil {
@@ -173,7 +173,7 @@ func TestMergeClustering(t *testing.T) {
 		},
 		{
 			name: "weird circle", // test the special case where leafs are put in a cluster with their neighbours
-			adj:  weirdCircle,
+			adj:  testBeyblade,
 			want: []VertexSet{
 				{0: Naught{}, 3: Naught{}}, // leaf 3 is in a cluster with 0
 				{1: Naught{}, 4: Naught{}}, // leaf 4 is in a cluster with 1
@@ -195,7 +195,7 @@ func TestMergeClustering(t *testing.T) {
 				}
 			}
 
-			got, err := adj.MergeClusteringGreedyBFS(partialModularityMetric, partialModularityCompare)
+			got, err := adj.MergeClusteringGreedyBFS(PartialModularityMetric, PartialModularityCompare)
 			if err != nil {
 				t.Fatalf("MergeClusteringGreedyBFS failed: %v", err)
 			}
@@ -304,7 +304,7 @@ func TestHalveClustering(t *testing.T) {
 		},
 		{
 			name: "weird circle", // test the special case where leafs are put in a cluster with their neighbours
-			adj:  weirdCircle,
+			adj:  testBeyblade,
 			want: []VertexSet{
 				{0: Naught{}, 3: Naught{}}, // leaf 3 is in a cluster with 0
 				{1: Naught{}, 4: Naught{}}, // leaf 4 is in a cluster with 1
@@ -326,7 +326,7 @@ func TestHalveClustering(t *testing.T) {
 				}
 			}
 
-			got, err := adj.HalveClustering(partialModularityMetric, partialModularityCompare)
+			got, err := adj.HalveClustering(PartialModularityMetric, PartialModularityCompare)
 			if err != nil {
 				t.Fatalf("HalveClustering failed: %v", err)
 			}
@@ -380,7 +380,7 @@ func TestICEClustering(t *testing.T) {
 		},
 		{
 			name: "weird circle", // test the special case where leafs are put in a cluster with their neighbours
-			adj:  weirdCircle,
+			adj:  testBeyblade,
 			want: []VertexSet{
 				{0: Naught{}, 3: Naught{}}, // leaf 3 is in a cluster with 0
 				{1: Naught{}, 4: Naught{}}, // leaf 4 is in a cluster with 1
@@ -402,7 +402,7 @@ func TestICEClustering(t *testing.T) {
 				}
 			}
 
-			got, err := adj.ICEClustering(partialModularityMetric, partialModularityCompare)
+			got, err := adj.ICEClustering(PartialModularityMetric, PartialModularityCompare)
 			if err != nil {
 				t.Fatalf("ICEClustering failed: %v", err)
 			}

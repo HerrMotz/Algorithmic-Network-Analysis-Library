@@ -2,6 +2,7 @@ package graphlib
 
 import (
 	"errors"
+	"gonum.org/v1/gonum/stat/combin"
 	"math"
 	"math/rand"
 	"sort"
@@ -17,7 +18,7 @@ func clusterSizeCompare(newMetric, oldMetric float64) (bool, error) {
 	return newMetric >= oldMetric, nil
 }
 
-// partialModularityMetric calculates the modularity q(C) of a community C in the graph.
+// PartialModularityMetric calculates the modularity q_hat(C) of a community C in the graph.
 // It essentially gets an induced subgraph, but for simplicity the special type was avoided.
 func PartialModularityMetric(l *AdjList, C VertexSet) (float64, error) {
 	if l.Size == 0 || len(C) == 0 {
@@ -51,12 +52,12 @@ func PartialModularityMetric(l *AdjList, C VertexSet) (float64, error) {
 	eC /= 2 // each edge was counted twice
 
 	// partialModularityMetric formula (same as in the worksheet, but without the sum over all clusters):
-	// q(C) = |E(C)| / m - (sum_deg(v) for v in C)^2 / (4 * m^2)
+	// q_hat(C) = |E(C)| / m - (sum_deg(v) for v in C)^2 / (4 * m^2)
 	q := float64(eC)/float64(m) - math.Pow(float64(degreeSum), 2)/(4.0*math.Pow(float64(m), 2))
 	return q, nil
 }
 
-// totalModularityMetric calculates the full formula as given in the worksheet
+// TotalModularityMetric calculates the full formula as given in the worksheet
 func TotalModularityMetric(l *AdjList, C []VertexSet) (float64, error) {
 	var totalModularity float64
 	for _, cluster := range C {
@@ -77,7 +78,7 @@ func PartialModularityCompare(a, b float64) bool {
 	return true
 }
 
-// partialDisagreementMetric calculates d(C) = (|C| choose 2) - 2 * |E(C)|
+// PartialDisagreementMetric calculates d_hat(C) = (|C| choose 2) - 2 * |E(C)|
 // It measures how far a subgraph is from being a complete graph.
 // It essentially gets an induced subgraph, but for simplicity the special type was avoided.
 func PartialDisagreementMetric(l *AdjList, C VertexSet) (int, error) {
@@ -95,8 +96,7 @@ func PartialDisagreementMetric(l *AdjList, C VertexSet) (int, error) {
 		}
 	}
 
-	numPairs := (len(C) * (len(C) - 1)) / 2
-	return numPairs - 2*edgeCount, nil
+	return combin.Binomial(len(C), 2) - 2*edgeCount, nil
 }
 
 func PartialDisagreementCompare(a, b float64) bool {
@@ -104,6 +104,19 @@ func PartialDisagreementCompare(a, b float64) bool {
 		return false
 	}
 	return true
+}
+
+// TotalDisagreementMetric calculates the full formula d(C) as given in the worksheet
+func TotalDisagreementMetric(l *AdjList, C []VertexSet) (int, error) {
+	sum := 0
+	for _, cluster := range C {
+		q, err := PartialDisagreementMetric(l, cluster)
+		if err != nil {
+			return 0, err
+		}
+		sum += q
+	}
+	return sum, nil
 }
 
 // --------------------------------------------------------------------
@@ -571,7 +584,7 @@ func (l *AdjList) ICEClustering(
 	assigned := make(map[int]bool)
 	var clusters []VertexSet
 
-	// 1. Sort vertices by ascending degree
+	// 1. Sort vertices by degree ascending (start with the smallest degree)
 	verticesSortedByDegree := make([]int, n)
 	for k := range l.List {
 		verticesSortedByDegree[k] = k
