@@ -139,7 +139,7 @@ func TestPartialModularityTemporary(t *testing.T) {
 	t.Logf("Metric when cliques are clusters: %f", got1+got2)
 
 	if err != nil {
-		t.Fatalf("MergeClustering failed: %v", err)
+		t.Fatalf("MergeClusteringGreedyBFS failed: %v", err)
 	}
 
 	if got < 10000 {
@@ -157,7 +157,8 @@ func TestMergeClustering(t *testing.T) {
 			name: "two cliques and bridge",
 			adj:  testAdjTwoCliquesBridge,
 			want: []VertexSet{
-				{0: Naught{}, 1: Naught{}, 2: Naught{}, 3: Naught{}, 4: Naught{}, 5: Naught{}}, // all connected
+				{0: Naught{}, 1: Naught{}, 2: Naught{}},
+				{3: Naught{}, 4: Naught{}, 5: Naught{}},
 			},
 		},
 		{
@@ -193,14 +194,14 @@ func TestMergeClustering(t *testing.T) {
 				}
 			}
 
-			got, err := adj.MergeClustering(partialModularityMetric, partialModularityCompare)
+			got, err := adj.MergeClusteringGreedyBFS(partialModularityMetric, partialModularityCompare)
 			if err != nil {
-				t.Fatalf("MergeClustering failed: %v", err)
+				t.Fatalf("MergeClusteringGreedyBFS failed: %v", err)
 			}
 
 			// Check that every wanted cluster is present in the result, order does not matter
 			if len(got) != len(tc.want) {
-				t.Errorf("MergeClustering failed: got %d clusters, want %d", len(got), len(tc.want))
+				t.Errorf("MergeClusteringGreedyBFS failed: got %d clusters, want %d", len(got), len(tc.want))
 			}
 			for _, wantCluster := range tc.want {
 				found := false

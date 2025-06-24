@@ -3,6 +3,7 @@ package graphlib
 import (
 	"errors"
 	"math"
+	"math/rand"
 )
 
 // Dummy metric: just size of cluster (for easy testing)
@@ -108,7 +109,7 @@ func PartialDisagreementCompare(a, b float64) bool {
 // Heuristic & Operation 1 - Merge
 // --------------------------------------------------------------------
 
-func (l *AdjList) MergeClustering(
+func (l *AdjList) MergeClusteringGreedyBFS(
 	metric func(*AdjList, VertexSet) (float64, error),
 	compare func(newMetric, oldMetric float64) bool,
 ) ([]VertexSet, error) {
@@ -240,6 +241,169 @@ func (l *AdjList) MergeClustering(
 				mergedThisRound[i] = Naught{}
 				mergedThisRound[j] = Naught{}
 			}
+		}
+	}
+
+	// Return active clusters as VertexSets
+	var result []VertexSet
+	for idx := range activeClusters {
+		if clusters[idx] != nil && len(clusters[idx]) > 0 {
+			result = append(result, clusters[idx])
+		}
+	}
+	return result, nil
+}
+
+// MergeClusteringMetricWithRandomPivot merges clusters by picking a random active cluster
+// and merging it with the best possible neighboring cluster according to the metric.
+func (l *AdjList) MergeClusteringMetricWithRandomPivot(
+	metric func(*AdjList, VertexSet) (float64, error),
+	compare func(newMetric, oldMetric float64) bool,
+) ([]VertexSet, error) {
+	// STEP 1: Initialize each vertex as its own cluster
+	clusters := make([]VertexSet, l.Size)
+	vertexToCluster := make(map[int]int)
+	for i := 0; i < l.Size; i++ {
+		clusters[i] = VertexSet{i: Naught{}}
+		vertexToCluster[i] = i
+	}
+	activeClusters := make(map[int]Naught)
+	for i := 0; i < l.Size; i++ {
+		activeClusters[i] = Naught{}
+	}
+
+	// STEP 2: Identify isolated vertices
+	isolated := make(map[int]Naught)
+	for i := 0; i < l.Size; i++ {
+		neigh, _ := l.Neighbours(Vertex{i})
+		if len(neigh) == 0 {
+			isolated[i] = Naught{}
+		}
+	}
+	// STEP 3: Merge all leaves with their single neighbor
+	for i := 0; i < l.Size; i++ {
+		if _, ok := isolated[i]; ok {
+			continue
+		}
+		neigh, _ := l.Neighbours(Vertex{i})
+		if len(neigh) == 1 {
+			var n int
+			for u := range neigh {
+				n = u
+			}
+			idxV := vertexToCluster[i]
+			idxN := vertexToCluster[n]
+			_, okV := activeClusters[idxV]
+			_, okN := activeClusters[idxN]
+			if idxV != idxN && okV && okN {
+				// Merge V into N
+				for u := range clusters[idxV] {
+					clusters[idxN][u] = Naught{}
+					vertexToCluster[u] = idxN
+				}
+				clusters[idxV] = nil
+				delete(activeClusters, idxV)
+			}
+		}
+	}
+
+	// STEP 4: Main merging procedure using metric
+	for {
+		// Gather all current active cluster indices
+		var clusterIndices []int
+		for idx := range activeClusters {
+			clusterIndices = append(clusterIndices, idx)
+		}
+		if len(clusterIndices) <= 1 {
+			break // Only one cluster left, or none
+		}
+
+		// Try clusters in random order to avoid bias
+		rand.Shuffle(len(clusterIndices), func(i, j int) {
+			clusterIndices[i], clusterIndices[j] = clusterIndices[j], clusterIndices[i]
+		})
+		merged := false
+
+		for _, chosenIdx := range clusterIndices {
+			cluster := clusters[chosenIdx]
+
+			// Find neighbor clusters
+			neighborClusters := make(VertexSet)
+			for v := range cluster {
+				neigh, _ := l.Neighbours(Vertex{v})
+				for n := range neigh {
+					j := vertexToCluster[n]
+					if j != chosenIdx {
+						if _, ok := activeClusters[j]; ok {
+							neighborClusters[j] = Naught{}
+						}
+					}
+				}
+			}
+
+			// Gather all neighbor indices
+			var neighborIndices []int
+			for j := range neighborClusters {
+				neighborIndices = append(neighborIndices, j)
+			}
+			if len(neighborIndices) == 0 {
+				continue // No neighbors to merge with, try next cluster
+			}
+
+			// Find the best neighbor according to the metric
+			bestNeighbor := -1
+			bestImprovement := 0.0
+			foundImprovement := false
+			m1, err := metric(l, cluster)
+			if err != nil {
+				return nil, err
+			}
+
+			for _, j := range neighborIndices {
+				other := clusters[j]
+
+				mergedCluster := cluster.Copy()
+				for u := range other {
+					mergedCluster[u] = Naught{}
+				}
+
+				m2, err := metric(l, other)
+				if err != nil {
+					return nil, err
+				}
+				newMetric, err := metric(l, mergedCluster)
+				if err != nil {
+					return nil, err
+				}
+
+				oldMetric := m1 + m2
+				if compare(newMetric, oldMetric) {
+					improvement := oldMetric - newMetric
+					if !foundImprovement || improvement > bestImprovement {
+						bestImprovement = improvement
+						bestNeighbor = j
+						foundImprovement = true
+					}
+				}
+			}
+
+			if foundImprovement && bestNeighbor != -1 {
+				// Merge clusters: chosenIdx <- bestNeighbor
+				for u := range clusters[bestNeighbor] {
+					clusters[chosenIdx][u] = Naught{}
+					vertexToCluster[u] = chosenIdx
+				}
+				clusters[bestNeighbor] = nil
+				delete(activeClusters, bestNeighbor)
+				merged = true
+				break // Merge only one pair per iteration
+			}
+			// else, try next cluster
+		}
+
+		if !merged {
+			// No possible merges remain
+			break
 		}
 	}
 
