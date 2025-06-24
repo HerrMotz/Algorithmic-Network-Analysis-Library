@@ -116,7 +116,10 @@ func TotalDisagreementMetric(l *AdjList, C []VertexSet) (int, error) {
 		}
 		sum += q
 	}
-	return sum, nil
+
+	// calculate total edge count in the graph
+	m := l.TotalDegree()
+	return (m / 2) + sum, nil
 }
 
 // --------------------------------------------------------------------
