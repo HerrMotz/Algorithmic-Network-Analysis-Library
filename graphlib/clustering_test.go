@@ -58,6 +58,19 @@ var weirdCircle = []VertexSet{
 	{2: Naught{}},
 }
 
+// compareVertexSets is a helper function to compare clusters ignoring order
+func compareVertexSets(a, b VertexSet) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for k := range a {
+		if _, ok := b[k]; !ok {
+			return false
+		}
+	}
+	return true
+}
+
 func TestPartialModularity(t *testing.T) {
 	// Create a graph with 4 nodes and 3 edges forming a triangle + 1 isolated node:
 	// 0 -- 1
@@ -186,6 +199,9 @@ func TestMergeClustering(t *testing.T) {
 			}
 
 			// Check that every wanted cluster is present in the result, order does not matter
+			if len(got) != len(tc.want) {
+				t.Errorf("MergeClustering failed: got %d clusters, want %d", len(got), len(tc.want))
+			}
 			for _, wantCluster := range tc.want {
 				found := false
 				for _, gotCluster := range got {
@@ -236,19 +252,6 @@ func TestComponentClustering(t *testing.T) {
 		{3: struct{}{}}, // Isolated node
 	}
 
-	// Helper function to compare clusters ignoring order
-	match := func(a, b VertexSet) bool {
-		if len(a) != len(b) {
-			return false
-		}
-		for k := range a {
-			if _, ok := b[k]; !ok {
-				return false
-			}
-		}
-		return true
-	}
-
 	// For each wantCluster, check that it's found in clusters
 	for _, want := range wantClusters {
 		found := false
@@ -258,7 +261,7 @@ func TestComponentClustering(t *testing.T) {
 			for v := range got {
 				gotSet[v] = struct{}{}
 			}
-			if match(want, gotSet) {
+			if compareVertexSets(want, gotSet) {
 				found = true
 				break
 			}
@@ -309,19 +312,6 @@ func TestHalveClustering(t *testing.T) {
 		{3: struct{}{}}, // Isolated node
 	}
 
-	// Helper function to compare clusters ignoring order
-	match := func(a, b VertexSet) bool {
-		if len(a) != len(b) {
-			return false
-		}
-		for k := range a {
-			if _, ok := b[k]; !ok {
-				return false
-			}
-		}
-		return true
-	}
-
 	// For each wantCluster, check that it's found in clusters
 	for _, want := range wantClusters {
 		found := false
@@ -330,7 +320,7 @@ func TestHalveClustering(t *testing.T) {
 			for v := range got {
 				gotSet[v] = struct{}{}
 			}
-			if match(want, gotSet) {
+			if compareVertexSets(want, gotSet) {
 				found = true
 				break
 			}
