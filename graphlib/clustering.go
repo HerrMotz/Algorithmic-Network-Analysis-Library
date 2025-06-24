@@ -144,7 +144,7 @@ func (iGraph *InducedGraph) BFSWithDepth(start int, depth int) VertexSet {
 	return visited
 }
 
-func (l *AdjList) HalveClustering(metric func(VertexSet) float64, partialModularityCompare func(a, b float64) bool) []VertexSet {
+func (l *AdjList) HalveClustering(metric func(*AdjList, VertexSet) (float64, error), compare func(a, b float64) bool) ([]VertexSet, error) {
 	var clustering []VertexSet
 	clusteringToDo := l.ComponentClustering() // Initial clusters: each connected component
 
@@ -190,21 +190,22 @@ func (l *AdjList) HalveClustering(metric func(VertexSet) float64, partialModular
 			}
 		}
 
-		// If cannot split further (isolated node, or all unreachable), add as is
-		if maxDist <= 0 {
+		// If cannot split further, add cluster to clustering
+		// For maxDist (=diameter) 1 the heuristic will give us only 1 cluster
+		if maxDist <= 1 {
 			clustering = append(clustering, cluster)
 			continue
 		}
 
 		// BFS from u and v (in induced subgraph) for ceil(maxDist/2) steps
-		depth := (maxDist + 1) / 2
+		depth := (maxDist + 1) / 2 // Integer division in Go floors by default
 		u := vertexIDs[uIdx]
 		v := vertexIDs[vIdx]
 
 		cluster1 := iGraph.BFSWithDepth(u, depth)
 		cluster2 := iGraph.BFSWithDepth(v, depth)
 
-		// Assign overlapping nodes arbitrarily (here: to cluster1)
+		// Delete overlapping nodes from cluster2 because they are already in cluster1
 		for node := range cluster2 {
 			if _, in1 := cluster1[node]; in1 {
 				delete(cluster2, node)
@@ -212,19 +213,33 @@ func (l *AdjList) HalveClustering(metric func(VertexSet) float64, partialModular
 		}
 
 		// Remove empty clusters
+		// This should not happen since we already processed clusters with diameter <= 1
 		if len(cluster1) == 0 || len(cluster2) == 0 {
 			clustering = append(clustering, cluster)
 			continue
 		}
 
-		// Metric comparison
-		if partialModularityCompare(metric(cluster), metric(cluster1)+metric(cluster2)) {
-			clustering = append(clustering, cluster)
+		// Compute metrics for the different clusters
+		m, err := metric(l, cluster)
+		if err != nil {
+			return nil, err
+		}
+		m1, err1 := metric(l, cluster1)
+		if err1 != nil {
+			return nil, err1
+		}
+		m2, err2 := metric(l, cluster2)
+		if err2 != nil {
+			return nil, err2
+		}
+		// Compare the metrics
+		if compare(m, m1+m2) {
+			clustering = append(clustering, cluster) // Add single cluster to clustering because it has a better metric
 		} else {
 			clusteringToDo = append(clusteringToDo, cluster1)
 			clusteringToDo = append(clusteringToDo, cluster2)
 		}
 	}
 
-	return clustering
+	return clustering, nil
 }
