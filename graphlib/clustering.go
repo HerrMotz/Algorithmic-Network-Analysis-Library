@@ -18,7 +18,7 @@ func clusterSizeCompare(newMetric, oldMetric float64) (bool, error) {
 
 // partialModularityMetric calculates the modularity q(C) of a community C in the graph.
 // It essentially gets an induced subgraph, but for simplicity the special type was avoided.
-func partialModularityMetric(l *AdjList, C VertexSet) (float64, error) {
+func PartialModularityMetric(l *AdjList, C VertexSet) (float64, error) {
 	if l.Size == 0 || len(C) == 0 {
 		return 0, errors.New("graph or community is empty")
 	}
@@ -56,10 +56,10 @@ func partialModularityMetric(l *AdjList, C VertexSet) (float64, error) {
 }
 
 // totalModularityMetric calculates the full formula as given in the worksheet
-func totalModularityMetric(l *AdjList, C []VertexSet) (float64, error) {
+func TotalModularityMetric(l *AdjList, C []VertexSet) (float64, error) {
 	var totalModularity float64
 	for _, cluster := range C {
-		q, err := partialModularityMetric(l, cluster)
+		q, err := PartialModularityMetric(l, cluster)
 		if err != nil {
 			return 0, err
 		}
@@ -68,7 +68,7 @@ func totalModularityMetric(l *AdjList, C []VertexSet) (float64, error) {
 	return totalModularity, nil
 }
 
-func partialModularityCompare(a, b float64) bool {
+func PartialModularityCompare(a, b float64) bool {
 	// Compare two modularity values
 	if a < b {
 		return false
@@ -79,7 +79,7 @@ func partialModularityCompare(a, b float64) bool {
 // partialDisagreementMetric calculates d(C) = (|C| choose 2) - 2 * |E(C)|
 // It measures how far a subgraph is from being a complete graph.
 // It essentially gets an induced subgraph, but for simplicity the special type was avoided.
-func partialDisagreementMetric(l *AdjList, C VertexSet) (int, error) {
+func PartialDisagreementMetric(l *AdjList, C VertexSet) (int, error) {
 	if len(C) < 2 {
 		return 0, nil
 	}
