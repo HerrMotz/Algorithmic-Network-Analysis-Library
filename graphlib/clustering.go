@@ -6,13 +6,13 @@ import (
 )
 
 // Dummy metric: just size of cluster (for easy testing)
-func clusterSizeMetric(_ *AdjList, C VertexSet) float64 {
-	return float64(len(C))
+func clusterSizeMetric(_ *AdjList, C VertexSet) (float64, error) {
+	return float64(len(C)), nil
 }
 
 // Simple compare: merge if merged cluster is not smaller (just for testing)
-func clusterSizeCompare(newMetric, oldMetric float64) bool {
-	return newMetric >= oldMetric
+func clusterSizeCompare(newMetric, oldMetric float64) (bool, error) {
+	return newMetric >= oldMetric, nil
 }
 
 // partialModularityMetric calculates the modularity q(C) of a community C in the graph.
@@ -48,10 +48,23 @@ func partialModularityMetric(l *AdjList, C VertexSet) (float64, error) {
 	}
 	eC /= 2 // each edge was counted twice
 
-	// partialModularityMetric formula:
+	// partialModularityMetric formula (same as in the worksheet, but without the sum over all clusters):
 	// q(C) = |E(C)| / m - (sum_deg(v) for v in C)^2 / (4 * m^2)
 	q := float64(eC)/float64(m) - math.Pow(float64(degreeSum), 2)/(4.0*math.Pow(float64(m), 2))
 	return q, nil
+}
+
+// totalModularityMetric calculates the full formula as given in the worksheet
+func totalModularityMetric(l *AdjList, C []VertexSet) (float64, error) {
+	var totalModularity float64
+	for _, cluster := range C {
+		q, err := partialModularityMetric(l, cluster)
+		if err != nil {
+			return 0, err
+		}
+		totalModularity += q
+	}
+	return totalModularity, nil
 }
 
 func partialModularityCompare(a, b float64) bool {
@@ -89,6 +102,155 @@ func PartialDisagreementCompare(a, b float64) bool {
 		return false
 	}
 	return true
+}
+
+// --------------------------------------------------------------------
+// Heuristic & Operation 1 - Merge
+// --------------------------------------------------------------------
+
+func (l *AdjList) MergeClustering(
+	metric func(*AdjList, VertexSet) (float64, error),
+	compare func(newMetric, oldMetric float64) bool,
+) ([]VertexSet, error) {
+
+	// STEP 1: Initialize each vertex as its own cluster
+	clusters := make([]VertexSet, l.Size)
+	vertexToCluster := make(map[int]int)
+	for i := 0; i < l.Size; i++ {
+		clusters[i] = VertexSet{i: Naught{}}
+		vertexToCluster[i] = i
+	}
+	activeClusters := make(map[int]Naught) // this is the same type as a VertexSet, but this was confusing to read.
+	for i := 0; i < l.Size; i++ {
+		activeClusters[i] = Naught{}
+	}
+
+	// STEP 2: Identify isolated vertices
+	isolated := make(map[int]Naught)
+	for i := 0; i < l.Size; i++ {
+		neigh, _ := l.Neighbours(Vertex{i})
+		if len(neigh) == 0 {
+			isolated[i] = Naught{}
+		}
+	}
+	// STEP 3: Merge all leaves with their single neighbour
+	for i := 0; i < l.Size; i++ {
+		if _, ok := isolated[i]; ok {
+			continue
+		}
+		neigh, _ := l.Neighbours(Vertex{i})
+		if len(neigh) == 1 {
+			var n int
+			for u := range neigh {
+				n = u
+			}
+			idxV := vertexToCluster[i]
+			idxN := vertexToCluster[n]
+			_, okV := activeClusters[idxV]
+			_, okN := activeClusters[idxN]
+			if idxV != idxN && okV && okN {
+				// Merge V into N
+				for u := range clusters[idxV] {
+					clusters[idxN][u] = Naught{}
+					vertexToCluster[u] = idxN
+				}
+				clusters[idxV] = nil
+				delete(activeClusters, idxV)
+			}
+		}
+	}
+
+	// STEP 4: Main merging procedure
+	n := l.Size
+	for k := 1; k <= n; k++ {
+		var toMerge [][2]int
+		// Only consider active clusters of size k
+		var clusterIndices []int
+		for idx := range activeClusters {
+			if len(clusters[idx]) == k {
+				clusterIndices = append(clusterIndices, idx)
+			}
+		}
+		for _, i := range clusterIndices {
+			cluster := clusters[i]
+			neighborClusters := make(VertexSet)
+			for v := range cluster {
+				neigh, _ := l.Neighbours(Vertex{v})
+				for n := range neigh {
+					j := vertexToCluster[n]
+					if j != i {
+						if _, ok := activeClusters[j]; ok {
+							neighborClusters[j] = Naught{}
+						}
+					}
+				}
+			}
+			// Find best neighbouring cluster to merge
+			bestJ := -1
+			var bestImprovement float64
+			foundImprovement := false
+			for j := range neighborClusters {
+				other := clusters[j]
+				mergedCluster := cluster.Copy()
+				for u := range other {
+					mergedCluster[u] = Naught{}
+				}
+				// Calculate metrics
+				m1, err := metric(l, cluster)
+				if err != nil {
+					return nil, err
+				}
+				m2, err := metric(l, other)
+				if err != nil {
+					return nil, err
+				}
+				newMetric, err := metric(l, mergedCluster)
+				if err != nil {
+					return nil, err
+				}
+				oldMetric := m1 + m2
+				if compare(newMetric, oldMetric) {
+					improvement := oldMetric - newMetric
+					if !foundImprovement || improvement > bestImprovement {
+						bestImprovement = improvement
+						bestJ = j
+						foundImprovement = true
+					}
+				}
+			}
+			if bestJ != -1 {
+				toMerge = append(toMerge, [2]int{i, bestJ})
+			}
+		}
+		// Apply merges (each cluster at most once)
+		mergedThisRound := make(map[int]Naught)
+		for _, pair := range toMerge {
+			i, j := pair[0], pair[1]
+			_, okI := activeClusters[i]
+			_, okJ := activeClusters[j]
+			_, mergedI := mergedThisRound[i]
+			_, mergedJ := mergedThisRound[j]
+			if okI && okJ && !mergedI && !mergedJ {
+				for u := range clusters[j] {
+					clusters[i][u] = Naught{}
+					vertexToCluster[u] = i
+				}
+				clusters[j] = nil
+				delete(activeClusters, j)
+				mergedThisRound[i] = Naught{}
+				mergedThisRound[j] = Naught{}
+			}
+		}
+	}
+
+	// Return active clusters as VertexSets
+	var result []VertexSet
+	for idx := range activeClusters {
+		if clusters[idx] != nil && len(clusters[idx]) > 0 {
+			result = append(result, clusters[idx])
+		}
+	}
+	return result, nil
 }
 
 // ComponentClustering returns a clustering of the graph where each connected component is its own cluster.
