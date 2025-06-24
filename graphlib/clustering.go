@@ -22,7 +22,7 @@ func clusterSizeCompare(newMetric, oldMetric float64) (bool, error) {
 // It essentially gets an induced subgraph, but for simplicity the special type was avoided.
 func PartialModularityMetric(l *AdjList, C VertexSet) (float64, error) {
 	if l.Size == 0 || len(C) == 0 {
-		return 0, errors.New("partialModularityMetric: cluster is empty")
+		return 0, nil // this is a special case
 	}
 
 	var (
@@ -81,7 +81,7 @@ func PartialModularityCompare(a, b float64) bool {
 // PartialDisagreementMetric calculates d_hat(C) = (|C| choose 2) - 2 * |E(C)|
 // It measures how far a subgraph is from being a complete graph.
 // It essentially gets an induced subgraph, but for simplicity the special type was avoided.
-func PartialDisagreementMetric(l *AdjList, C VertexSet) (int, error) {
+func PartialDisagreementMetric(l *AdjList, C VertexSet) (float64, error) {
 	if len(C) < 2 {
 		return 0, nil
 	}
@@ -96,7 +96,7 @@ func PartialDisagreementMetric(l *AdjList, C VertexSet) (int, error) {
 		}
 	}
 
-	return combin.Binomial(len(C), 2) - 2*edgeCount, nil
+	return float64(combin.Binomial(len(C), 2) - 2*edgeCount), nil
 }
 
 func PartialDisagreementCompare(a, b float64) bool {
@@ -107,8 +107,8 @@ func PartialDisagreementCompare(a, b float64) bool {
 }
 
 // TotalDisagreementMetric calculates the full formula d(C) as given in the worksheet
-func TotalDisagreementMetric(l *AdjList, C []VertexSet) (int, error) {
-	sum := 0
+func TotalDisagreementMetric(l *AdjList, C []VertexSet) (float64, error) {
+	sum := 0.0
 	for _, cluster := range C {
 		q, err := PartialDisagreementMetric(l, cluster)
 		if err != nil {
@@ -119,7 +119,7 @@ func TotalDisagreementMetric(l *AdjList, C []VertexSet) (int, error) {
 
 	// calculate total edge count in the graph
 	m := l.TotalDegree()
-	return (m / 2) + sum, nil
+	return float64(m/2) + sum, nil
 }
 
 // --------------------------------------------------------------------
@@ -130,6 +130,9 @@ func (l *AdjList) MergeClusteringGreedyBFS(
 	metric func(*AdjList, VertexSet) (float64, error),
 	compare func(newMetric, oldMetric float64) bool,
 ) ([]VertexSet, error) {
+
+	// parameter for search width for each step
+	branchingLimit := 4 - 1
 
 	// STEP 1: Initialize each vertex as its own cluster
 	clusters := make([]VertexSet, l.Size)
@@ -191,14 +194,14 @@ func (l *AdjList) MergeClusteringGreedyBFS(
 		}
 		for _, i := range clusterIndices {
 			cluster := clusters[i]
-			neighborClusters := make(VertexSet)
+			neighbourClusters := make(VertexSet)
 			for v := range cluster {
 				neigh, _ := l.Neighbours(Vertex{v})
 				for n := range neigh {
 					j := vertexToCluster[n]
 					if j != i {
 						if _, ok := activeClusters[j]; ok {
-							neighborClusters[j] = Naught{}
+							neighbourClusters[j] = Naught{}
 						}
 					}
 				}
@@ -207,7 +210,14 @@ func (l *AdjList) MergeClusteringGreedyBFS(
 			bestJ := -1
 			var bestImprovement float64
 			foundImprovement := false
-			for j := range neighborClusters {
+			// use the best improvement after at most k steps
+			branchCount := 0
+			for j := range neighbourClusters {
+				if branchCount > branchingLimit {
+					break
+				}
+				branchCount++
+
 				other := clusters[j]
 				mergedCluster := cluster.Copy()
 				for u := range other {
@@ -633,6 +643,7 @@ func (l *AdjList) ICEClustering(
 	// For marking finished clusters
 	done := make(map[int]bool)
 
+	// 3. Evaluate, which cluster a vertex should be moved to or whether it should be separated.
 	for {
 		// Find the largest unfinished cluster
 		maxIdx, maxSize := -1, -1
@@ -683,50 +694,94 @@ func (l *AdjList) ICEClustering(
 		}
 
 		// Prepare affected clusters
-		oldCluster := clusters[maxIdx]
+		sourceCluster := clusters[maxIdx]
+		metricSourceCluster, err := metric(l, sourceCluster)
+		if err != nil {
+			return nil, err
+		}
+
 		// Remove bestV from current cluster
-		newCluster := make(VertexSet)
-		for u := range oldCluster {
-			if u != bestV {
-				newCluster[u] = Naught{}
+		sourceCluster.RemoveVertex(Vertex{bestV})
+		metricChangedSourceCluster, err := metric(l, sourceCluster)
+		if err != nil {
+			return nil, err
+		}
+
+		// create a solo cluster for bestV
+		soloCluster := make(VertexSet, 1)
+		soloCluster[bestV] = Naught{}
+		// measure the improvement if we move to a solo cluster
+		metricSolo, err := metric(l, soloCluster)
+		if err != nil {
+			return nil, err
+		}
+
+		// search the best cluster to move bestV to
+		existingIdx := -1
+		metricExisting := metricSourceCluster // this is the baseline, if we find something better it is better than the current state
+
+		for idx, cluster := range clusters { // todo only use adjacent clusters?
+			if cluster.HasVertex(Vertex{bestV}) || idx == maxIdx { // if the idx is the source idx
+				continue
+			}
+
+			// add bestV to each cluster and measure the improvement
+			err := cluster.AddVertex(Vertex{bestV})
+			if err != nil {
+				return nil, err
+			}
+			// measure improvement
+			newMetric, err := metric(l, cluster)
+			cluster.RemoveVertex(Vertex{bestV})
+
+			// vorn ist der bessere wert
+			if compare(newMetric, metricExisting) {
+				metricExisting = newMetric
+				existingIdx = idx
 			}
 		}
-		// Add bestV as its own cluster
-		soloCluster := make(VertexSet)
-		soloCluster[bestV] = Naught{}
 
-		// Compute metric sums for affected clusters before and after
-		oldMetric, err := metric(l, oldCluster)
-		if err != nil {
-			return nil, err
-		}
-		newMetric1, err := metric(l, newCluster)
-		if err != nil {
-			return nil, err
-		}
-		newMetric2, err := metric(l, soloCluster)
-		if err != nil {
-			return nil, err
-		}
+		// use the best improvement one (either solo or existing) OR mark as done if none are improvements
+		if existingIdx == -1 {
+			// only solo can be better, because no better "move to"-cluster was found
+			if compare(metricSolo+metricChangedSourceCluster, metricSourceCluster) && len(sourceCluster) > 0 { // only do this if the source cluster had more than one vertex, else the target state would be the same
+				// solo is better, add solo cluster to vertex set (the vertex is already removed from the source cluster in place)
+				clusters = append(clusters, soloCluster)
+			} else {
+				// neither solo nor existing are better
 
-		// todo It should be EITHER newmetric1 >= oldMetric OR newMetric2 >= oldMetric and
-		//  then the appropriate action is taken (replacing the extended cluster and removing from the old cluster)
-		//  OR removing from the old cluster and adding the new cluster
-		if compare(newMetric1+newMetric2, oldMetric) {
-			// Accept the move
-			clusters[maxIdx] = newCluster
-			clusters = append(clusters, soloCluster)
-			// Remove any empty clusters
-			pruned := clusters[:0]
-			for _, c := range clusters {
-				if len(c) > 0 {
-					pruned = append(pruned, c)
+				// mark the cluster as done
+				done[maxIdx] = true
+				// add the vertex back
+				err := sourceCluster.AddVertex(Vertex{bestV})
+				if err != nil {
+					return nil, err
 				}
 			}
-			clusters = pruned
 		} else {
-			done[maxIdx] = true
+			// solo or existing can be better
+			if compare(metricSolo+metricChangedSourceCluster, metricExisting+metricChangedSourceCluster) && len(sourceCluster) > 0 {
+				// solo is better
+				clusters = append(clusters, soloCluster)
+			} else {
+				// if something was found for "existing" it is already better than the current state, because
+				// of the baseline set in "metricExisting" before the loop
+				// just apply it (the vertex is already removed from the source cluster in place)
+
+				// DUPLICATE CODE TO ABOVE
+				// mark the cluster as done
+				done[maxIdx] = true
+				// add the vertex back to the source cluster
+				err := clusters[maxIdx].AddVertex(Vertex{bestV})
+				if err != nil {
+					return nil, err
+				}
+			}
 		}
+		// the source cluster can now be empty, remove it if that it the case
+		//if len(sourceCluster) == 0 {
+		//	slices.Delete(clusters, maxIdx, maxIdx+1)
+		//}
 	}
 
 	return clusters, nil
