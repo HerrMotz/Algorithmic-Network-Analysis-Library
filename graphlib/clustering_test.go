@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-var test_adj_two_cliques_bridge = []VertexSet{
+var testAdjTwoCliquesBridge = []VertexSet{
 	// 0
 	{1: Naught{}, 2: Naught{}}, // 0 connects to 1 and 2 (clique 1)
 	// 1
@@ -21,7 +21,7 @@ var test_adj_two_cliques_bridge = []VertexSet{
 	{3: Naught{}, 4: Naught{}}, // 5 connects to 3 and 4 (clique 2)
 }
 
-var test_adj_clique_isolates = []VertexSet{
+var testAdjCliqueIsolates = []VertexSet{
 	// 0
 	{1: Naught{}, 2: Naught{}}, // 0 connects to 1 and 2 (clique)
 	// 1
@@ -32,6 +32,30 @@ var test_adj_clique_isolates = []VertexSet{
 	{}, // 3 is isolated
 	// 4
 	{}, // 4 is isolated
+}
+
+//	    5
+//	    |
+//	    2
+//	   / \
+//	  /   \
+//	 0-----1
+//	/       \
+//
+// 3         4
+var weirdCircle = []VertexSet{
+	// 0
+	{1: Naught{}, 2: Naught{}, 3: Naught{}},
+	// 1
+	{0: Naught{}, 2: Naught{}, 4: Naught{}},
+	// 2
+	{0: Naught{}, 1: Naught{}, 5: Naught{}},
+	// 3
+	{0: Naught{}},
+	// 4
+	{1: Naught{}},
+	// 5
+	{2: Naught{}},
 }
 
 func TestPartialModularity(t *testing.T) {
@@ -80,8 +104,8 @@ func TestPartialModularity(t *testing.T) {
 
 func TestPartialModularityTemporary(t *testing.T) {
 	adj := &AdjList{
-		List: test_adj_two_cliques_bridge,
-		Size: len(test_adj_two_cliques_bridge),
+		List: testAdjTwoCliquesBridge,
+		Size: len(testAdjTwoCliquesBridge),
 	}
 
 	lol := VertexSet{
@@ -89,6 +113,17 @@ func TestPartialModularityTemporary(t *testing.T) {
 	}
 
 	got, err := partialModularityMetric(adj, lol)
+
+	lol21 := VertexSet{
+		0: Naught{}, 1: Naught{}, 2: Naught{},
+	}
+	lol22 := VertexSet{
+		3: Naught{}, 4: Naught{}, 5: Naught{},
+	}
+
+	got1, err := partialModularityMetric(adj, lol21)
+	got2, err := partialModularityMetric(adj, lol22)
+	t.Logf("Metric when cliques are clusters: %f", got1+got2)
 
 	if err != nil {
 		t.Fatalf("MergeClustering failed: %v", err)
@@ -107,18 +142,27 @@ func TestMergeClustering(t *testing.T) {
 	}{
 		{
 			name: "two cliques and bridge",
-			adj:  test_adj_two_cliques_bridge,
+			adj:  testAdjTwoCliquesBridge,
 			want: []VertexSet{
 				{0: Naught{}, 1: Naught{}, 2: Naught{}, 3: Naught{}, 4: Naught{}, 5: Naught{}}, // all connected
 			},
 		},
 		{
 			name: "clique and isolates",
-			adj:  test_adj_clique_isolates,
+			adj:  testAdjCliqueIsolates,
 			want: []VertexSet{
 				{0: Naught{}, 1: Naught{}, 2: Naught{}}, // clique
 				{3: Naught{}},                           // isolate
 				{4: Naught{}},                           // isolate
+			},
+		},
+		{
+			name: "weird circle", // test the special case where leafs are put in a cluster with their neighbours
+			adj:  weirdCircle,
+			want: []VertexSet{
+				{0: Naught{}, 3: Naught{}}, // leaf 3 is in a cluster with 0
+				{1: Naught{}, 4: Naught{}}, // leaf 4 is in a cluster with 1
+				{2: Naught{}, 5: Naught{}}, // leaf 5 is in a cluster with 2
 			},
 		},
 	}
