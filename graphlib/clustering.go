@@ -6,13 +6,13 @@ import (
 )
 
 // Dummy metric: just size of cluster (for easy testing)
-func clusterSizeMetric(_ *AdjList, C VertexSet) float64 {
-	return float64(len(C))
+func clusterSizeMetric(_ *AdjList, C VertexSet) (float64, error) {
+	return float64(len(C)), nil
 }
 
 // Simple compare: merge if merged cluster is not smaller (just for testing)
-func clusterSizeCompare(newMetric, oldMetric float64) bool {
-	return newMetric >= oldMetric
+func clusterSizeCompare(newMetric, oldMetric float64) (bool, error) {
+	return newMetric >= oldMetric, nil
 }
 
 // partialModularityMetric calculates the modularity q(C) of a community C in the graph.
@@ -52,6 +52,19 @@ func partialModularityMetric(l *AdjList, C VertexSet) (float64, error) {
 	// q(C) = |E(C)| / m - (sum_deg(v) for v in C)^2 / (4 * m^2)
 	q := float64(eC)/float64(m) - math.Pow(float64(degreeSum), 2)/(4.0*math.Pow(float64(m), 2))
 	return q, nil
+}
+
+// totalModularityMetric calculates the full formula as given in the worksheet
+func totalModularityMetric(l *AdjList, C []VertexSet) (float64, error) {
+	var totalModularity float64
+	for _, community := range C {
+		q, err := partialModularityMetric(l, community)
+		if err != nil {
+			return 0, err
+		}
+		totalModularity += q
+	}
+	return totalModularity, nil
 }
 
 func partialModularityCompare(a, b float64) bool {
