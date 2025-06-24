@@ -48,7 +48,7 @@ func partialModularityMetric(l *AdjList, C VertexSet) (float64, error) {
 	}
 	eC /= 2 // each edge was counted twice
 
-	// partialModularityMetric formula:
+	// partialModularityMetric formula (same as in the worksheet, but without the sum over all clusters):
 	// q(C) = |E(C)| / m - (sum_deg(v) for v in C)^2 / (4 * m^2)
 	q := float64(eC)/float64(m) - math.Pow(float64(degreeSum), 2)/(4.0*math.Pow(float64(m), 2))
 	return q, nil
@@ -57,8 +57,8 @@ func partialModularityMetric(l *AdjList, C VertexSet) (float64, error) {
 // totalModularityMetric calculates the full formula as given in the worksheet
 func totalModularityMetric(l *AdjList, C []VertexSet) (float64, error) {
 	var totalModularity float64
-	for _, community := range C {
-		q, err := partialModularityMetric(l, community)
+	for _, cluster := range C {
+		q, err := partialModularityMetric(l, cluster)
 		if err != nil {
 			return 0, err
 		}
