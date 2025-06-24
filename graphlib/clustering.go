@@ -474,6 +474,10 @@ func (iGraph *InducedGraph) BFSWithDepth(start int, depth int) VertexSet {
 func (l *AdjList) HalveClustering(metric func(*AdjList, VertexSet) (float64, error), compare func(a, b float64) bool) ([]VertexSet, error) {
 	var clustering []VertexSet
 	clusteringToDo := l.ComponentClustering() // Initial clusters: each connected component
+	distMatrix, err := l.ImprovedAllPairsShortestPaths()
+	if err != nil {
+		return nil, err
+	}
 
 	for len(clusteringToDo) > 0 {
 		// Pop a cluster
@@ -492,20 +496,17 @@ func (l *AdjList) HalveClustering(metric func(*AdjList, VertexSet) (float64, err
 			GoodVertices: cluster,
 		}
 
-		// Get distance matrix
-		distMatrix := iGraph.SpecialAllPairsShortestPath()
-
-		// Find the pair (u, v) with maximal distance d
+		// Find the pair (u, v) with maximal distance d in the current cluster using the precomputed distance matrix
 		maxDist := -1
-		var uIdx, vIdx int
-		for i := 0; i < l.Size; i++ {
-			if distMatrix[i] == nil {
-				continue
-			}
-			for j := 0; j < l.Size; j++ {
-				if distMatrix[i][j] > maxDist {
-					maxDist = distMatrix[i][j]
-					uIdx, vIdx = i, j
+		var u, v int
+		for x := range cluster {
+			for y := range cluster {
+				if x == y {
+					continue
+				}
+				if distMatrix[x][y] > maxDist {
+					maxDist = distMatrix[x][y]
+					u, v = x, y
 				}
 			}
 		}
@@ -521,8 +522,8 @@ func (l *AdjList) HalveClustering(metric func(*AdjList, VertexSet) (float64, err
 		cluster2 := make(VertexSet)
 
 		for w := range iGraph.GoodVertices {
-			// Compare distances from u and v (using indices uIdx and vIdx)
-			if distMatrix[uIdx][w] <= distMatrix[vIdx][w] {
+			// Compare distances from u and v
+			if distMatrix[u][w] <= distMatrix[v][w] {
 				cluster1[w] = struct{}{}
 			} else {
 				cluster2[w] = struct{}{}
