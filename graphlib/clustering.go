@@ -281,6 +281,7 @@ func (l *AdjList) ComponentClustering() []VertexSet {
 
 // BFSWithDepth returns all vertices in an induced subgraph that have a certain max.
 // distance to a given start node using BFS
+// With our updated approach this function is not used anymore
 func (iGraph *InducedGraph) BFSWithDepth(start int, depth int) VertexSet {
 	visited := make(VertexSet)
 	queue := []struct {
@@ -317,7 +318,7 @@ func (l *AdjList) HalveClustering(metric func(*AdjList, VertexSet) (float64, err
 
 		// If cluster is too small to split, just keep it
 		if len(cluster) <= 1 {
-			clustering = append(clustering, cluster)
+			clustering = append(clustering, cluster.Copy())
 			continue
 		}
 
@@ -328,23 +329,16 @@ func (l *AdjList) HalveClustering(metric func(*AdjList, VertexSet) (float64, err
 		}
 
 		// Get distance matrix
-		distMatrix := iGraph.NaiveAllPairsShortestPath()
-
-		// Get slice of vertices in this cluster
-		vertexIDs := make([]int, 0, len(cluster))
-		vertexIndex := make(map[int]int)
-		idx := 0
-		for v := range cluster {
-			vertexIDs = append(vertexIDs, v)
-			vertexIndex[v] = idx
-			idx++
-		}
+		distMatrix := iGraph.SpecialAllPairsShortestPath()
 
 		// Find the pair (u, v) with maximal distance d
 		maxDist := -1
 		var uIdx, vIdx int
-		for i := 0; i < len(vertexIDs); i++ {
-			for j := 0; j < len(vertexIDs); j++ {
+		for i := 0; i < l.Size; i++ {
+			if distMatrix[i] == nil {
+				continue
+			}
+			for j := 0; j < l.Size; j++ {
 				if distMatrix[i][j] > maxDist {
 					maxDist = distMatrix[i][j]
 					uIdx, vIdx = i, j
@@ -355,29 +349,26 @@ func (l *AdjList) HalveClustering(metric func(*AdjList, VertexSet) (float64, err
 		// If cannot split further, add cluster to clustering
 		// For maxDist (=diameter) 1 the heuristic will give us only 1 cluster
 		if maxDist <= 1 {
-			clustering = append(clustering, cluster)
+			clustering = append(clustering, cluster.Copy())
 			continue
 		}
 
-		// BFS from u and v (in induced subgraph) for ceil(maxDist/2) steps
-		depth := (maxDist + 1) / 2 // Integer division in Go floors by default
-		u := vertexIDs[uIdx]
-		v := vertexIDs[vIdx]
+		cluster1 := make(VertexSet)
+		cluster2 := make(VertexSet)
 
-		cluster1 := iGraph.BFSWithDepth(u, depth)
-		cluster2 := iGraph.BFSWithDepth(v, depth)
-
-		// Delete overlapping nodes from cluster2 because they are already in cluster1
-		for node := range cluster2 {
-			if _, in1 := cluster1[node]; in1 {
-				delete(cluster2, node)
+		for w := range iGraph.GoodVertices {
+			// Compare distances from u and v (using indices uIdx and vIdx)
+			if distMatrix[uIdx][w] <= distMatrix[vIdx][w] {
+				cluster1[w] = struct{}{}
+			} else {
+				cluster2[w] = struct{}{}
 			}
 		}
 
 		// Remove empty clusters
 		// This should not happen since we already processed clusters with diameter <= 1
 		if len(cluster1) == 0 || len(cluster2) == 0 {
-			clustering = append(clustering, cluster)
+			clustering = append(clustering, cluster.Copy())
 			continue
 		}
 
@@ -396,7 +387,7 @@ func (l *AdjList) HalveClustering(metric func(*AdjList, VertexSet) (float64, err
 		}
 		// Compare the metrics
 		if compare(m, m1+m2) {
-			clustering = append(clustering, cluster) // Add single cluster to clustering because it has a better metric
+			clustering = append(clustering, cluster.Copy()) // Add single cluster to clustering because it has a better metric
 		} else {
 			clusteringToDo = append(clusteringToDo, cluster1)
 			clusteringToDo = append(clusteringToDo, cluster2)

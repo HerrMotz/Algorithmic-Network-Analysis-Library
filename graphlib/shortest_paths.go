@@ -76,15 +76,15 @@ func (l *AdjList) SingleSourceShortestPath(source Vertex) ([]int, error) {
 	return dist, nil
 }
 
-func (iGraph *InducedGraph) SingleSourceShortestPath(source Vertex) ([]int, error) {
-	size := iGraph.Size()
+func (iGraph *InducedGraph) SpecialSingleSourceShortestPath(source Vertex) ([]int, error) {
+	size := iGraph.AdjList.Size
 	dist := make([]int, size)
 	for i := range dist {
-		dist[i] = INF
+		dist[i] = -1
 	}
 	dist[source.Id] = 0
 	queue := NewQueue[int](10) // todo heuristic chance
-	visited := make([]bool, iGraph.Size())
+	visited := make([]bool, size)
 	visited[source.Id] = true
 
 	queue.enqueue(source.Id)
@@ -119,13 +119,13 @@ func (l *AdjList) NaiveAllPairsShortestPath() [][]int {
 	return distanceMatrix
 }
 
-func (iGraph *InducedGraph) NaiveAllPairsShortestPath() [][]int {
+func (iGraph *InducedGraph) SpecialAllPairsShortestPath() [][]int {
 	// we return a full matrix, because the distance from each node to each other is well-defined,
 	// even if they are not in the same connected component
 
-	distanceMatrix := make([][]int, iGraph.Size())
-	for i := 0; i < iGraph.Size(); i++ {
-		distanceMatrix[i], _ = iGraph.SingleSourceShortestPath(Vertex{i})
+	distanceMatrix := make([][]int, iGraph.AdjList.Size)
+	for i := 0; i < iGraph.AdjList.Size; i++ {
+		distanceMatrix[i], _ = iGraph.SpecialSingleSourceShortestPath(Vertex{i})
 	}
 
 	return distanceMatrix

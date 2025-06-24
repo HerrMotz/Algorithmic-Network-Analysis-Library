@@ -277,61 +277,78 @@ func TestComponentClustering(t *testing.T) {
 	}
 }
 
-// Test function for HalveClustering using the modularity Metric
 func TestHalveClustering(t *testing.T) {
-	// Create a graph:
-	// 0 -- 1
-	//  \  /
-	//   2
-	// 3 (isolated)
-	graph, err := InitializeAdjList(4)
-	if err != nil {
-		t.Fatalf("Failed to initialize graph: %v", err)
+	tests := []struct {
+		name string
+		adj  []VertexSet
+		want []VertexSet // expected clusters
+	}{
+		{
+			name: "two cliques and bridge",
+			adj:  testAdjTwoCliquesBridge,
+			want: []VertexSet{
+				{0: Naught{}, 1: Naught{}, 2: Naught{}}, // clique
+				{3: Naught{}, 4: Naught{}, 5: Naught{}}, // clique
+			},
+		},
+		{
+			name: "clique and isolates",
+			adj:  testAdjCliqueIsolates,
+			want: []VertexSet{
+				{0: Naught{}, 1: Naught{}, 2: Naught{}}, // clique
+				{3: Naught{}},                           // isolate
+				{4: Naught{}},                           // isolate
+			},
+		},
+		{
+			name: "weird circle", // test the special case where leafs are put in a cluster with their neighbours
+			adj:  weirdCircle,
+			want: []VertexSet{
+				{0: Naught{}, 3: Naught{}}, // leaf 3 is in a cluster with 0
+				{1: Naught{}, 4: Naught{}}, // leaf 4 is in a cluster with 1
+				{2: Naught{}, 5: Naught{}}, // leaf 5 is in a cluster with 2
+			},
+		},
 	}
 
-	edges := []Edge{
-		{U: Vertex{0}, V: Vertex{1}},
-		{U: Vertex{1}, V: Vertex{2}},
-		{U: Vertex{2}, V: Vertex{0}},
-	}
-	for _, e := range edges {
-		if err := graph.AddEdge(e); err != nil {
-			t.Fatalf("Failed to add edge %v: %v", e, err)
-		}
-	}
-
-	clusters, err := graph.HalveClustering(partialModularityMetric, partialModularityCompare)
-	if err != nil {
-		t.Fatalf("HalveClustering returned error: %v", err)
-	}
-
-	// The optimal clustering (with minimal cut) is the two clusters:
-	// {0,1,2} (the triangle) and {3} (isolated)
-	wantClusters := []VertexSet{
-		{0: struct{}{}, 1: struct{}{}, 2: struct{}{}}, // Triangle
-		{3: struct{}{}}, // Isolated node
-	}
-
-	// For each wantCluster, check that it's found in clusters
-	for _, want := range wantClusters {
-		found := false
-		for _, got := range clusters {
-			gotSet := VertexSet{}
-			for v := range got {
-				gotSet[v] = struct{}{}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			adj := &AdjList{
+				List: make([]VertexSet, len(tc.adj)),
+				Size: len(tc.adj),
 			}
-			if compareVertexSets(want, gotSet) {
-				found = true
-				break
+			for i, neighbors := range tc.adj {
+				adj.List[i] = make(VertexSet)
+				for n := range neighbors {
+					adj.List[i][n] = Naught{}
+				}
 			}
-		}
-		if !found {
-			t.Errorf("Expected cluster %v not found in result %v", want, clusters)
-		}
-	}
 
-	// Also check that the number of clusters is correct
-	if len(clusters) != len(wantClusters) {
-		t.Errorf("Expected %d clusters, got %d", len(wantClusters), len(clusters))
+			got, err := adj.HalveClustering(partialModularityMetric, partialModularityCompare)
+			if err != nil {
+				t.Fatalf("HalveClustering failed: %v", err)
+			}
+
+			// Check that every wanted cluster is present in the result, order does not matter
+			if len(got) != len(tc.want) {
+				t.Errorf("HalveClustering failed: got %d clusters, want %d", len(got), len(tc.want))
+			}
+			for _, wantCluster := range tc.want {
+				found := false
+				for _, gotCluster := range got {
+					if reflect.DeepEqual(gotCluster, wantCluster) {
+						found = true
+						break
+					}
+				}
+				if !found {
+					t.Errorf("Expected cluster %v not found in result %v", wantCluster, got)
+				}
+			}
+			// Optionally check size as well
+			if len(got) != len(tc.want) {
+				t.Errorf("Got %d clusters, want %d", len(got), len(tc.want))
+			}
+		})
 	}
 }
