@@ -1,0 +1,5 @@
+Graph,Modularity (ms),Disagreement (ms),Δ (ms)
+abi,9.08,8.18,0.91
+out.dimacs10-netscie,324.8,168.06,156.73
+out.pajek-erdos,154775.04,121752.22,33022.82
+Gesamt,155108.92,121928.46,33180.46

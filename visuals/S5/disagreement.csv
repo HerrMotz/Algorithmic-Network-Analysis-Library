@@ -1,0 +1,13 @@
+Graph,Heuristic,k,Score
+abi,halve,5,600.0
+abi,ice,11,321.0
+abi,mergeBFS,3,620.0
+abi,mergeRandom,2,571.0
+out.dimacs10-netscie,halve,505,862.0
+out.dimacs10-netscie,ice,562,-28.0
+out.dimacs10-netscie,mergeBFS,467,995.0
+out.dimacs10-netscie,mergeRandom,446,921.0
+out.pajek-erdos,halve,6044,11391.0
+out.pajek-erdos,ice,6453,3634.0
+out.pajek-erdos,mergeBFS,2080,64143.0
+out.pajek-erdos,mergeRandom,2081,64144.0

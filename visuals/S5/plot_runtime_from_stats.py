@@ -79,6 +79,24 @@ def main():
     graphs, heuristics, times = parse(Path(args.stats))
     combos = [f"{h}_{m}" for h in heuristics for m in ("M", "D")]
 
+    # ------------------------------------------------------------------- Runtime-Summary
+    print("\n=== Runtime-Summary (ms) ===")
+    total_mod, total_dis = 0.0, 0.0
+
+    for g in graphs:
+        sum_mod = sum(v for c, v in times[g].items() if c.endswith("_M"))
+        sum_dis = sum(v for c, v in times[g].items() if c.endswith("_D"))
+        total_mod += sum_mod
+        total_dis += sum_dis
+        diff = sum_mod - sum_dis
+        print(f"{g:25s}:  M = {sum_mod:10.2f}   D = {sum_dis:10.2f}   Δ = {diff:+.2f}")
+
+    overall_diff = total_mod - total_dis
+    print("-" * 60)
+    print(f"Gesamt{'':20s}  M = {total_mod:10.2f}   D = {total_dis:10.2f}   "
+        f"Δ = {overall_diff:+.2f} ms")
+    print("============================\n")
+
     n_graphs = len(graphs)
     n_combos = len(combos)
     bar_w = 0.8 / n_combos
