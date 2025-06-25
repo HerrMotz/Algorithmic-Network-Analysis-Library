@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"path/filepath"
 	"time"
 
 	"graphlib/graphlib"
@@ -47,11 +46,6 @@ func main() {
 		log.Fatal("-graph erforderlich")
 	}
 
-	ext := filepath.Ext(*graphPath)
-	if ext != ".metis" && ext != ".edgelist" && ext != ".txt" {
-		log.Fatalf("unsupported format %s – die Cluster-Heuristiken brauchen eine AdjList", ext)
-	}
-
 	// laden des Graphen
 	g, err := graphlib.ReadGraphAdjList(*graphPath, *directed)
 	if err != nil {
@@ -59,44 +53,48 @@ func main() {
 	}
 	fmt.Printf("Graph: |V|=%d  |E|≈%d\n", g.Size, g.TotalDegree()/2)
 
-	// Heuristiken für Clustering definieren
+	// ---- Run-Definition ---------------------------------------------
 	type run struct {
-		name string
-		algo func() ([]graphlib.VertexSet, error)
+		name       string
+		algo       func() ([]graphlib.VertexSet, error)
+		metricType string // "M" (Modularity) oder "D" (Disagreement)
 	}
+	add := func(tag string,
+		build func(metric func(*graphlib.AdjList, graphlib.VertexSet) (float64, error),
+			compare func(float64, float64) bool) ([]graphlib.VertexSet, error)) []run {
 
-	runs := []run{
-		{
-			name: "mergeBFS_modularity",
-			algo: func() ([]graphlib.VertexSet, error) {
-				return g.MergeClusteringGreedyBFS(
-					graphlib.PartialModularityMetric,
-					graphlib.PartialModularityCompare,
-				)
+		return []run{
+			{
+				name: tag + "_M",
+				metricType: "M",
+				algo: func() ([]graphlib.VertexSet, error) {
+					return build(graphlib.PartialModularityMetric,
+						graphlib.PartialModularityCompare)
+				},
 			},
-		},
-		{
-			name: "halve_diameter_modularity",
-			algo: func() ([]graphlib.VertexSet, error) {
-				return g.HalveClustering(
-					graphlib.PartialModularityMetric,
-					graphlib.PartialModularityCompare,
-				)
-			},
-		},
-		{
-			name: "mergeRandom_disagreement",
-			algo: func() ([]graphlib.VertexSet, error) {
-				return g.MergeClusteringMetricWithRandomPivot(
-					func(a *graphlib.AdjList, C graphlib.VertexSet) (float64, error) {
+			{
+				name: tag + "_D",
+				metricType: "D",
+				algo: func() ([]graphlib.VertexSet, error) {
+					conv := func(a *graphlib.AdjList, C graphlib.VertexSet) (float64, error) {
 						d, err := graphlib.PartialDisagreementMetric(a, C)
 						return float64(d), err
-					},
-					graphlib.PartialDisagreementCompare,
-				)
+					}
+					return build(conv, graphlib.PartialDisagreementCompare)
+				},
 			},
-		},
+		}
 	}
+
+	runs := []run{}
+	// 1) Merge-BFS
+	runs = append(runs, add("mergeBFS", g.MergeClusteringGreedyBFS)...)
+	// 2) Halve
+	runs = append(runs, add("halve", g.HalveClustering)...)
+	// 3) Merge-Random
+	runs = append(runs, add("mergeRandom", g.MergeClusteringMetricWithRandomPivot)...)
+	// 4) ICE
+	runs = append(runs, add("ice", g.ICEClustering)...)
 
 	// Directory für Ergebnisse erstellen
 	if err := os.MkdirAll(*outDir, 0o755); err != nil {
@@ -106,19 +104,25 @@ func main() {
 	// Durchführen und Ergebnisse ausgeben
 	for _, r := range runs {
 		start := time.Now()
-		cl, err := r.algo()
+		C, err := r.algo()
 		if err != nil {
 			log.Printf("%s ERROR: %v\n", r.name, err)
 			continue
 		}
 		elapsed := time.Since(start)
 
-		mod, _ := graphlib.TotalModularityMetric(g, cl)
+		var score float64
+		if r.metricType == "M" {
+			score, _ = graphlib.TotalModularityMetric(g, C)
+		} else {
+			score, _ = graphlib.TotalDisagreementMetric(g, C)
+		}
+
 		fmt.Printf("%-28s  k=%-4d  Q=%.6f  t=%v\n",
-			r.name, len(cl), mod, elapsed)
+			r.name, len(C), score, elapsed)
 
 		outFile := fmt.Sprintf("%s/%s.clusters.txt", *outDir, r.name)
-		if err := WriteClustersTXT(outFile, cl); err != nil {
+		if err := WriteClustersTXT(outFile, C); err != nil {
 			log.Printf("clusters schreiben (%s): %v", r.name, err)
 		}
 	}
