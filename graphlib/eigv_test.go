@@ -211,3 +211,53 @@ func TestPowerIterationRayleigh_RunsUntilVectorsAgree(t *testing.T) {
 		t.Fatalf("the start vectors did not converge to each other: %v vs %v", v1, v2)
 	}
 }
+
+func TestKatzCentrality_AgainstLinearSystem(t *testing.T) {
+	m := pawGraph(t) // largest eigenvalue ≈ 2.17
+	const a = 0.2
+	n := int(m.Dim())
+
+	v, alpha, beta := make(Vector, n), make(Vector, n), make(Vector, n)
+	for i := 0; i < n; i++ {
+		v[i], alpha[i], beta[i] = 1, a, 1
+	}
+	if err := m.KatzCentrality(&v, &alpha, &beta, 10000); err != nil {
+		t.Fatal(err)
+	}
+
+	// exact solution of (I - aA) x = 1, normalised to sum 1
+	lhs := mat.NewDense(n, n, nil)
+	for i := 0; i < n; i++ {
+		lhs.Set(i, i, 1)
+		row, _ := m.GetRow(uint32(i))
+		for _, j := range row {
+			lhs.Set(i, int(j), lhs.At(i, int(j))-a)
+		}
+	}
+	rhs := mat.NewVecDense(n, nil)
+	for i := 0; i < n; i++ {
+		rhs.SetVec(i, 1)
+	}
+	var want mat.VecDense
+	if err := want.SolveVec(lhs, rhs); err != nil {
+		t.Fatal(err)
+	}
+	sum := mat.Sum(&want)
+	for i := 0; i < n; i++ {
+		if w := want.AtVec(i) / sum; math.Abs(v[i]-w) > 1e-9 {
+			t.Errorf("x[%d] = %v, want %v", i, v[i], w)
+		}
+	}
+}
+
+func TestKatzCentrality_DivergesForLargeAlpha(t *testing.T) {
+	m := pawGraph(t) // 1/λ_max ≈ 0.46
+	n := int(m.Dim())
+	v, alpha, beta := make(Vector, n), make(Vector, n), make(Vector, n)
+	for i := 0; i < n; i++ {
+		v[i], alpha[i], beta[i] = 1, 0.6, 1
+	}
+	if err := m.KatzCentrality(&v, &alpha, &beta, 10000); err == nil {
+		t.Fatal("expected an error for alpha > 1/λ_max")
+	}
+}

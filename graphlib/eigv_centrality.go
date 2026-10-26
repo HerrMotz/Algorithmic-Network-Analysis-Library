@@ -2,6 +2,8 @@ package graphlib
 
 import (
 	"errors"
+	"fmt"
+	"math"
 )
 
 // ------------------------
@@ -105,36 +107,56 @@ func (m *AdjMatSparse) PowerIterationRayleigh(
 	return nil // vectors were updated in-place
 }
 
-// KatzCentrality calculates the katz centrality using power iteration,
-// for a start vector v, walk probability alpha, ground importance vector beta
-// and a given number of iterations.
+// katzTolerance is the relative change between two iterations (in the 1-norm)
+// below which KatzCentrality considers the iteration converged.
+const katzTolerance = 1e-12
+
+// KatzCentrality calculates the Katz centrality x = Σ_k (αA)^k β, i.e. the
+// solution of x = αAx + β, by iterating x ← αAx + β from the start vector v.
+// alpha (the walk probability) and beta (the ground importance) hold one value
+// per vertex. The iteration only converges if alpha is smaller than 1/λ_max,
+// where λ_max is the largest eigenvalue of the adjacency matrix; an error is
+// returned if it diverges or has not converged after the given number of
+// iterations. The result is normalised to sum 1.
 func (m *AdjMatSparse) KatzCentrality(v *Vector, alpha *Vector, beta *Vector, iterations int) error {
 	n := int(m.Dim())
 
-	if len(*beta) != n {
+	if len(*v) != n || len(*alpha) != n || len(*beta) != n {
 		return errors.New("vector length does not match matrix dimension")
 	}
 
-	var sum float64
-
 	for i := 0; i < iterations; i++ {
 		// calculate x' := A*x
-		*v, _ = m.MulVec(v) // the error can be ignored because it is checked in this function as well
-		// calculate alpha * x' + beta
-		err := v.FMA(alpha, beta)
+		next, err := m.MulVec(v)
 		if err != nil {
 			return err
 		}
-		// re-normalise
-		sum = 0
-		for _, v := range *v {
-			sum += v
+		// calculate alpha * x' + beta
+		if err := next.FMA(alpha, beta); err != nil {
+			return err
 		}
-		// in place
-		v.ScaleVector(1 / sum)
+
+		// relative change ‖x' – x‖₁ / ‖x'‖₁
+		var change, size, sum float64
+		for j := range next {
+			change += math.Abs(next[j] - (*v)[j])
+			size += math.Abs(next[j])
+			sum += next[j]
+		}
+		*v = next
+		if math.IsInf(size, 0) || math.IsNaN(size) {
+			return errors.New("Katz centrality diverges: alpha must be smaller than 1/λ_max")
+		}
+
+		if change <= katzTolerance*size {
+			if sum != 0 {
+				v.ScaleVector(1 / sum) // in place
+			}
+			return nil
+		}
 	}
 
-	return nil // this is not the vector, everything happens in place
+	return fmt.Errorf("Katz centrality did not converge in %d iterations: alpha must be smaller than 1/λ_max", iterations)
 }
 
 // TopKCentralities This function returns the top k centralities for a given vector.
