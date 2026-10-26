@@ -115,39 +115,6 @@ func TestPartialModularity(t *testing.T) {
 	}
 }
 
-// todo delete this function
-func TestPartialModularityTemporary(t *testing.T) {
-	adj := &AdjList{
-		List: testAdjTwoCliquesBridge,
-		Size: len(testAdjTwoCliquesBridge),
-	}
-
-	lol := VertexSet{
-		0: Naught{}, 1: Naught{}, 2: Naught{}, 3: Naught{}, 4: Naught{}, 5: Naught{},
-	}
-
-	got, err := PartialModularityMetric(adj, lol)
-
-	lol21 := VertexSet{
-		0: Naught{}, 1: Naught{}, 2: Naught{},
-	}
-	lol22 := VertexSet{
-		3: Naught{}, 4: Naught{}, 5: Naught{},
-	}
-
-	got1, err := PartialModularityMetric(adj, lol21)
-	got2, err := PartialModularityMetric(adj, lol22)
-	t.Logf("Metric when cliques are clusters: %f", got1+got2)
-
-	if err != nil {
-		t.Fatalf("MergeClusteringGreedyBFS failed: %v", err)
-	}
-
-	if got < 10000 {
-		t.Errorf("Expected 2 clusters, got %f", got)
-	}
-}
-
 func TestMergeClustering(t *testing.T) {
 	tests := []struct {
 		name string
