@@ -139,6 +139,15 @@ func TotalDisagreementMetric(l *AdjList, C []VertexSet) (float64, error) {
 // Heuristic & Operation 1 - Merge
 // --------------------------------------------------------------------
 
+// MergeClusteringGreedyBFS starts with one cluster per vertex and merges every
+// leaf into the cluster of its neighbour. Then, for growing cluster sizes k,
+// every cluster of size k is merged with the neighbouring cluster that improves
+// the metric the most. compare(a, b) must report whether a is at least as good
+// as b.
+//
+// To bound the work per cluster, at most four neighbouring clusters are
+// inspected. They are sampled at random from a generator with a fixed seed, so
+// the result is reproducible.
 func (l *AdjList) MergeClusteringGreedyBFS(
 	metric func(*AdjList, VertexSet) (float64, error),
 	compare func(newMetric, oldMetric float64) bool,
@@ -146,6 +155,7 @@ func (l *AdjList) MergeClusteringGreedyBFS(
 
 	// parameter for search width for each step
 	branchingLimit := 4 - 1
+	sampleRng := rand.New(rand.NewSource(1))
 
 	// STEP 1: Initialize each vertex as its own cluster
 	clusters := make([]VertexSet, l.Size)
@@ -224,11 +234,14 @@ func (l *AdjList) MergeClusteringGreedyBFS(
 			bestJ := -1
 			var bestGain float64
 			foundImprovement := false
-			// use the best improvement after at most k steps; neighbours are
-			// visited in index order so that the same ones are inspected on
-			// every run
+			// use the best improvement after at most k steps; the neighbouring
+			// clusters are inspected in a random order from the seeded generator
 			branchCount := 0
-			for _, j := range slices.Sorted(maps.Keys(neighbourClusters)) {
+			candidates := slices.Sorted(maps.Keys(neighbourClusters))
+			sampleRng.Shuffle(len(candidates), func(a, b int) {
+				candidates[a], candidates[b] = candidates[b], candidates[a]
+			})
+			for _, j := range candidates {
 				if branchCount > branchingLimit {
 					break
 				}
