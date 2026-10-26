@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/csv"
+	"flag"
 	"fmt"
 	"math"
 	"os"
@@ -36,56 +37,6 @@ func worstCaseBound(n, d int) float64 {
 	return float64(n) * math.Pow(3, float64(d+1)/3)
 }
 
-// ----------------------------------------------------------------------------
-// 3.  Degeneracy = core-Zahl d(G)
-// ----------------------------------------------------------------------------
-func degeneracy(adj *graphlib.AdjList) int {
-	n := adj.Size
-	deg := make([]int, n)
-	maxDeg := 0
-	for v := 0; v < n; v++ {
-		d := len(adj.List[v])
-		deg[v] = d
-		if d > maxDeg {
-			maxDeg = d
-		}
-	}
-
-	// Buckets für O(n)-Algorithmus
-	buckets := make([][]int, maxDeg+1)
-	for v, d := range deg {
-		buckets[d] = append(buckets[d], v)
-	}
-
-	removed := make([]bool, n)
-	dValue := 0
-
-	for k := 0; k <= maxDeg; k++ {
-		for len(buckets[k]) > 0 {
-			v := buckets[k][len(buckets[k])-1]
-			buckets[k] = buckets[k][:len(buckets[k])-1]
-
-			if removed[v] || deg[v] != k {
-				continue
-			}
-			if k > dValue {
-				dValue = k
-			}
-			removed[v] = true
-
-			for u := range adj.List[v] {
-				if removed[u] {
-					continue
-				}
-				du := deg[u]
-				deg[u]--
-				buckets[du-1] = append(buckets[du-1], u)
-			}
-		}
-	}
-	return dValue
-}
-
 // ------------------------------------------------------------
 // Clique-Zahl und Max-Größe dynamisch ermitteln
 // ------------------------------------------------------------
@@ -101,7 +52,7 @@ func cliqueStats(g *graphlib.AdjList) (count, max int) {
 }
 
 // ----------------------------------------------------------------------------
-// 4.  Analyse eines Graphen
+// 3.  Analyse eines Graphen
 // ----------------------------------------------------------------------------
 type stats struct {
 	graphName      string
@@ -129,7 +80,10 @@ func analyze(path string) (*stats, error) {
 		dens = float64(2*m) / float64(n*(n-1))
 	}
 
-	d := degeneracy(g)
+	d, err := g.Degeneracy() // core number d(G)
+	if err != nil {
+		return nil, err
+	}
 
 	name := filepath.Base(path)
 
@@ -157,9 +111,12 @@ func ratio(x, y float64) float64 {
 }
 
 // ----------------------------------------------------------------------------
-// 5.  Hauptprogramm
+// 4.  Hauptprogramm
 // ----------------------------------------------------------------------------
 func main() {
+	outPath := flag.String("out", "graph_clique_analysis.csv", "CSV file to write")
+	flag.Parse()
+
 	var rows [][]string
 
 	for _, file := range graphFiles {
@@ -180,7 +137,7 @@ func main() {
 		})
 	}
 
-	out, err := os.Create("graph_clique_analysis.csv")
+	out, err := os.Create(*outPath)
 	if err != nil {
 		panic(err)
 	}
@@ -199,5 +156,5 @@ func main() {
 		panic(err)
 	}
 	w.Flush()
-	fmt.Println("\nAnalyse abgeschlossen – Ergebnisse in graph_clique_analysis.csv.")
+	fmt.Printf("\nAnalyse abgeschlossen – Ergebnisse in %s.\n", *outPath)
 }
