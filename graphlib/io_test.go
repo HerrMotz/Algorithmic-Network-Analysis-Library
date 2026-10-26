@@ -26,7 +26,7 @@ var wantAdj = []VertexSet{
 	{5: Naught{}, 3: Naught{}},
 }
 
-var wantAdjAsMETIS = []byte(`7 22
+var wantAdjAsMETIS = []byte(`7 11
  2 3 5
  1 3 4
  1 2 4 5
@@ -330,7 +330,7 @@ func benchReadGraph(b *testing.B, file string) {
 }
 
 func TestWriteSizeInFile(t *testing.T) {
-	file := "write_test.graph"
+	file := filepath.Join(t.TempDir(), "write_test.graph")
 
 	adj := []VertexSet{
 		{1: Naught{}},
@@ -361,7 +361,7 @@ func checkWriteHeuristic(t *testing.T, method string, file string, heur int, wri
 }
 
 func TestWriteAdjListToEdgeList(t *testing.T) {
-	file := "write_test.graph"
+	file := filepath.Join(t.TempDir(), "write_test.graph")
 	l := AdjList{List: wantAdj, Size: len(wantAdj)}
 	heur := l.Size * 10
 	written, err := l.WriteToEdgeList(file, heur)
@@ -399,7 +399,7 @@ func TestWriteAdjListToEdgeList(t *testing.T) {
 }
 
 func TestWriteAdjListToMETIS(t *testing.T) {
-	file := "write_test.mgraph"
+	file := filepath.Join(t.TempDir(), "write_test.mgraph")
 	l := AdjList{List: wantAdj, Size: len(wantAdj)}
 	heur := l.Size * 10
 	written, err := l.WriteToMETIS(file, heur)
@@ -432,5 +432,37 @@ func TestWriteAdjListToMETIS(t *testing.T) {
 
 	if !bytes.Equal(gotSum, wantSum[:]) {
 		t.Fatalf("contents differ (by hash).\nexpected %v,\ngot      %v", wantSum, gotSum)
+	}
+}
+
+func TestWriteToMETISRoundTrip(t *testing.T) {
+	// a triangle, a pendant vertex and an isolated vertex (written as an empty line)
+	want := []VertexSet{
+		{1: Naught{}, 2: Naught{}},
+		{0: Naught{}, 2: Naught{}},
+		{0: Naught{}, 1: Naught{}, 3: Naught{}},
+		{2: Naught{}},
+		{},
+	}
+	l := AdjList{List: want, Size: len(want)}
+	file := filepath.Join(t.TempDir(), "roundtrip.mgraph")
+	if _, err := l.WriteToMETIS(file, 0); err != nil {
+		t.Fatalf("WriteToMETIS failed: %v", err)
+	}
+
+	content, err := os.ReadFile(file)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if header := string(bytes.SplitN(content, []byte("\n"), 2)[0]); header != "5 4" {
+		t.Errorf("header = %q, want \"5 4\" (vertices and edges)", header)
+	}
+
+	got, err := ReadGraphAdjList(file, false)
+	if err != nil {
+		t.Fatalf("reading the written file failed: %v", err)
+	}
+	if !reflect.DeepEqual(got.List, want) {
+		t.Errorf("round trip changed the graph\n  got : %v\n  want: %v", got.List, want)
 	}
 }

@@ -63,12 +63,19 @@ func (l *AdjList) WriteToMETIS(path string, heuristicSize int) (int, error) {
 
 	// add the meta line: <number of vertices>SPACE<num edges>
 	numVertices := l.Size
-	totalDegree := l.TotalDegreeParallel(4)
+	// every undirected edge is stored as two arcs, a self-loop as one
+	arcs, loops := 0, 0
+	for u, nbrs := range l.List {
+		arcs += len(nbrs)
+		if _, ok := nbrs[u]; ok {
+			loops++
+		}
+	}
+	numEdges := (arcs-loops)/2 + loops
 
 	buf = appendNum(buf, numVertices)
 	buf = append(buf, ' ')
-	// total degree
-	buf = appendNum(buf, totalDegree)
+	buf = appendNum(buf, numEdges)
 	buf = append(buf, '\n')
 
 	for _, nbrs := range l.List {

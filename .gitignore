@@ -182,9 +182,6 @@ pyrightconfig.json
 .vscode
 .idea
 
-graphlib/write_test.graph
-graphlib/write_test.mgraph
-
 ### Go ###
 # Test binaries, profiles and coverage output
 *.test
