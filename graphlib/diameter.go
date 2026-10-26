@@ -44,18 +44,18 @@ func (l *AdjList) NeighbourhoodSubsets() (VertexSet, error) {
 		// --- collect candidates ( neighbours of u OR of any neighbour of u ) --
 		candidates := make(VertexSet)
 
-		openU := make(VertexSet, 8) // todo: chance to add a heuristic
-		openU, _ = l.Neighbours(Vertex{u})
+		// only reference passing: openU is the graph's own neighbour map
+		openU, _ := l.Neighbours(Vertex{u})
 
-		// we only need closedU, because the comparison works with only closedU
-		closedU := make(VertexSet, len(openU)+1)
-		closedU = openU
+		// we only need closedU, because the comparison works with only closedU.
+		// It has to be a copy: adding u to openU itself would insert the
+		// self-loop u-u into the graph.
+		closedU := openU.Copy()
 		closedU[u] = Naught{}
 
 		for v := range openU {
 			// only reference passing
-			openV := make(VertexSet, 8) // todo: chance to add a heuristic
-			openV, _ = l.Neighbours(Vertex{v})
+			openV, _ := l.Neighbours(Vertex{v})
 
 			candidates[v] = Naught{}
 			for w := range openV {
@@ -67,8 +67,7 @@ func (l *AdjList) NeighbourhoodSubsets() (VertexSet, error) {
 		// --- check each candidate --------------------------------------------
 		for v := range candidates {
 			// only reference passing
-			openV := make(VertexSet, 8) // todo: chance to add a heuristic
-			openV, _ = l.Neighbours(Vertex{v})
+			openV, _ := l.Neighbours(Vertex{v})
 
 			if _, already := result[v]; already {
 				// mimic the Python early‑out: if v is already in the result set
