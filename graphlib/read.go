@@ -4,6 +4,8 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"io"
+	"math"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -14,39 +16,82 @@ import (
 // Loads plain edge lists, METIS or Matrix Market files into an AdjList.
 // -----------------------------------------------------------------------------
 
-// ReadGraphAdjList opens *path* and returns the graph as an *AdjList*.
+// GraphFormat is the file format of a graph, see ReadGraphAdjListAs.
+type GraphFormat int
+
+const (
+	// FormatAuto chooses the format from the file extension (see ReadGraphAdjList).
+	FormatAuto GraphFormat = iota
+	// FormatEdgeList is a plain edge list with one "u v" pair per line.
+	FormatEdgeList
+	// FormatMETIS is the METIS graph format: a header "n m [fmt [ncon]]" and
+	// one adjacency line per vertex.
+	FormatMETIS
+	// FormatMatrixMarket is the Matrix Market coordinate format.
+	FormatMatrixMarket
+)
+
+// ParseGraphFormat returns the GraphFormat called "auto", "edgelist", "metis"
+// or "mtx", e.g. for a command-line flag.
+func ParseGraphFormat(name string) (GraphFormat, error) {
+	switch strings.ToLower(name) {
+	case "", "auto":
+		return FormatAuto, nil
+	case "edgelist":
+		return FormatEdgeList, nil
+	case "metis":
+		return FormatMETIS, nil
+	case "mtx":
+		return FormatMatrixMarket, nil
+	}
+	return FormatAuto, fmt.Errorf("unknown graph format %q (want auto, edgelist, metis or mtx)", name)
+}
+
+// ReadGraphAdjList opens *path* and returns the graph as an *AdjList*. The
+// format is chosen by the file extension:
 //
-// • Plain edge‑list  -> one “u v” per line
-// • METIS            -> first line “n m …”, next n lines adjacency lists
-// • Matrix Market    -> “%%MatrixMarket matrix coordinate …” banner, size line, “i j” entries
+//   - .metis, .mgraph: METIS, first line “n m …”, next n lines adjacency lists
+//   - .mtx: Matrix Market, “%%MatrixMarket matrix coordinate …” banner, size line, “i j” entries
+//   - anything else: plain edge list, one “u v” per line
 //
-// The loader auto‑detects the format and converts any 1‑based ids to 0‑based.
+// Use ReadGraphAdjListAs to choose the format explicitly, e.g. for METIS files
+// named *.graph. Ids are converted to 0-based ids: METIS and Matrix Market ids
+// are 1-based (METIS files that use the id 0 are read as 0-based), and edge
+// lists are renumbered so that their smallest id becomes 0.
 // If *directed* is true, only the arc u→v is stored; otherwise both directions are recorded.
 func ReadGraphAdjList(path string, directed bool) (*AdjList, error) {
+	return ReadGraphAdjListAs(path, FormatAuto, directed)
+}
+
+// ReadGraphAdjListAs is ReadGraphAdjList with an explicitly chosen file format.
+func ReadGraphAdjListAs(path string, format GraphFormat, directed bool) (*AdjList, error) {
+	if format == FormatAuto {
+		switch strings.ToLower(filepath.Ext(path)) {
+		case ".metis", ".mgraph":
+			format = FormatMETIS
+		case ".mtx":
+			format = FormatMatrixMarket
+		default:
+			format = FormatEdgeList
+		}
+	}
+
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
-
-	defer func(f *os.File) {
-		err := f.Close()
-		if err != nil {
-		}
-	}(f)
+	defer f.Close()
 
 	r := bufio.NewReader(f)
-
-	// Peek at the first non‑comment line so we can guess the format.
-
-	ext := strings.ToLower(filepath.Ext(path))
-	switch ext {
-	case ".metis", ".mgraph":
+	switch format {
+	case FormatMETIS:
 		return readMetisToAdjList(r, directed)
-	case ".mtx":
+	case FormatMatrixMarket:
 		return readMatrixMarketToAdjList(r, directed)
-	default:
+	case FormatEdgeList:
 		return readEdgeListToAdjList(r, directed)
 	}
+	return nil, fmt.Errorf("unknown graph format %d", format)
 }
 
 func ReadGraphSparseMatrix(path string, directed bool) (*AdjMatSparse, error) {
@@ -265,11 +310,36 @@ func readMatrixMarketToAdjList(r *bufio.Reader, directed bool) (*AdjList, error)
 // -----------------------------------------------------------------------------
 // METIS format
 // -----------------------------------------------------------------------------
-func readMetisToAdjList(r *bufio.Reader, directed bool) (*AdjList, error) {
+
+// metisGraph is the adjacency structure of a METIS file without its weights.
+type metisGraph struct {
+	n          int
+	neighbours [][]int // neighbours[v] holds the neighbour ids of vertex v as written in the file
+	offset     int     // subtract from an id in the file to get the 0-based vertex
+}
+
+// parseMETIS reads a graph in METIS format: a header "n m [fmt [ncon]]"
+// followed by exactly one line per vertex that lists its neighbours. Lines
+// starting with % are comments, and an empty line is a vertex without
+// neighbours.
+//
+// fmt tells which weights the vertex lines contain: its last digit stands for
+// edge weights (one after every neighbour), its middle digit for ncon vertex
+// weights and its first digit for a vertex size (both at the start of the
+// line). Weights and sizes are skipped.
+//
+// METIS numbers vertices from 1. Files that use the id 0 are treated as
+// 0-based.
+func parseMETIS(r io.Reader) (*metisGraph, error) {
 	scanner := bufio.NewScanner(r)
+	// allow very long adjacency lines
+	scanner.Buffer(make([]byte, 64*1024), 32*1024*1024)
 
 	// ----- header -----
-	var n, v int
+	var n int
+	var hasSize, hasVertexWeights, hasEdgeWeights bool
+	ncon := 1
+	headerFound := false
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
 		if line == "" || strings.HasPrefix(line, "%") {
@@ -280,75 +350,118 @@ func readMetisToAdjList(r *bufio.Reader, directed bool) (*AdjList, error) {
 			return nil, errors.New("METIS: header must contain at least n and m")
 		}
 		var err error
-		if n, err = strconv.Atoi(fields[0]); err != nil {
-			return nil, fmt.Errorf("METIS: bad n in header: %v", err)
+		if n, err = strconv.Atoi(fields[0]); err != nil || n <= 0 {
+			return nil, fmt.Errorf("METIS: bad n in header: %q", fields[0])
 		}
+		if len(fields) >= 3 {
+			f := fields[2]
+			if len(f) > 3 || strings.Trim(f, "01") != "" {
+				return nil, fmt.Errorf("METIS: bad fmt in header: %q", f)
+			}
+			f = strings.Repeat("0", 3-len(f)) + f
+			hasSize, hasVertexWeights, hasEdgeWeights = f[0] == '1', f[1] == '1', f[2] == '1'
+		}
+		if len(fields) >= 4 {
+			if ncon, err = strconv.Atoi(fields[3]); err != nil || ncon < 1 {
+				return nil, fmt.Errorf("METIS: bad ncon in header: %q", fields[3])
+			}
+		}
+		headerFound = true
 		break
 	}
 	if err := scanner.Err(); err != nil {
 		return nil, err
 	}
-	if n <= 0 {
-		return nil, errors.New("METIS: n must be positive")
+	if !headerFound {
+		return nil, errors.New("METIS: missing header")
 	}
 
-	// ----- read all adjacency lists once -----
-	neighs := make([][]int, 0, n)
-	minID := int(^uint(0) >> 1) // +∞
+	// number of leading values (vertex size and weights) on each vertex line
+	skip := 0
+	if hasSize {
+		skip++
+	}
+	if hasVertexWeights {
+		skip += ncon
+	}
+	step := 1 // values per neighbour
+	if hasEdgeWeights {
+		step = 2
+	}
+
+	// ----- one line per vertex -----
+	g := &metisGraph{n: n, neighbours: make([][]int, 0, n)}
+	minID := math.MaxInt
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
-		if line == "" || strings.HasPrefix(line, "%") {
+		if strings.HasPrefix(line, "%") {
 			continue
 		}
-
-		if v >= n {
-			return nil, fmt.Errorf("METIS: too many adjacency lines (>%d)", n)
+		v := len(g.neighbours)
+		if v == n {
+			if line != "" {
+				return nil, fmt.Errorf("METIS: too many adjacency lines (>%d)", n)
+			}
+			continue // trailing empty lines
 		}
 
-		raw := make([]int, 0)
-		for _, tok := range strings.Fields(line) {
-			w, err := strconv.Atoi(tok)
+		fields := strings.Fields(line)
+		if len(fields) < skip {
+			return nil, fmt.Errorf("METIS: line %d has fewer than %d vertex weights", v+1, skip)
+		}
+		fields = fields[skip:]
+		if len(fields)%step != 0 {
+			return nil, fmt.Errorf("METIS: line %d has a neighbour without edge weight", v+1)
+		}
+
+		nbrs := make([]int, 0, len(fields)/step)
+		for i := 0; i < len(fields); i += step {
+			w, err := strconv.Atoi(fields[i])
 			if err != nil {
 				return nil, fmt.Errorf("METIS: bad neighbour id in line %d: %v", v+1, err)
 			}
-			raw = append(raw, w)
-			if w < minID {
-				minID = w
-			}
+			nbrs = append(nbrs, w)
+			minID = min(minID, w)
 		}
-		neighs = append(neighs, raw)
-		v++
+		g.neighbours = append(g.neighbours, nbrs)
 	}
 	if err := scanner.Err(); err != nil {
 		return nil, err
 	}
-	if v != n {
-		return nil, fmt.Errorf("METIS: expected %d adjacency lines, got %d", n, v)
+	if len(g.neighbours) != n {
+		return nil, fmt.Errorf("METIS: expected %d adjacency lines, got %d", n, len(g.neighbours))
 	}
 
 	// ----- decide offset -----
-	var offset int
-	switch minID {
-	case 0:
-		offset = 0
-	case 1:
-		offset = 1
-	default:
-		return nil, fmt.Errorf("METIS: vertex ids must start with 0 or 1 (found %d)", minID)
+	g.offset = 1
+	if minID == 0 {
+		g.offset = 0
 	}
+	for v, nbrs := range g.neighbours {
+		for _, w := range nbrs {
+			if w-g.offset < 0 || w-g.offset >= n {
+				return nil, fmt.Errorf("METIS: neighbour id %d of vertex %d out of range after shift", w, v+1)
+			}
+		}
+	}
+	return g, nil
+}
 
-	// ----- build adjacency -----
-	adj, err := InitializeAdjList(n)
+func readMetisToAdjList(r *bufio.Reader, directed bool) (*AdjList, error) {
+	g, err := parseMETIS(r)
 	if err != nil {
 		return nil, err
 	}
 
-	for v, nbrs := range neighs {
+	// ----- build adjacency -----
+	adj, err := InitializeAdjList(g.n)
+	if err != nil {
+		return nil, err
+	}
+
+	for v, nbrs := range g.neighbours {
 		for _, wRaw := range nbrs {
-			w := wRaw - offset
-			if w < 0 || w >= n {
-				return nil, fmt.Errorf("METIS: neighbour id %d out of range after shift", wRaw)
-			}
+			w := wRaw - g.offset
 
 			if directed {
 				if err := adj.AddArc(
@@ -368,9 +481,10 @@ func readMetisToAdjList(r *bufio.Reader, directed bool) (*AdjList, error) {
 	return adj, nil
 }
 
-// ReadMetisToSparse opens *path*, auto-detects whether the file is 0- or 1-indexed
-// and returns the graph as an AdjMatSparse. If *directed* is false each
-// (v,w) pair is mirrored so that the matrix is symmetric.
+// ReadMetisToSparse opens the METIS file *path* and returns the graph as an
+// AdjMatSparse with one row per vertex (see parseMETIS for the accepted
+// format). If *directed* is false each (v,w) pair is mirrored so that the
+// matrix is symmetric.
 //
 // The routine keeps only the (i,j) pairs in memory, so it will happily ingest
 // very large graphs.
@@ -381,121 +495,44 @@ func ReadMetisToSparse(path string, directed bool) (AdjMatSparse, error) {
 	}
 	defer f.Close()
 
-	scanner := bufio.NewScanner(f)
-	// allow very long adjacency lines
-	scanner.Buffer(make([]byte, 64*1024), 32*1024*1024)
-
-	// header
-	var n int // number of vertices
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		if line == "" || strings.HasPrefix(line, "%") {
-			continue
-		}
-		fs := strings.Fields(line)
-		if len(fs) < 2 {
-			return AdjMatSparse{}, errors.New("METIS: header must contain at least n and m")
-		}
-		if n, err = strconv.Atoi(fs[0]); err != nil || n <= 0 {
-			return AdjMatSparse{}, fmt.Errorf("METIS: bad n in header: %v", fs[0])
-		}
-		break
-	}
-	if err := scanner.Err(); err != nil {
-		return AdjMatSparse{}, err
-	}
-
-	// collect raw pairs  (row = current line index, col = token)
-	type pair struct {
-		src uint32
-		dst uint32
-	}
-	rawPairs := make([]pair, 0)
-	var minID uint32 // necessary, because the compiler automagically gives minID type int32 for whatever reason
-	minID = INF
-	maxID := uint32(0)
-
-	v := 0 // 0-based row index we will keep
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		if line == "" || strings.HasPrefix(line, "%") {
-			continue
-		}
-		if v >= n {
-			return AdjMatSparse{}, fmt.Errorf("METIS: too many adjacency lines (>%d)", n)
-		}
-
-		for _, tok := range strings.Fields(line) {
-			w64, err := strconv.ParseInt(tok, 10, 0)
-			if err != nil {
-				return AdjMatSparse{}, fmt.Errorf("METIS: bad neighbour id in line %d: %v", v+1, err)
-			}
-			w := uint32(w64)
-
-			rawPairs = append(rawPairs, pair{src: uint32(v), dst: w})
-			if w < minID {
-				minID = w
-			}
-			if w > maxID {
-				maxID = w
-			}
-		}
-		v++
-	}
-	if err := scanner.Err(); err != nil {
-		return AdjMatSparse{}, err
-	}
-	if v != n {
-		return AdjMatSparse{}, fmt.Errorf("METIS: expected %d adjacency lines, got %d", n, v)
-	}
-
-	// decide index offset (0- vs 1-based)
-	var offset uint32
-	switch minID {
-	case 0:
-		offset = 0
-	case 1:
-		offset = 1
-	default:
-		return AdjMatSparse{}, fmt.Errorf("METIS: vertex ids must start with 0 or 1 (found %d)", minID)
-	}
-	if maxID-offset != uint32(n-1) {
-		return AdjMatSparse{}, fmt.Errorf("METIS: header says n=%d, but max id after shift is %d", n, maxID-offset)
-	}
-
-	// build the final i-j lists
-	s := make([]uint32, 0, len(rawPairs)*func() int {
-		if directed {
-			return 1
-		}
-		return 2
-	}())
-	d := make([]uint32, 0, cap(s))
-
-	for _, p := range rawPairs {
-		w := p.dst - offset
-		if w >= uint32(n) {
-			return AdjMatSparse{}, fmt.Errorf("METIS: neighbour id %d out of range after shift", p.dst)
-		}
-
-		s = append(s, p.src)
-		d = append(d, w)
-
-		if !directed && w != p.src { // mirroring (skip self-loops)
-			s = append(s, w)
-			d = append(d, p.src)
-		}
-	}
-
-	// sort + dedupe, then compress to CSR
-	if err := SortIJ(&s, &d); err != nil {
-		return AdjMatSparse{}, err
-	}
-	mat, err := NewFromSortedIJ(s, d)
+	g, err := parseMETIS(f)
 	if err != nil {
 		return AdjMatSparse{}, err
 	}
-	return mat, nil
+
+	// build the final i-j lists
+	pairs := 0
+	for _, nbrs := range g.neighbours {
+		pairs += len(nbrs)
+	}
+	if !directed {
+		pairs *= 2
+	}
+	s := make([]uint32, 0, pairs)
+	d := make([]uint32, 0, pairs)
+
+	for v, nbrs := range g.neighbours {
+		src := uint32(v)
+		for _, wRaw := range nbrs {
+			w := uint32(wRaw - g.offset)
+
+			s = append(s, src)
+			d = append(d, w)
+
+			if !directed && w != src { // mirroring (skip self-loops)
+				s = append(s, w)
+				d = append(d, src)
+			}
+		}
+	}
+
+	// sort + dedupe, then compress to CSR with one row per vertex, so that
+	// isolated vertices at the end keep their (empty) rows
+	if err := SortIJ(&s, &d); err != nil {
+		return AdjMatSparse{}, err
+	}
+	ia, ja := compress(s, d, uint64(g.n))
+	return AdjMatSparse{ia, ja}, nil
 }
 
 func readAdjListToSparse(r *bufio.Reader, directed bool) (*AdjMatSparse, error) {

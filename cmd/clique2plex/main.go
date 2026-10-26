@@ -54,16 +54,22 @@ func benchmarkPlex(name string, run func() (graphlib.VertexSet, error)) {
 
 func main() {
 	// CLI
-	graphPath := flag.String("graph", "", "Pfad zur Graph-Datei (Adjazenzlistenformat)")
+	graphPath := flag.String("graph", "", "path to the input graph (edge list, METIS or Matrix Market)")
+	formatName := flag.String("format", "auto", "input format: auto (by file extension), edgelist, metis or mtx")
 	flag.Parse()
 	if *graphPath == "" {
-		fmt.Println("Bitte gib den Pfad zum Graphen an mit -graph=...")
+		fmt.Println("Please specify the graph with -graph=...")
+		os.Exit(1)
+	}
+	format, err := graphlib.ParseGraphFormat(*formatName)
+	if err != nil {
+		fmt.Println(err)
 		os.Exit(1)
 	}
 
 	// Einlesen
 	fmt.Println("Einlesen des Graphen…")
-	g, err := graphlib.ReadGraphAdjList(*graphPath, false)
+	g, err := graphlib.ReadGraphAdjListAs(*graphPath, format, false)
 	if err != nil {
 		fmt.Printf("Fehler beim Einlesen: %v\n", err)
 		os.Exit(1)

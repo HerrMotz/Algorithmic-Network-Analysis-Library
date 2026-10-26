@@ -43,6 +43,7 @@ func main() {
 
 	// cli flags definieren
 	graphPath := flag.String("graph", "", "path to the input graph (edge list, METIS or Matrix Market)")
+	formatName := flag.String("format", "auto", "input format: auto (by file extension), edgelist, metis or mtx")
 	outDir := flag.String("out", "results", "output directory for the *.clusters.txt files")
 	directed := flag.Bool("directed", false, "read the graph as directed")
 	seed := flag.Int64("seed", 1, "seed for the random pivot order of the mergeRandom heuristic")
@@ -52,8 +53,13 @@ func main() {
 		log.Fatal("-graph is required")
 	}
 
+	format, err := graphlib.ParseGraphFormat(*formatName)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	// laden des Graphen
-	g, err := graphlib.ReadGraphAdjList(*graphPath, *directed)
+	g, err := graphlib.ReadGraphAdjListAs(*graphPath, format, *directed)
 	if err != nil {
 		log.Fatalf("loading graph: %v", err)
 	}

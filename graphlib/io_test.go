@@ -142,6 +142,116 @@ func TestReadGraph_MatrixMarketDirected(t *testing.T) {
 	}
 }
 
+func TestReadGraph_METISFormats(t *testing.T) {
+	dir := t.TempDir()
+	read := func(name, content string) (*AdjList, error) {
+		path := filepath.Join(dir, name)
+		if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		return ReadGraphAdjList(path, false)
+	}
+
+	// path 1-2-3, plus the isolated vertices 4 and 5, all 1-based
+	want := []VertexSet{{1: Naught{}}, {0: Naught{}, 2: Naught{}}, {1: Naught{}}, {}, {}}
+	files := map[string]string{
+		// an empty line is a vertex without neighbours, here at the end
+		"isolated.mgraph": "5 2\n2\n1 3\n2\n\n\n",
+		// ... and here in the middle (path 1-2-4, isolated 3 and 5)
+		"isolated-middle.mgraph": "% comment\n5 2\n2\n1 4\n\n2\n\n",
+		// fmt=1: every neighbour is followed by an edge weight
+		"edge-weights.mgraph": "5 2 1\n2 7\n1 7 3 9\n2 9\n\n\n",
+		// fmt=11 with ncon=2: two vertex weights per line, then edge weights
+		"vertex-and-edge-weights.mgraph": "5 2 11 2\n1 1 2 7\n4 4 1 7 3 9\n1 1 2 9\n2 2\n3 3\n",
+		// fmt=100: a vertex size at the start of every line
+		"sizes.mgraph": "5 2 100\n1 2\n1 1 3\n1 2\n1\n1\n",
+	}
+	for name, content := range files {
+		g, err := read(name, content)
+		if err != nil {
+			t.Errorf("%s: %v", name, err)
+			continue
+		}
+		w := want
+		if name == "isolated-middle.mgraph" {
+			w = []VertexSet{{1: Naught{}}, {0: Naught{}, 3: Naught{}}, {}, {1: Naught{}}, {}}
+		}
+		if !reflect.DeepEqual(g.List, w) {
+			t.Errorf("%s: got %v, want %v", name, g.List, w)
+		}
+	}
+
+	// the vertex lines must match n
+	if _, err := read("too-few.mgraph", "3 1\n2\n1\n"); err == nil {
+		t.Error("expected an error for a file with fewer vertex lines than n")
+	}
+	if _, err := read("too-many.mgraph", "2 1\n2\n1\n1\n"); err == nil {
+		t.Error("expected an error for a file with more vertex lines than n")
+	}
+}
+
+func TestReadGraph_METISWithVertexWeights(t *testing.T) {
+	// header "766 1314 10 2": two vertex weights per line before the neighbours
+	g, err := ReadGraphAdjList("../exampleGraphs/metis_test.mgraph", false)
+	if err != nil {
+		t.Fatalf("ReadGraphAdjList returned error: %v", err)
+	}
+	if g.Size != 766 {
+		t.Errorf("size = %d, want 766", g.Size)
+	}
+	if m := g.TotalDegree() / 2; m != 1314 {
+		t.Errorf("edges = %d, want 1314", m)
+	}
+}
+
+func TestReadGraphAdjListAs(t *testing.T) {
+	// a METIS file whose extension would make ReadGraphAdjList read it as an edge list
+	path := filepath.Join(t.TempDir(), "metis.graph")
+	if err := os.WriteFile(path, []byte("3 2\n2\n1 3\n2\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	format, err := ParseGraphFormat("metis")
+	if err != nil {
+		t.Fatal(err)
+	}
+	g, err := ReadGraphAdjListAs(path, format, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []VertexSet{{1: Naught{}}, {0: Naught{}, 2: Naught{}}, {1: Naught{}}}
+	if !reflect.DeepEqual(g.List, want) {
+		t.Errorf("got %v, want %v", g.List, want)
+	}
+
+	if _, err := ParseGraphFormat("gml"); err == nil {
+		t.Error("expected an error for an unknown format name")
+	}
+}
+
+func TestReadMetisToSparse_IsolatedVertices(t *testing.T) {
+	// vertex 4 is isolated and has the largest id
+	path := filepath.Join(t.TempDir(), "isolated.mgraph")
+	if err := os.WriteFile(path, []byte("4 2\n2\n1 3\n2\n\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	m, err := ReadMetisToSparse(path, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if m.Dim() != 4 {
+		t.Fatalf("Dim() = %d, want 4", m.Dim())
+	}
+	for v, want := range [][]uint32{{1}, {0, 2}, {1}, {}} {
+		got, err := m.GetRow(uint32(v))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(got) != len(want) || (len(want) > 0 && !reflect.DeepEqual(got, want)) {
+			t.Errorf("row %d = %v, want %v", v, got, want)
+		}
+	}
+}
+
 // ---------
 // helpers
 // ---------
