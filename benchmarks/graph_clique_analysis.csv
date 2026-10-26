@@ -1,8 +1,8 @@
 graph_name,nodes,edges,density,degeneracy,max_clique_size,clique_count,worst_case_bound
-soc-karate.mtx,34,78,0.139037,5,5,36,3.060e+02
-soc-dolphins.mtx,62,159,0.084082,5,5,84,5.580e+02
-abi.edgelist,63,966,0.494624,33,20,30,1.610e+07
+soc-karate.mtx,34,78,0.139037,4,5,36,2.122e+02
+soc-dolphins.mtx,62,159,0.084082,4,5,84,3.869e+02
+abi.edgelist,63,966,0.494624,23,20,30,4.133e+05
 out.dimacs10-netscie.graph,1461,2742,0.002571,19,20,613,2.215e+06
-out.pajek-erdos.graph,6927,11850,0.000494,62,8,9210,7.246e+13
-fb-pages-public-figure.edges,11565,67076,0.001003,72,21,150772,4.711e+15
-fb-pages-media.edges,27917,206111,0.000529,135,31,126862,1.190e+26
+out.pajek-erdos.graph,6927,11850,0.000494,10,8,9210,3.890e+05
+fb-pages-public-figure.edges,11565,67076,0.001003,42,21,150772,7.978e+10
+fb-pages-media.edges,27917,206111,0.000529,31,31,126862,3.429e+09
