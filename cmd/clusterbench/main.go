@@ -5,13 +5,20 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"maps"
+	"math/rand"
 	"os"
+	"slices"
 	"time"
 
 	"github.com/HerrMotz/Algorithmic-Network-Analysis-Library/graphlib"
 )
 
-// WriteClustersTXT speichert Cluster zeilenweise – kompatibel zu plot_clusters.py
+type metricFunc = func(*graphlib.AdjList, graphlib.VertexSet) (float64, error)
+type compareFunc = func(float64, float64) bool
+
+// WriteClustersTXT speichert Cluster zeilenweise – kompatibel zu plot_clusters.py.
+// Die Knoten jeder Zeile sind aufsteigend sortiert, damit Läufe vergleichbar bleiben.
 func WriteClustersTXT(path string, clusters []graphlib.VertexSet) error {
 	f, err := os.Create(path)
 	if err != nil {
@@ -21,13 +28,11 @@ func WriteClustersTXT(path string, clusters []graphlib.VertexSet) error {
 
 	w := bufio.NewWriter(f)
 	for _, c := range clusters {
-		first := true
-		for v := range c {
-			if !first {
+		for i, v := range slices.Sorted(maps.Keys(c)) {
+			if i > 0 {
 				fmt.Fprint(w, " ")
 			}
 			fmt.Fprint(w, v)
-			first = false
 		}
 		fmt.Fprintln(w)
 	}
@@ -37,19 +42,20 @@ func WriteClustersTXT(path string, clusters []graphlib.VertexSet) error {
 func main() {
 
 	// cli flags definieren
-	graphPath := flag.String("graph", "", "Pfad zu *.metis oder *.edgelist (AdjList-kompatibel)")
-	outDir := flag.String("out", "results", "Ausgabeverzeichnis")
-	directed := flag.Bool("directed", false, "Graph als gerichtet einlesen")
+	graphPath := flag.String("graph", "", "path to the input graph (edge list, METIS or Matrix Market)")
+	outDir := flag.String("out", "results", "output directory for the *.clusters.txt files")
+	directed := flag.Bool("directed", false, "read the graph as directed")
+	seed := flag.Int64("seed", 1, "seed for the random pivot order of the mergeRandom heuristic")
 	flag.Parse()
 
 	if *graphPath == "" {
-		log.Fatal("-graph erforderlich")
+		log.Fatal("-graph is required")
 	}
 
 	// laden des Graphen
 	g, err := graphlib.ReadGraphAdjList(*graphPath, *directed)
 	if err != nil {
-		log.Fatalf("Graph laden: %v", err)
+		log.Fatalf("loading graph: %v", err)
 	}
 	fmt.Printf("Graph: |V|=%d  |E|≈%d\n", g.Size, g.TotalDegree()/2)
 
@@ -59,9 +65,7 @@ func main() {
 		algo       func() ([]graphlib.VertexSet, error)
 		metricType string // "M" (Modularity) oder "D" (Disagreement)
 	}
-	add := func(tag string,
-		build func(metric func(*graphlib.AdjList, graphlib.VertexSet) (float64, error),
-			compare func(float64, float64) bool) ([]graphlib.VertexSet, error)) []run {
+	add := func(tag string, build func(metric metricFunc, compare compareFunc) ([]graphlib.VertexSet, error)) []run {
 
 		return []run{
 			{
@@ -91,8 +95,11 @@ func main() {
 	runs = append(runs, add("mergeBFS", g.MergeClusteringGreedyBFS)...)
 	// 2) Halve
 	runs = append(runs, add("halve", g.HalveClustering)...)
-	// 3) Merge-Random
-	runs = append(runs, add("mergeRandom", g.MergeClusteringMetricWithRandomPivot)...)
+	// 3) Merge-Random: every run gets a fresh generator with the same seed, so
+	// the M and D results are reproducible independently of each other
+	runs = append(runs, add("mergeRandom", func(metric metricFunc, compare compareFunc) ([]graphlib.VertexSet, error) {
+		return g.MergeClusteringMetricWithRandomPivot(rand.New(rand.NewSource(*seed)), metric, compare)
+	})...)
 	// 4) ICE
 	runs = append(runs, add("ice", g.ICEClustering)...)
 
@@ -123,7 +130,7 @@ func main() {
 
 		outFile := fmt.Sprintf("%s/%s.clusters.txt", *outDir, r.name)
 		if err := WriteClustersTXT(outFile, C); err != nil {
-			log.Printf("clusters schreiben (%s): %v", r.name, err)
+			log.Printf("writing clusters (%s): %v", r.name, err)
 		}
 	}
 }

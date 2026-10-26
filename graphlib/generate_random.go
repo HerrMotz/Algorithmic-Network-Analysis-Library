@@ -62,7 +62,7 @@ func GenerateRandomGraph(n int, rho float64, loops, directed bool, seed int64) (
 		m = len(possible)
 	}
 
-	rand.Shuffle(len(possible), func(i, j int) { possible[i], possible[j] = possible[j], possible[i] })
+	r.Shuffle(len(possible), func(i, j int) { possible[i], possible[j] = possible[j], possible[i] })
 	chosen := possible[:m]
 
 	// 4. Initialize the adjacency list

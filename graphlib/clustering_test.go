@@ -2,6 +2,7 @@ package graphlib
 
 import (
 	"math"
+	"math/rand"
 	"reflect"
 	"testing"
 )
@@ -393,6 +394,46 @@ func TestICEClustering(t *testing.T) {
 			// Optionally check size as well
 			if len(got) != len(tc.want) {
 				t.Errorf("Got %d clusters, want %d", len(got), len(tc.want))
+			}
+		})
+	}
+}
+
+// TestClusteringIsReproducible runs every heuristic twice on the same graph and
+// expects identical clusterings in identical order. Before the heuristics
+// iterated in sorted order, the results depended on Go's random map order.
+func TestClusteringIsReproducible(t *testing.T) {
+	g, err := ReadGraphAdjList("../exampleGraphs/abi.edgelist", false)
+	if err != nil {
+		t.Fatalf("reading graph: %v", err)
+	}
+
+	heuristics := map[string]func() ([]VertexSet, error){
+		"MergeClusteringGreedyBFS": func() ([]VertexSet, error) {
+			return g.MergeClusteringGreedyBFS(PartialModularityMetric, PartialModularityCompare)
+		},
+		"MergeClusteringMetricWithRandomPivot": func() ([]VertexSet, error) {
+			return g.MergeClusteringMetricWithRandomPivot(rand.New(rand.NewSource(7)), PartialModularityMetric, PartialModularityCompare)
+		},
+		"HalveClustering": func() ([]VertexSet, error) {
+			return g.HalveClustering(PartialDisagreementMetric, PartialDisagreementCompare)
+		},
+	}
+
+	for name, run := range heuristics {
+		t.Run(name, func(t *testing.T) {
+			first, err := run()
+			if err != nil {
+				t.Fatal(err)
+			}
+			for i := 0; i < 5; i++ {
+				again, err := run()
+				if err != nil {
+					t.Fatal(err)
+				}
+				if !reflect.DeepEqual(first, again) {
+					t.Fatalf("run %d differs from the first run:\n  first: %v\n  again: %v", i+2, first, again)
+				}
 			}
 		})
 	}

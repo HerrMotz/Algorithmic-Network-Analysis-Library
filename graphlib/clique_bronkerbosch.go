@@ -281,7 +281,9 @@ func (l *AdjList) BronKerboschOwnPivotDegeneracy() [][]int {
 	seenCliques := make(map[string]struct{})
 	var out [][]int
 
-	rand.Seed(time.Now().UnixNano())
+	// A local generator keeps the randomised pivot choice from reseeding the
+	// package-level source that other code relies on.
+	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 
 	var bk func(R, P, X map[int]struct{})
 	bk = func(R, P, X map[int]struct{}) {
@@ -300,7 +302,7 @@ func (l *AdjList) BronKerboschOwnPivotDegeneracy() [][]int {
 			weights[u] = w
 			total += w
 		}
-		rnd := rand.Intn(total)
+		rnd := rng.Intn(total)
 		run := 0
 		pivot := -1
 		for u, w := range weights {

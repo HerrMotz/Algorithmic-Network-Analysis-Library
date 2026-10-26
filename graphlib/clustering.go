@@ -2,10 +2,13 @@ package graphlib
 
 import (
 	"errors"
-	"gonum.org/v1/gonum/stat/combin"
+	"maps"
 	"math"
 	"math/rand"
+	"slices"
 	"sort"
+
+	"gonum.org/v1/gonum/stat/combin"
 )
 
 // Dummy metric: just size of cluster (for easy testing)
@@ -195,9 +198,10 @@ func (l *AdjList) MergeClusteringGreedyBFS(
 	n := l.Size
 	for k := 1; k <= n; k++ {
 		var toMerge [][2]int
-		// Only consider active clusters of size k
+		// Only consider active clusters of size k (in index order, so that
+		// the result does not depend on Go's random map iteration order)
 		var clusterIndices []int
-		for idx := range activeClusters {
+		for _, idx := range slices.Sorted(maps.Keys(activeClusters)) {
 			if len(clusters[idx]) == k {
 				clusterIndices = append(clusterIndices, idx)
 			}
@@ -220,9 +224,11 @@ func (l *AdjList) MergeClusteringGreedyBFS(
 			bestJ := -1
 			var bestGain float64
 			foundImprovement := false
-			// use the best improvement after at most k steps
+			// use the best improvement after at most k steps; neighbours are
+			// visited in index order so that the same ones are inspected on
+			// every run
 			branchCount := 0
-			for j := range neighbourClusters {
+			for _, j := range slices.Sorted(maps.Keys(neighbourClusters)) {
 				if branchCount > branchingLimit {
 					break
 				}
@@ -283,7 +289,7 @@ func (l *AdjList) MergeClusteringGreedyBFS(
 
 	// Return active clusters as VertexSets
 	var result []VertexSet
-	for idx := range activeClusters {
+	for _, idx := range slices.Sorted(maps.Keys(activeClusters)) {
 		if clusters[idx] != nil && len(clusters[idx]) > 0 {
 			result = append(result, clusters[idx])
 		}
@@ -293,10 +299,19 @@ func (l *AdjList) MergeClusteringGreedyBFS(
 
 // MergeClusteringMetricWithRandomPivot merges clusters by picking a random active cluster
 // and merging it with the best possible neighbouring cluster according to the metric.
+//
+// rng determines the random order in which clusters are picked. Pass a seeded
+// generator, e.g. rand.New(rand.NewSource(1)), to get reproducible results; if
+// rng is nil, a randomly seeded generator is used.
 func (l *AdjList) MergeClusteringMetricWithRandomPivot(
+	rng *rand.Rand,
 	metric func(*AdjList, VertexSet) (float64, error),
 	compare func(newMetric, oldMetric float64) bool,
 ) ([]VertexSet, error) {
+	if rng == nil {
+		rng = rand.New(rand.NewSource(rand.Int63()))
+	}
+
 	// STEP 1: Initialize each vertex as its own cluster
 	clusters := make([]VertexSet, l.Size)
 	vertexToCluster := make(map[int]int)
@@ -346,17 +361,15 @@ func (l *AdjList) MergeClusteringMetricWithRandomPivot(
 
 	// STEP 4: Main merging procedure using metric
 	for {
-		// Gather all current active cluster indices
-		var clusterIndices []int
-		for idx := range activeClusters {
-			clusterIndices = append(clusterIndices, idx)
-		}
+		// Gather all current active cluster indices (sorted first, so that the
+		// shuffle below is the only source of randomness)
+		clusterIndices := slices.Sorted(maps.Keys(activeClusters))
 		if len(clusterIndices) <= 1 {
 			break // Only one cluster left, or none
 		}
 
 		// Try clusters in random order to avoid bias
-		rand.Shuffle(len(clusterIndices), func(i, j int) {
+		rng.Shuffle(len(clusterIndices), func(i, j int) {
 			clusterIndices[i], clusterIndices[j] = clusterIndices[j], clusterIndices[i]
 		})
 		merged := false
@@ -379,10 +392,7 @@ func (l *AdjList) MergeClusteringMetricWithRandomPivot(
 			}
 
 			// Gather all neighbour indices
-			var neighbourIndices []int
-			for j := range neighbourClusters {
-				neighbourIndices = append(neighbourIndices, j)
-			}
+			neighbourIndices := slices.Sorted(maps.Keys(neighbourClusters))
 			if len(neighbourIndices) == 0 {
 				continue // No neighbours to merge with, try next cluster
 			}
@@ -446,7 +456,7 @@ func (l *AdjList) MergeClusteringMetricWithRandomPivot(
 
 	// Return active clusters as VertexSets
 	var result []VertexSet
-	for idx := range activeClusters {
+	for _, idx := range slices.Sorted(maps.Keys(activeClusters)) {
 		if clusters[idx] != nil && len(clusters[idx]) > 0 {
 			result = append(result, clusters[idx])
 		}
@@ -455,7 +465,7 @@ func (l *AdjList) MergeClusteringMetricWithRandomPivot(
 }
 
 // ComponentClustering returns a clustering of the graph where each connected component is its own cluster.
-// Each cluster is a set (VertexSet) of vertices.
+// Each cluster is a set (VertexSet) of vertices. Clusters are ordered by their smallest vertex.
 func (l *AdjList) ComponentClustering() []VertexSet {
 	componentIDs := l.naiveConnectedComponents()
 	if componentIDs == nil {
@@ -471,10 +481,11 @@ func (l *AdjList) ComponentClustering() []VertexSet {
 		clusters[compID][vertex] = struct{}{}
 	}
 
-	// Convert map to slice of sets
+	// Convert map to slice of sets. Component IDs are numbered in order of
+	// their smallest vertex, so sorting them gives a reproducible order.
 	result := make([]VertexSet, 0, len(clusters))
-	for _, cluster := range clusters {
-		result = append(result, cluster)
+	for _, compID := range slices.Sorted(maps.Keys(clusters)) {
+		result = append(result, clusters[compID])
 	}
 
 	return result
@@ -533,11 +544,13 @@ func (l *AdjList) HalveClustering(metric func(*AdjList, VertexSet) (float64, err
 			GoodVertices: cluster,
 		}
 
-		// Find the pair (u, v) with maximal distance d in the current cluster using the precomputed distance matrix
+		// Find the pair (u, v) with maximal distance d in the current cluster using the precomputed distance matrix.
+		// Vertices are visited in ascending order, so ties are always broken the same way.
 		maxDist := -1
 		var u, v int
-		for x := range cluster {
-			for y := range cluster {
+		members := slices.Sorted(maps.Keys(cluster))
+		for _, x := range members {
+			for _, y := range members {
 				if x == y {
 					continue
 				}
