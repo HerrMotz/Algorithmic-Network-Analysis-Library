@@ -2,26 +2,37 @@ package graphlib
 
 import (
 	"fmt"
+	"io"
+	"os"
+	"slices"
 	"sort"
 	"strings"
 )
 
-// Prettyprint the clusters in a human-readable form in console output.
+// PrintClusters prints the clusters in a human-readable form to standard
+// output, biggest clusters first.
 func PrintClusters(clusters []VertexSet) {
+	FprintClusters(os.Stdout, clusters)
+}
+
+// FprintClusters writes the clusters in a human-readable form to w, biggest
+// clusters first. The order of the clusters slice itself is not changed.
+func FprintClusters(w io.Writer, clusters []VertexSet) {
 	if len(clusters) == 0 {
-		fmt.Println("(keine Cluster)")
+		fmt.Fprintln(w, "(no clusters)")
 		return
 	}
 
-	// sort biggest clusters first
+	// sort biggest clusters first (on a copy, so the caller's order is kept)
+	clusters = slices.Clone(clusters)
 	sort.SliceStable(clusters, func(i, j int) bool {
 		return len(clusters[i]) > len(clusters[j])
 	})
 
 	// output
 	longestLabel := len(fmt.Sprintf("%d", len(clusters)-1))
-	fmt.Println("CLUSTERING")
-	fmt.Println(strings.Repeat("=", 40))
+	fmt.Fprintln(w, "CLUSTERING")
+	fmt.Fprintln(w, strings.Repeat("=", 40))
 
 	sizeHist := make(map[int]int)
 	for idx, c := range clusters {
@@ -34,22 +45,22 @@ func PrintClusters(clusters []VertexSet) {
 
 		// print
 		label := fmt.Sprintf("C%-*d (|C|=%d)", longestLabel, idx, len(c))
-		fmt.Printf("%s : %v\n", label, nodes)
+		fmt.Fprintf(w, "%s : %v\n", label, nodes)
 
 		sizeHist[len(c)]++
 	}
 
 	// short summary of clusters and stats
-	fmt.Println(strings.Repeat("-", 40))
-	fmt.Printf("Gesamt: %d Cluster\n", len(clusters))
-	fmt.Println("Größenverteilung:")
+	fmt.Fprintln(w, strings.Repeat("-", 40))
+	fmt.Fprintf(w, "Total: %d clusters\n", len(clusters))
+	fmt.Fprintln(w, "Size distribution:")
 	var sizes []int
 	for s := range sizeHist {
 		sizes = append(sizes, s)
 	}
 	sort.Ints(sizes)
 	for _, s := range sizes {
-		fmt.Printf("  %2d× Cluster der Größe %d\n", sizeHist[s], s)
+		fmt.Fprintf(w, "  %2d× cluster of size %d\n", sizeHist[s], s)
 	}
-	fmt.Println(strings.Repeat("=", 40))
+	fmt.Fprintln(w, strings.Repeat("=", 40))
 }
