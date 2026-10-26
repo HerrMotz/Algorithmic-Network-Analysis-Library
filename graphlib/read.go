@@ -153,7 +153,7 @@ func readEdgeListToAdjList(r *bufio.Reader, directed bool) (*AdjList, error) {
 	var arcs []Arc
 
 	maxID := -1
-	minID := INF
+	minID := math.MaxInt
 
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
@@ -539,9 +539,7 @@ func readAdjListToSparse(r *bufio.Reader, directed bool) (*AdjMatSparse, error) 
 	var s, d []uint32
 	scanner := bufio.NewScanner(r)
 
-	var minID uint32
-
-	minID = INF
+	var minID uint32 = math.MaxUint32
 
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())

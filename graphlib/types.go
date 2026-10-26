@@ -18,7 +18,9 @@ type Vertex struct {
 	Id int
 }
 
-const INF = math.MaxUint32 // or MaxInt64, depending on your needs
+// INF is the distance of an unreachable vertex. It is math.MaxInt32, so that it
+// fits into an int on 32-bit platforms, too.
+const INF = math.MaxInt32
 
 var EdgeOrArcExistsError = errors.New("edge or arc already exists")
 

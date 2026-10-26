@@ -210,7 +210,11 @@ func (l *AdjList) ImprovedAllPairsShortestPaths() ([][]int, error) {
 							minD = d
 						}
 					}
-					distances[u] = minD + 1
+					if minD < INF {
+						distances[u] = minD + 1
+					} else {
+						distances[u] = INF // unreachable from all neighbours
+					}
 				}
 			}
 		} else {
