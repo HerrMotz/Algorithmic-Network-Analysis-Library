@@ -45,7 +45,7 @@ def write_csv(rows, metric_tag, filename):
     subset = [r for r in rows if r["Metric"] == metric_tag]
     subset.sort(key=lambda r: (r["Graph"], r["Heuristic"]))
     with open(filename, "w", newline="") as fh:
-        w = csv.DictWriter(fh, fieldnames=["Graph", "Heuristic", "k", "Score"])
+        w = csv.DictWriter(fh, fieldnames=["Graph", "Heuristic", "k", "Score"], lineterminator="\n")
         w.writeheader()
         for r in subset:
             w.writerow({k: r[k] for k in w.fieldnames})
@@ -53,12 +53,15 @@ def write_csv(rows, metric_tag, filename):
 def main():
     ap = argparse.ArgumentParser(description="stats.txt → two CSVs (M & D)")
     ap.add_argument("stats", help="Pfad zur Log-Datei stats.txt")
+    ap.add_argument("-d", "--outdir", help="output directory (default: the directory of the stats file)")
     args = ap.parse_args()
 
-    rows = parse_log(Path(args.stats))
-    write_csv(rows, "M", "modularity.csv")
-    write_csv(rows, "D", "disagreement.csv")
-    print("✓ erzeugt modularity.csv und disagreement.csv")
+    stats = Path(args.stats)
+    outdir = Path(args.outdir) if args.outdir else stats.parent
+    rows = parse_log(stats)
+    write_csv(rows, "M", outdir / "modularity.csv")
+    write_csv(rows, "D", outdir / "disagreement.csv")
+    print(f"✓ wrote {outdir / 'modularity.csv'} and {outdir / 'disagreement.csv'}")
 
 if __name__ == "__main__":
     main()

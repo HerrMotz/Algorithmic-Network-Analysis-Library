@@ -1,8 +1,11 @@
 import pandas as pd
 import matplotlib.pyplot as plt
+from pathlib import Path
 
-# Load CSV file (adjust path if needed)
-df = pd.read_csv('visuals/benchmark_metrics2.csv')
+HERE = Path(__file__).resolve().parent  # files are read from and written next to this script
+
+# Load CSV file (written by logtocsv.py)
+df = pd.read_csv(HERE / 'benchmark_metrics2.csv')
 
 # Algorithms in desired order
 algos = ['NaiveAllPairs', 'ImprovedAllPairs', 'NaiveDiameter', 'ImprovedDiameter']
@@ -25,7 +28,7 @@ plt.title('Run Time vs. n')
 plt.legend()
 plt.grid(True, linestyle='--', alpha=0.5)
 plt.tight_layout()
-plt.savefig('runtime_vs_n.png')
+plt.savefig(HERE / 'runtime_vs_n.png')
 plt.close()  # Schließt die Figure, damit die nächste sauber startet
 
 # --- Plot 2: Memory Usage vs n ---
@@ -38,7 +41,7 @@ plt.title('Memory Usage vs. n')
 plt.legend()
 plt.grid(True, linestyle='--', alpha=0.5)
 plt.tight_layout()
-plt.savefig('memory_usage_vs_n.png')
+plt.savefig(HERE / 'memory_usage_vs_n.png')
 plt.close()  # Schließt auch diese Figure
 
 print("Saved two files: 'runtime_vs_n.png' and 'memory_usage_vs_n.png'")

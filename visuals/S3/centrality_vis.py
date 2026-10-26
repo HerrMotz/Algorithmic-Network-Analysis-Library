@@ -1,14 +1,36 @@
+"""Plots for the centrality rankings written by cmd/centralitybench.
+
+    python visuals/S3/centrality_vis.py heatmap visuals/S3/jena
+    python visuals/S3/centrality_vis.py scatter visuals/S3/erdos
+    python visuals/S3/centrality_vis.py network GRAPH RANKING.csv OUTPUT.png --measure NAME
+"""
+import argparse
+from pathlib import Path
+
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.stats import kendalltau
 import networkx as nx
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-import networkx as nx
 from matplotlib import colormaps
 from matplotlib import colors
+
+
+def read_graph(path):
+    """Read an edge list (# or % comments) and number the vertices like
+    graphlib.ReadGraphAdjList, i.e. shift the ids so that the smallest is 0."""
+    edges = []
+    with open(path, encoding="utf8") as fh:
+        for line in fh:
+            line = line.strip()
+            if not line or line[0] in "#%":
+                continue
+            u, v = line.split()[:2]
+            edges.append((int(u), int(v)))
+    offset = min(min(e) for e in edges)
+    G = nx.Graph()
+    G.add_edges_from((u - offset, v - offset) for u, v in edges)
+    return G
 
 def plot_kendall_heatmap(measure_csv_paths, output_path):
     """
@@ -128,8 +150,8 @@ def plot_network_with_color_and_size(graph_path, csv_path, output_path, measure_
     - measure_name: str
         Name of the centrality measure (for title and colorbar label).
     """
-    # Load graph
-    G = nx.read_edgelist(graph_path, comments="%", nodetype=int)
+    # Load graph (vertex ids as in the rankings)
+    G = read_graph(graph_path)
     
     # Load scores
     df = pd.read_csv(csv_path)
@@ -176,28 +198,55 @@ def plot_network_with_color_and_size(graph_path, csv_path, output_path, measure_
     ax.set_title(f"Network view ({measure_name})")
     ax.axis('off')
     plt.tight_layout()
-    plt.savefig(output_path, dpi=600)
+    plt.savefig(output_path, dpi=200)
     plt.close()
 
 
-# Example usage (commented out):
-measure_files = {
-     'Degree': 'centrality_ranking/degree_ranking.csv',
-     'Closeness': 'centrality_ranking/closeness_ranking.csv',
-     'PowerC': 'centrality_ranking/power_closeness_ranking.csv',
-     'Organ Donor': 'centrality_ranking/exponential_closeness_ranking.csv',
-     'Power Iteration': 'centrality_ranking/power_iteration_ranking.csv',
-     #'Katz': 'centrality_ranking/katz_centrality_ranking.csv',
-
-     # !! hier weitere Measures hinzufügen !! als Beispiel: das sieht in der Heatmap dann gut aus desto mehr desto besser
-     #'Eigenvector': 'centrality_ranking/eigenvector_ranking.csv',
-     #'MyMeasure': 'centrality_ranking/mymeasure_ranking.csv',
+# Measures in the order of the committed heatmaps. Katz is left out to keep
+# them comparable; its rankings were random numbers until centralitybench was
+# fixed, pass --katz to include the regenerated ones.
+MEASURES = {
+    'Degree': 'degree_ranking.csv',
+    'Closeness': 'closeness_ranking.csv',
+    'PowerC': 'power_closeness_ranking.csv',
+    'Organ Donor': 'exponential_closeness_ranking.csv',
+    'Power Iteration': 'power_iteration_ranking.csv',
 }
-plot_kendall_heatmap(measure_files, 'kendall_heatmap_erdos.png')
 
-# Scatter nur zwischen zwei measures möglich, denke da reicht es, wenn ich nur das für erdos mache (oder Straßennetz, wenn ihr das möchtet)
-# plot_rank_scatter('centrality_ranking/degree_ranking.csv', 'centrality_ranking/closeness_ranking.csv', 'Degree', 'Closeness', 'degree_vs_closeness_scatter.png')
 
-# genauso für Netzwerkanzeige 
-#plot_network_with_color_and_size('../../exampleGraphs/jena_road_unfolded_50.edgelist', 'centrality_ranking/exponential_closeness_ranking.csv', 'network_ExpoC.png', 'Organ Donor Centrality')
+def main():
+    ap = argparse.ArgumentParser(description="Plots for the centrality rankings written by cmd/centralitybench.")
+    sub = ap.add_subparsers(dest="command", required=True)
 
+    hm = sub.add_parser("heatmap", help="Kendall's tau between all rankings in a directory")
+    hm.add_argument("dir", type=Path, help="directory with the *_ranking.csv files, e.g. visuals/S3/jena")
+    hm.add_argument("--katz", action="store_true", help="include the Katz ranking")
+
+    sc = sub.add_parser("scatter", help="rank scatter plot of degree vs. closeness")
+    sc.add_argument("dir", type=Path, help="directory with the *_ranking.csv files")
+
+    nw = sub.add_parser("network", help="draw the graph coloured by one centrality")
+    nw.add_argument("graph", help="edge list of the graph")
+    nw.add_argument("ranking", help="ranking CSV of the measure")
+    nw.add_argument("output", help="image file to write")
+    nw.add_argument("--measure", default="Centrality", help="name of the measure for the title")
+
+    args = ap.parse_args()
+    if args.command == "heatmap":
+        files = dict(MEASURES)
+        if args.katz:
+            files['Katz'] = 'katz_centrality_ranking.csv'
+        out = args.dir / f"kendall_heatmap_{args.dir.name}.png"
+        plot_kendall_heatmap({m: args.dir / f for m, f in files.items()}, out)
+    elif args.command == "scatter":
+        out = args.dir / f"degree_vs_closeness_scatter_{args.dir.name}.png"
+        plot_rank_scatter(args.dir / 'degree_ranking.csv', args.dir / 'closeness_ranking.csv',
+                          'Degree', 'Closeness', out)
+    else:
+        out = args.output
+        plot_network_with_color_and_size(args.graph, args.ranking, out, args.measure)
+    print("saved", out)
+
+
+if __name__ == "__main__":
+    main()

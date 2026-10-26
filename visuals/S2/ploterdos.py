@@ -1,4 +1,7 @@
 import matplotlib.pyplot as plt
+from pathlib import Path
+
+HERE = Path(__file__).resolve().parent  # files are read from and written next to this script
 
 # Data for out.pajek-erdos.graph
 iters_erdos = {
@@ -51,7 +54,7 @@ for i, algo in enumerate(algos):
     y = times_erdos[algo]
     plt.text(i, y * 1.01, f'{y:.2f}', ha='center', va='bottom')
 plt.tight_layout()
-plt.savefig('erdos_runtime_comparison.png')
+plt.savefig(HERE / 'erdos_runtime_comparison.png')
 plt.close()
 
 # --- Plot 2: DIMACS dataset ---
@@ -66,5 +69,5 @@ for i, algo in enumerate(algos):
     y = times_dimacs[algo]
     plt.text(i, y * 1.01, f'{y:.2f}', ha='center', va='bottom')
 plt.tight_layout()
-plt.savefig('dimacs_runtime_comparison.png')
+plt.savefig(HERE / 'dimacs_runtime_comparison.png')
 plt.close()

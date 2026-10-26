@@ -1,9 +1,16 @@
-import re
+import argparse
 import csv
+import re
+from pathlib import Path
 
-# Pfade anpassen
-input_file = 'visuals/benchmark2.log'
-output_file = 'benchmark_metrics2.csv'
+# Input: the output of `go test -bench ... -benchmem ./graphlib` (the log itself is not part of the repository)
+parser = argparse.ArgumentParser(description="Convert a Go benchmark log into benchmark_metrics2.csv.")
+parser.add_argument('logfile', help="benchmark log written by go test -bench")
+parser.add_argument('-o', '--output', default=Path(__file__).resolve().parent / 'benchmark_metrics2.csv',
+                    help="CSV file to write (default: benchmark_metrics2.csv next to this script)")
+args = parser.parse_args()
+input_file = args.logfile
+output_file = args.output
 
 # Regex zum Parsen: n, Algorithmus, Iterationen, ns/op, B/op, allocs/op
 pattern = re.compile(
@@ -41,7 +48,7 @@ columns = ['n'] + [f'{algo}_{metric}'
 
 # CSV schreiben
 with open(output_file, 'w', newline='') as csvfile:
-    writer = csv.writer(csvfile)
+    writer = csv.writer(csvfile, lineterminator='\n')
     writer.writerow(columns)
     for n in sorted(records):
         row = [n]

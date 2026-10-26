@@ -1,6 +1,9 @@
 import re
 import pandas as pd
 import matplotlib.pyplot as plt
+from pathlib import Path
+
+HERE = Path(__file__).resolve().parent  # files are read from and written next to this script
 
 # Map raw metric names from out.txt to display names
 metric_map = {
@@ -17,7 +20,7 @@ records = []
 # Regex to parse lines like: n= 100 DegreeCentralityAll: 30.708µs
 pattern = re.compile(r"n=\s*(\d+)\s+(\w+):\s*([\d\.]+)([µm]?s)")
 
-with open("out.txt", "r", encoding="utf-8") as f:
+with open(HERE / "out.txt", "r", encoding="utf-8") as f:
     for line in f:
         m = pattern.match(line.strip())
         if not m:
@@ -68,4 +71,5 @@ plt.title("Timing of Centrality Measures")
 plt.legend()
 plt.grid(True)
 plt.tight_layout()
-plt.show()
+plt.savefig(HERE / "Bench_Centrality_Measures.png")
+print("saved", HERE / "Bench_Centrality_Measures.png")

@@ -3,6 +3,7 @@ import argparse
 import os
 from collections import defaultdict
 
+import matplotlib
 import matplotlib.pyplot as plt
 import networkx as nx
 from matplotlib.patches import Patch
@@ -10,18 +11,35 @@ from scipy.io import mmread
 from scipy.sparse import coo_matrix
 
 
-# ---------- Einlesen (unverändert) -----------------------------------
+# ---------- Einlesen --------------------------------------------------
+# The vertex ids must match the ones in the *.clusters.txt files written by
+# cmd/clusterbench, so graphs are numbered like graphlib.ReadGraphAdjList does:
+# Matrix Market ids are 1-based, edge lists are shifted so that their smallest
+# id becomes 0.
 def read_graph(path):
     if path.endswith(".mtx"):
-        sparse = mmread(path)
+        sparse = mmread(path)  # converts to 0-based indices
         if not isinstance(sparse, coo_matrix):
             sparse = sparse.tocoo()
         g = nx.Graph()
+        g.add_nodes_from(range(sparse.shape[0]))
         for u, v, _ in zip(sparse.row, sparse.col, sparse.data):
             if u != v:
                 g.add_edge(int(u), int(v))
         return g
-    return nx.read_edgelist(path, nodetype=int)
+
+    edges = []
+    with open(path, encoding="utf8") as fh:
+        for line in fh:
+            line = line.strip()
+            if not line or line[0] in "#%":
+                continue
+            u, v = line.split()[:2]
+            edges.append((int(u), int(v)))
+    offset = min(min(e) for e in edges)
+    g = nx.Graph()
+    g.add_edges_from((u - offset, v - offset) for u, v in edges if u != v)
+    return g
 
 
 def read_clusters(path):
@@ -65,7 +83,7 @@ def main():
 
     # Farbpalette
     nc = max(assign.values()) + 1
-    palette = plt.cm.get_cmap("tab20", nc)
+    palette = matplotlib.colormaps["tab20"].resampled(nc)
     node_colors = [palette(assign[v]) for v in g.nodes()]
 
     # Plot
@@ -108,7 +126,7 @@ def main():
     ax.axis("off")
     plt.tight_layout(rect=[0, 0, 1, 0.96])  # Platz für suptitle
     if args.output:
-        plt.savefig(args.output, dpi=300)
+        plt.savefig(args.output, dpi=150)
         print("saved", args.output)
     else:
         plt.show()

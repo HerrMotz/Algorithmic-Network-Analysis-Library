@@ -29,7 +29,8 @@ def truncate_time_str(tstr):
 
 def main():
     parser = argparse.ArgumentParser(description="Plot benchmark results as a bar chart.")
-    parser.add_argument('logfile', help="Pfad zur Logdatei mit Benchmarks.")
+    parser.add_argument('logfile', help="Path to the benchmark log file.")
+    parser.add_argument('-o', '--output', help="Save the figure to this file instead of showing it.")
     args = parser.parse_args()
 
     # Einlesen
@@ -74,7 +75,11 @@ def main():
         )
 
     plt.tight_layout()
-    plt.show()
+    if args.output:
+        plt.savefig(args.output, dpi=150)
+        print("saved", args.output)
+    else:
+        plt.show()
 
 if __name__ == '__main__':
     main()

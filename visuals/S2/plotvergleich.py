@@ -1,4 +1,7 @@
 import matplotlib.pyplot as plt
+from pathlib import Path
+
+HERE = Path(__file__).resolve().parent  # files are read from and written next to this script
 
 # Zeiten in Sekunden
 labels = ['Read', 'SSSP', 'All Pairs']
@@ -35,4 +38,4 @@ fig.suptitle('Comparison of Python and Go Implementation (n=2000, p=0.5)', fonts
 fig.subplots_adjust(top=0.85)  # mehr Abstand für Titel und Annotations
 
 # Diagramm speichern
-plt.savefig('comparison.png')
+plt.savefig(HERE / 'comparison.png')

@@ -6,6 +6,7 @@ x-Achse = Graphen, Balken = Heuristik+Metrik-Kombination.
 """
 
 import argparse
+import csv
 import re
 from pathlib import Path
 from collections import defaultdict
@@ -74,6 +75,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("stats", help="stats.txt")
     ap.add_argument("-o", "--output")
+    ap.add_argument("-s", "--summary", help="also write the runtime summary as CSV to this file")
     args = ap.parse_args()
 
     graphs, heuristics, times = parse(Path(args.stats))
@@ -82,6 +84,7 @@ def main():
     # ------------------------------------------------------------------- Runtime-Summary
     print("\n=== Runtime-Summary (ms) ===")
     total_mod, total_dis = 0.0, 0.0
+    summary = []  # (graph, M, D, Δ)
 
     for g in graphs:
         sum_mod = sum(v for c, v in times[g].items() if c.endswith("_M"))
@@ -90,12 +93,22 @@ def main():
         total_dis += sum_dis
         diff = sum_mod - sum_dis
         print(f"{g:25s}:  M = {sum_mod:10.2f}   D = {sum_dis:10.2f}   Δ = {diff:+.2f}")
+        summary.append((g, sum_mod, sum_dis, diff))
 
     overall_diff = total_mod - total_dis
     print("-" * 60)
-    print(f"Gesamt{'':20s}  M = {total_mod:10.2f}   D = {total_dis:10.2f}   "
+    print(f"Total{'':21s}  M = {total_mod:10.2f}   D = {total_dis:10.2f}   "
         f"Δ = {overall_diff:+.2f} ms")
     print("============================\n")
+    summary.append(("Total", total_mod, total_dis, overall_diff))
+
+    if args.summary:
+        with open(args.summary, "w", newline="") as fh:
+            w = csv.writer(fh, lineterminator="\n")
+            w.writerow(["Graph", "Modularity (ms)", "Disagreement (ms)", "Δ (ms)"])
+            for g, m, d, delta in summary:
+                w.writerow([g, f"{m:.2f}", f"{d:.2f}", f"{delta:.2f}"])
+        print("saved", args.summary)
 
     n_graphs = len(graphs)
     n_combos = len(combos)

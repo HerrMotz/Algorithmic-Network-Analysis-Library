@@ -1,5 +1,8 @@
 import matplotlib.pyplot as plt
 import numpy as np
+from pathlib import Path
+
+HERE = Path(__file__).resolve().parent  # files are read from and written next to this script
 
 # Raw benchmark data: (iterations, ns_per_op)
 data = {
@@ -53,5 +56,5 @@ for bars in (bars1, bars2):
 
 # Finalize
 plt.tight_layout()
-plt.savefig('triangles_comparison.png')
+plt.savefig(HERE / 'triangles_comparison.png')
 plt.show()

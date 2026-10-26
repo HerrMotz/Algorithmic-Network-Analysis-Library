@@ -22,7 +22,7 @@ def truncate_time_str(tstr):
     """Truncate all decimal numbers in the time string to two decimal places."""
     return re.sub(r'(\d+\.\d+)', lambda m: f"{float(m.group(1)):.2f}", tstr)
 
-def plot_benchmark(data, cap_seconds=3600, ylim_multiplier=3):
+def plot_benchmark(data, cap_seconds=3600, ylim_multiplier=3, output=None):
     variants = list(next(iter(data.values())).keys())
     datasets = list(data.keys())
     n_vars = len(variants)
@@ -87,11 +87,16 @@ def plot_benchmark(data, cap_seconds=3600, ylim_multiplier=3):
 
     fig.subplots_adjust(top=0.90, bottom=0.15)
     plt.tight_layout()
-    plt.show()
+    if output:
+        plt.savefig(output, dpi=150)
+        print("saved", output)
+    else:
+        plt.show()
 
 def main():
     parser = argparse.ArgumentParser(description="Plot benchmark results for Bron–Kerbosch variants with log scale.")
     parser.add_argument('logfile', help="Path to the benchmark log file.")
+    parser.add_argument('-o', '--output', help="Save the figure to this file instead of showing it.")
     args = parser.parse_args()
 
     all_data = {}
@@ -112,7 +117,7 @@ def main():
             if chunk_data:
                 all_data[graph_path] = chunk_data
 
-    plot_benchmark(all_data)
+    plot_benchmark(all_data, output=args.output)
 
 if __name__ == "__main__":
     main()

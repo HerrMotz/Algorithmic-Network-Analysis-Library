@@ -1,0 +1,7 @@
+# Python packages used by the plotting, benchmark and reference scripts.
+# The Go library itself has no Python dependencies.
+matplotlib>=3.6
+networkx>=3.0
+numpy>=1.23
+pandas>=1.5
+scipy>=1.9

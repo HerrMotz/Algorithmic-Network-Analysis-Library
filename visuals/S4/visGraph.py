@@ -1,4 +1,5 @@
 import argparse
+import os
 import networkx as nx
 import matplotlib.pyplot as plt
 from scipy.io import mmread
@@ -21,7 +22,15 @@ def main():
             if i != j:  
                 G.add_edge(i, j)
     else:
-        G = nx.read_edgelist(args.graph, nodetype=int)
+        G = nx.Graph()
+        with open(args.graph, encoding='utf8') as fh:
+            for line in fh:
+                line = line.strip()
+                if not line or line[0] in '#%':  # comment lines (SNAP, KONECT, ...)
+                    continue
+                u, v = line.split()[:2]
+                if u != v:
+                    G.add_edge(int(u), int(v))
 
     # Find all cliques and select maximum ones
     cliques = list(nx.find_cliques(G))
@@ -96,13 +105,14 @@ def main():
     nx.draw_networkx_nodes(G, pos, nodelist=other_nodes, node_size=50, node_color='black')
 
     # Final touches
-    plt.title(f'Baboon with {len(max_cliques)} Maximum Cliques (Size {max_size})')
+    name = os.path.splitext(os.path.basename(args.graph))[0]
+    plt.title(f'{name} with {len(max_cliques)} Maximum Cliques (Size {max_size})')
     plt.legend(loc='upper right')
     plt.axis('off')
     plt.tight_layout()
 
     if args.output:
-        plt.savefig(args.output, dpi=300)
+        plt.savefig(args.output, dpi=150)
         print(f"Saved figure to {args.output}")
     else:
         plt.show()
