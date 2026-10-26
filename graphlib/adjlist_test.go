@@ -2,6 +2,7 @@ package graphlib
 
 import (
 	"errors"
+	"reflect"
 	"testing"
 )
 
@@ -58,5 +59,32 @@ func TestWeightedAdjList_RemoveEdge(t *testing.T) {
 	}
 	if err := g.RemoveEdge(Edge{Vertex{1}, Vertex{0}}); !errors.Is(err, EdgeOrArcNotFoundError) {
 		t.Errorf("RemoveEdge on a missing edge: got %v, want EdgeOrArcNotFoundError", err)
+	}
+}
+
+func TestAdjList_ToAdjMatSparse(t *testing.T) {
+	// path 0-1-2 and the isolated vertex 3, which must keep its (empty) row
+	l, err := InitializeAdjList(4)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, e := range []Edge{{Vertex{0}, Vertex{1}}, {Vertex{1}, Vertex{2}}} {
+		if err := l.AddEdge(e); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	m := l.ToAdjMatSparse()
+	if m.Dim() != 4 {
+		t.Fatalf("Dim() = %d, want 4", m.Dim())
+	}
+	for v, want := range [][]uint32{{1}, {0, 2}, {1}, {}} {
+		got, err := m.GetRow(uint32(v))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(got) != len(want) || (len(want) > 0 && !reflect.DeepEqual(got, want)) {
+			t.Errorf("row %d = %v, want %v", v, got, want)
+		}
 	}
 }

@@ -195,6 +195,22 @@ func NewFromSortedIJ(s []uint32, d []uint32) (AdjMatSparse, error) {
 	return AdjMatSparse{ia, ja}, nil
 }
 
+// ToAdjMatSparse returns the adjacency matrix of the graph in CSR form. Unlike
+// NewFromSortedIJ, the matrix always has one row per vertex, also when the last
+// vertices are isolated.
+func (l *AdjList) ToAdjMatSparse() AdjMatSparse {
+	var s, d []uint32
+	for u, nbrs := range l.List {
+		for v := range nbrs {
+			s = append(s, uint32(u))
+			d = append(d, uint32(v))
+		}
+	}
+	_ = SortIJ(&s, &d) // only fails for slices of different length
+	ia, ja := compress(s, d, uint64(l.Size))
+	return AdjMatSparse{ia, ja}
+}
+
 // SortIJ sorts two vectors s and d by s, then by d, and eliminates any duplicate pairs.
 // Modifies s and d.
 func SortIJ(s, d *[]uint32) error {

@@ -2,10 +2,12 @@ package main
 
 import (
 	"encoding/csv"
+	"flag"
 	"fmt"
 	"log"
 	"math/rand"
 	"os"
+	"path/filepath"
 	"runtime"
 	"sort"
 	"strconv"
@@ -92,18 +94,22 @@ func kendallTau(rankX, rankY []pair) float64 {
 }
 
 func main() {
+	graphPath := flag.String("graph", "exampleGraphs/jena_road_unfolded_50.metis", "path to the input graph (edge list, METIS or Matrix Market)")
+	formatName := flag.String("format", "auto", "input format: auto (by file extension), edgelist, metis or mtx")
+	outDir := flag.String("out", ".", "output directory for the *_ranking.csv files")
+	flag.Parse()
+
+	format, err := graphlib.ParseGraphFormat(*formatName)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// 1) Graph laden
-	g, err := graphlib.ReadGraphAdjList("exampleGraphs/jena_road_unfolded_50.metis", false)
-	g.WriteToEdgeList("exampleGraphs/jena_road_unfolded_50.edgelist", 0)
-	m, err2 := graphlib.ReadGraphSparseMatrix("exampleGraphs/jena_road_unfolded_50.edgelist", false)
-
+	g, err := graphlib.ReadGraphAdjListAs(*graphPath, format, false)
 	if err != nil {
 		log.Fatalf("could not load graph: %v", err)
 	}
-	if err2 != nil {
-		log.Fatalf("could not load graph: %v", err2)
-	}
+	m := g.ToAdjMatSparse()
 
 	// 2) Zentralitäten berechnen
 	degreeScores, err := g.DegreeCentralityAll(false)
@@ -130,7 +136,7 @@ func main() {
 	for i := range powerIterationScores {
 		powerIterationScores[i] = 1.0
 	}
-	err = m.PowerIteration(&powerIterationScores, 0.001, 10000)
+	err = m.PowerIteration(&powerIterationScores, 1e-9, 10000)
 	if err != nil {
 		log.Fatalf("PowerIteration: %v", err)
 	}
@@ -144,7 +150,7 @@ func main() {
 		alpha[i] = .02
 	}
 	beta := graphlib.Vector(make([]float64, m.Dim()))
-	for i := range alpha {
+	for i := range beta {
 		beta[i] = 1.0
 	}
 	err = m.KatzCentrality(&katzCentralityScores, &alpha, &beta, 10000)
@@ -152,16 +158,17 @@ func main() {
 		log.Fatalf("KatzCentrality: %v", err)
 	}
 
-	powerIterationRayleighScores1 := graphlib.Vector(make([]float64, m.Dim()))
+	// two random start vectors for the Rayleigh variant
 	source := rand.New(rand.NewSource(42))
+	powerIterationRayleighScores1 := graphlib.Vector(make([]float64, m.Dim()))
 	for i := range powerIterationRayleighScores1 {
-		katzCentralityScores[i] = source.Float64()
+		powerIterationRayleighScores1[i] = source.Float64()
 	}
 	powerIterationRayleighScores2 := graphlib.Vector(make([]float64, m.Dim()))
 	for i := range powerIterationRayleighScores2 {
-		katzCentralityScores[i] = source.Float64()
+		powerIterationRayleighScores2[i] = source.Float64()
 	}
-	err = m.PowerIterationRayleigh(&powerIterationRayleighScores1, &powerIterationRayleighScores2, 0.2, 10000)
+	err = m.PowerIterationRayleigh(&powerIterationRayleighScores1, &powerIterationRayleighScores2, 1e-9, 10000)
 	if err != nil {
 		log.Fatalf("PowerIterationRayleigh: %v", err)
 	}
@@ -180,28 +187,27 @@ func main() {
 	// !! hier weitere Ranglisten hinzufügen für mehr Zentralitäten !!
 
 	// 4) CSVs schreiben
-	if err := writeRankingCSV("degree_ranking.csv", degRank); err != nil {
-		log.Fatalf("write degree CSV: %v", err)
+	if err := os.MkdirAll(*outDir, 0o755); err != nil {
+		log.Fatalf("mkdir %s: %v", *outDir, err)
 	}
-	if err := writeRankingCSV("closeness_ranking.csv", cloRank); err != nil {
-		log.Fatalf("write closeness CSV: %v", err)
+	rankings := []struct {
+		file    string
+		ranking []pair
+	}{
+		{"degree_ranking.csv", degRank},
+		{"closeness_ranking.csv", cloRank},
+		{"power_closeness_ranking.csv", powRank},
+		{"exponential_closeness_ranking.csv", expRank},
+		{"power_iteration_ranking.csv", eigRank},
+		{"katz_centrality_ranking.csv", katRank},
+		{"power_iteration_rayleigh_ranking.csv", rayRank},
+		// !! hier weitere CSVs hinzufügen für mehr Zentralitäten !!
 	}
-	if err := writeRankingCSV("power_closeness_ranking.csv", powRank); err != nil {
-		log.Fatalf("write power closeness CSV: %v", err)
+	for _, r := range rankings {
+		if err := writeRankingCSV(filepath.Join(*outDir, r.file), r.ranking); err != nil {
+			log.Fatalf("write %s: %v", r.file, err)
+		}
 	}
-	if err := writeRankingCSV("exponential_closeness_ranking.csv", expRank); err != nil {
-		log.Fatalf("write exponential closeness CSV: %v", err)
-	}
-	if err := writeRankingCSV("power_iteration_ranking.csv", eigRank); err != nil {
-		log.Fatalf("write power iteration CSV: %v", err)
-	}
-	if err := writeRankingCSV("katz_centrality_ranking.csv", katRank); err != nil {
-		log.Fatalf("write katz centrality CSV: %v", err)
-	}
-	if err := writeRankingCSV("power_iteration_rayleigh_ranking.csv", rayRank); err != nil {
-		log.Fatalf("write power iteration rayleigh CSV: %v", err)
-	}
-	// !! hier weitere CSVs hinzufügen für mehr Zentralitäten !!
 
-	// !! die CSVs dann in visuals/S3/centrality_ranking/ packen und die centrality_vis.py anpassen !!
+	// !! die CSVs dann in visuals/S3/<graph>/ packen, siehe visuals/S3/centrality_vis.py !!
 }
