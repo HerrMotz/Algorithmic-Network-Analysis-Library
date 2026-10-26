@@ -1,8 +1,10 @@
-import networkx as nx
 import json
+from pathlib import Path
+
+import networkx as nx
 
 def main():
-    path = "../exampleGraphs/graph_for_test.graph"
+    path = Path(__file__).resolve().parent.parent / "exampleGraphs" / "graph_for_test.graph"
 
     # Graph einlesen
     G = nx.Graph()

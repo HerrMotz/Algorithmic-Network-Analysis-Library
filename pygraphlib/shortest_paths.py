@@ -1,5 +1,5 @@
 from queue import Queue
-from graph import Graph
+from .graph import Graph
 
 def create_dag(G: Graph, root: int):
     """

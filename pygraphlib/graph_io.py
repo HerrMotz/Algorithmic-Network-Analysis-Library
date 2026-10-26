@@ -1,3 +1,6 @@
+from .graph import Graph
+
+
 # === Import Functions ===
 
 def read_edge_list(filepath):
@@ -5,8 +8,6 @@ def read_edge_list(filepath):
     Liest eine Kantenliste ein. Ignoriert Zeilen, die mit '%' oder '#' beginnen.
     Gibt ein Graph-Objekt zurück.
     """
-    from graphlib.graph import Graph
-
     g = Graph()
 
     with open(filepath, 'r') as f:
@@ -28,25 +29,29 @@ def read_edge_list(filepath):
 
 def read_metis_list(filepath):
     """
-    Liest eine METIS-Datei ein. Ignoriert Zeilen, die mit '%' oder '#' beginnen.
+    Liest eine METIS-Datei (ohne Gewichte) ein. Ignoriert Zeilen, die mit '%'
+    oder '#' beginnen. Eine leere Zeile ist ein Knoten ohne Nachbarn.
     Gibt ein Graph-Objekt zurück.
     """
-    from graphlib.graph import Graph
-
     g = Graph()
     current_node = 1
-    header_skipped = False
+    num_nodes = None
 
     with open(filepath, 'r') as f:
         for line in f:
             line = line.strip()
-            if not line or line.startswith('%') or line.startswith('#'):
+            if line.startswith('%') or line.startswith('#'):
                 continue
 
-            if not header_skipped:
-                header_skipped = True
-                continue  # Überspringe Header-Zeile
+            if num_nodes is None:
+                if line:
+                    num_nodes = int(line.split()[0])  # Header-Zeile "n m ..."
+                continue
 
+            if current_node > num_nodes:
+                break  # leere Zeilen am Dateiende
+
+            g.add_node(current_node)
             neighbors = map(int, line.split())
             for neighbor in neighbors:
                 # print(f"Adding edge: {current_node} - {neighbor}")
@@ -78,14 +83,14 @@ def write_edge_list(filepath, g):
 def write_metis_list(filepath, g, directed=False):
     """
     Schreibt den Graphen im METIS-Format mit Header-Zeile.
-    Jede nachfolgende Zeile listet die Nachbarn eines Knotens (1-basiert).
+    Jede nachfolgende Zeile listet die Nachbarn eines Knotens. METIS nummeriert
+    die Knoten nach ihrer Position 1..n, nicht nach ihrem Namen.
     """
     num_nodes = g.get_num_nodes()
-    num_edges = g.get_num_edges() 
+    num_edges = g.get_num_edges()
 
     with open(filepath, 'w') as f:
         f.write(f"{num_nodes} {num_edges}\n")
-        for u in g.node_to_index:
-            neighbors = g.neighbors(u, convert_to_original_index=True)
-            neighbor_str = " ".join(str(v) for v in neighbors)
+        for index in range(num_nodes):
+            neighbor_str = " ".join(str(i + 1) for i in g.neighbors(index))
             f.write(neighbor_str + "\n")

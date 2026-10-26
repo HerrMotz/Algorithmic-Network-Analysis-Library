@@ -1,15 +1,25 @@
-from graphlib.random_graph import generate_random_graph_faster
+"""networkx reference timings; run from the repository root with
+
+    python -m benchmarks.networkx_benchmark
+"""
+import csv
+import tempfile
+import time
+from pathlib import Path
 
 import networkx as nx
-import time
-import csv
+
+from pygraphlib.random_graph import generate_random_graph_faster
+
+HERE = Path(__file__).resolve().parent
+
 
 # benchmarking reading from a file, single-source shortest path and all-pairs shortest path with networkx
-def networkx_benchmark(number_of_nodes, rho, filename = "benchmarks.csv"):
+def networkx_benchmark(number_of_nodes, rho, filename=HERE / "benchmarks.csv"):
     graph, m = generate_random_graph_faster(number_of_nodes, rho)
     g = nx.Graph(graph) #g is a networkx graph
 
-    path = f"../algorithmische-netzwerkanalyse-lab/exampleGraphs/random_graph.txt"
+    path = Path(tempfile.mkdtemp(prefix="pygraphlib-")) / "random_graph.txt"
     nx.write_adjlist(g, path)
 
     #benchmarking reading the graph from a file

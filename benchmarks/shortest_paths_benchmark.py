@@ -1,9 +1,15 @@
+"""Benchmarks of the Python prototype; run them from the repository root with
+
+    python -m benchmarks.shortest_paths_benchmark
+"""
 import random
+import tempfile
+from pathlib import Path
 from time import perf_counter
 import networkx as nx
-from graphlib.io import read_metis_list
-from graphlib.random_graph import generate_random_graph_faster
-from graphlib.shortest_paths import (
+from pygraphlib.graph_io import read_edge_list
+from pygraphlib.random_graph import generate_random_graph_faster
+from pygraphlib.shortest_paths import (
     create_dag,
     single_source_shortest_path,
     all_pairs_shortest_path,
@@ -11,9 +17,12 @@ from graphlib.shortest_paths import (
     connected_components,
 )
 
+HERE = Path(__file__).resolve().parent
+
+
 def _example():
     a1 = perf_counter()
-    g = read_metis_list("../exampleGraphs/edge_01.graph")
+    g = read_edge_list(HERE.parent / "exampleGraphs" / "edge_01.graph")
 
     print(g.admat)
 
@@ -80,12 +89,12 @@ def _benchmark():
     A, m = generate_random_graph_faster(n, rho, loops=False, directed=False)
 
     G = nx.Graph(A)
-    path = f"../exampleGraphs/random_graph_{n}_{rho}.txt"
-    nx.write_adjlist(G, path)
+    path = Path(tempfile.mkdtemp(prefix="pygraphlib-")) / f"random_graph_{n}_{rho}.edgelist"
+    nx.write_edgelist(G, path, data=False)
     print("density of graph", nx.density(G))
 
     a1 = perf_counter()
-    g = read_metis_list(path)
+    g = read_edge_list(path)
     a2 = perf_counter()
 
     c1 = perf_counter()
@@ -105,8 +114,8 @@ def _benchmark():
     print(f"Total time: {d2 - a1:.4f} seconds")
 
     print(f"{n}, {rho}, {m}, {a2-a1:.4f}, {c2-c1:.4f}, {d2-d1:.4f}, {d2-a1:.4f}")
-    # append this to a csv file called benchmark.csv
-    with open("benchmark.csv", "a") as f:
+    # append this to benchmark.csv next to this script
+    with open(HERE / "benchmark.csv", "a") as f:
         f.write(f"{n}, {rho}, {m}, {a2-a1:.4f}, {c2-c1:.4f}, {d2-d1:.4f}, {d2-a1:.4f}\n")
 
 if __name__ == "__main__":
