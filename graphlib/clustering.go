@@ -612,200 +612,180 @@ func (l *AdjList) HalveClustering(metric func(*AdjList, VertexSet) (float64, err
 	return clustering, nil
 }
 
+// iceTolerance is the smallest change of the summed metric that ICEClustering
+// accepts as an improvement. Smaller changes are treated as ties, so that
+// floating-point noise cannot move a vertex back and forth forever.
+const iceTolerance = 1e-12
+
+// ICEClustering starts from a clustering into neighbourhoods and improves it by
+// moving single vertices between clusters:
+//
+//  1. Vertices are visited by ascending degree (ties: smaller id first). Every
+//     vertex that is not clustered yet opens a new cluster together with its
+//     neighbours that are not clustered yet.
+//
+//  2. The largest unfinished cluster S is examined. Its candidate is the vertex v
+//     with the most neighbours outside S (ties: smaller degree, then smaller id).
+//     v may move into a cluster T that contains one of its neighbours, or into a
+//     new cluster of its own. The move that improves the summed metric the most,
+//     i.e. that has the best value of
+//
+//     metric(S\{v}) + metric(T∪{v}) - metric(S) - metric(T)
+//
+//     (an empty or new cluster counts as 0), is applied. If no move improves the
+//     sum by more than iceTolerance, S is marked as finished.
+//
+//  3. Step 2 is repeated until every cluster is finished.
+//
+// compare(a, b) must report whether a is at least as good as b. Under modularity
+// and disagreement, moving v into a cluster without any of its neighbours is
+// never better than giving v its own cluster, so such clusters are skipped.
+// Every applied move strictly improves the summed metric, which guarantees
+// termination, and every vertex ends up in exactly one cluster.
 func (l *AdjList) ICEClustering(
 	metric func(*AdjList, VertexSet) (float64, error),
 	compare func(a, b float64) bool,
 ) ([]VertexSet, error) {
 	n := l.Size
-	assigned := make(map[int]bool)
-	var clusters []VertexSet
 
-	// 1. Sort vertices by degree ascending (start with the smallest degree)
+	// 1. Sort vertices by degree ascending (start with the smallest degree);
+	//    the stable sort keeps vertices of equal degree in id order
 	verticesSortedByDegree := make([]int, n)
-	for k := range l.List {
+	for k := range verticesSortedByDegree {
 		verticesSortedByDegree[k] = k
 	}
-	sort.Slice(verticesSortedByDegree, func(i, j int) bool {
-		n1, _ := l.Neighbours(Vertex{verticesSortedByDegree[i]})
-		n2, _ := l.Neighbours(Vertex{verticesSortedByDegree[j]})
-		return len(n1) < len(n2)
+	sort.SliceStable(verticesSortedByDegree, func(i, j int) bool {
+		return len(l.List[verticesSortedByDegree[i]]) < len(l.List[verticesSortedByDegree[j]])
 	})
 
-	// 2. Initial clustering: group each vertex and its neighbours if not already clustered
+	// 2. Initial clustering: every unclustered vertex opens a cluster with its
+	//    unclustered neighbours. Only unclustered neighbours are added, so the
+	//    clusters are disjoint.
+	clusterOf := make([]int, n) // clusterOf[v] is the index of v's cluster
+	for v := range clusterOf {
+		clusterOf[v] = -1
+	}
+	var clusters []VertexSet
 	for _, v := range verticesSortedByDegree {
-		if assigned[v] {
+		if clusterOf[v] != -1 {
 			continue
 		}
-		cluster := make(VertexSet)
-		cluster[v] = Naught{}
-		neigh, err := l.Neighbours(Vertex{v})
-		if err != nil {
-			return nil, err
-		}
-		for u := range neigh {
-			cluster[u] = Naught{}
-		}
-		// Only add if at least one is unassigned
-		foundUnassigned := false
-		for u := range cluster {
-			if !assigned[u] {
-				foundUnassigned = true
-				break
+		idx := len(clusters)
+		cluster := VertexSet{v: Naught{}}
+		clusterOf[v] = idx
+		for u := range l.List[v] {
+			if clusterOf[u] == -1 {
+				cluster[u] = Naught{}
+				clusterOf[u] = idx
 			}
-		}
-		if !foundUnassigned {
-			continue
-		}
-		for u := range cluster {
-			assigned[u] = true
 		}
 		clusters = append(clusters, cluster)
 	}
 
-	// For marking finished clusters
-	done := make(map[int]bool)
-
+	// 3. Move vertices while that improves the summed metric. Clusters that
+	//    become empty stay in the slice (so that indices remain valid) and are
+	//    dropped at the end.
+	done := make([]bool, len(clusters))
 	for {
-		// Find the largest unfinished cluster
-		maxIdx, maxSize := -1, -1
+		// Find the largest unfinished cluster (ties: smaller index)
+		s := -1
 		for i, c := range clusters {
-			if done[i] {
-				continue
-			}
-			if len(c) > maxSize {
-				maxSize = len(c)
-				maxIdx = i
+			if !done[i] && len(c) > 0 && (s == -1 || len(c) > len(clusters[s])) {
+				s = i
 			}
 		}
-		if maxIdx == -1 {
+		if s == -1 {
 			break // all done
 		}
+		source := clusters[s]
 
-		// Pick candidate vertex to move from the biggest cluster
-		c := clusters[maxIdx]
-		bestV, maxOutside, minDegree := -1, -1, INF
-		for v := range c {
+		// Pick the candidate vertex to move out of the source cluster
+		bestV, maxOutside, minDegree := -1, -1, 0
+		for _, v := range slices.Sorted(maps.Keys(source)) {
 			outside := 0
-			neigh, err := l.Neighbours(Vertex{v})
-			if err != nil {
-				return nil, err
-			}
-			for u := range neigh {
-				if !c.HasVertex(Vertex{u}) {
+			for u := range l.List[v] {
+				if clusterOf[u] != s {
 					outside++
 				}
 			}
-			deg := len(neigh)
+			deg := len(l.List[v])
 			if outside > maxOutside || (outside == maxOutside && deg < minDegree) {
-				bestV = v
-				maxOutside = outside
-				minDegree = deg
+				bestV, maxOutside, minDegree = v, outside, deg
 			}
 		}
-		if bestV == -1 {
-			done[maxIdx] = true
-			continue
-		}
 
-		// Prepare affected clusters
-		sourceCluster := clusters[maxIdx]
-		metricSourceCluster, err := metric(l, sourceCluster)
+		// Change of the source cluster's metric when bestV leaves it
+		metricSource, err := metric(l, source)
 		if err != nil {
 			return nil, err
 		}
-
-		// Remove bestV from current cluster (but remember in case we need to restore)
-		sourceCluster.RemoveVertex(Vertex{bestV})
-
-		// Remove empty clusters immediately
-		if len(sourceCluster) == 0 {
-			clusters = append(clusters[:maxIdx], clusters[maxIdx+1:]...)
-			// Need to adjust 'done' indices after removal
-			newDone := make(map[int]bool)
-			for idx, v := range done {
-				if idx < maxIdx {
-					newDone[idx] = v
-				} else if idx > maxIdx {
-					newDone[idx-1] = v
-				}
+		source.RemoveVertex(Vertex{bestV})
+		metricSourceWithout := 0.0 // an empty cluster contributes nothing
+		if len(source) > 0 {
+			if metricSourceWithout, err = metric(l, source); err != nil {
+				return nil, err
 			}
-			done = newDone
-			maxIdx = -1 // We have to skip further actions for this iteration!
-			continue
 		}
+		removalGain := metricSourceWithout - metricSource
 
-		metricChangedSourceCluster, err := metric(l, sourceCluster)
-		if err != nil {
-			return nil, err
-		}
-
-		// create a solo cluster for bestV
-		soloCluster := make(VertexSet, 1)
-		soloCluster[bestV] = Naught{}
-		metricSolo, err := metric(l, soloCluster)
-		if err != nil {
-			return nil, err
-		}
-
-		existingIdx := -1
-		metricExisting := metricSourceCluster
-
-		for idx, cluster := range clusters {
-			if idx == maxIdx || cluster.HasVertex(Vertex{bestV}) {
-				continue
+		// Find the most improving move. target == -1 means "own cluster",
+		// target == stay means that no move improves the metric.
+		const stay = -2
+		bestTarget, bestGain := stay, 0.0
+		consider := func(target int, gain float64) {
+			improves := compare(gain, 0) && math.Abs(gain) > iceTolerance
+			if improves && (bestTarget == stay || strictlyBetter(compare, gain, bestGain)) {
+				bestTarget, bestGain = target, gain
 			}
-			// Temporarily add
-			err := cluster.AddVertex(Vertex{bestV})
+		}
+
+		// Option 1: bestV becomes a cluster of its own (pointless if it was alone)
+		if len(source) > 0 {
+			metricSolo, err := metric(l, VertexSet{bestV: Naught{}})
 			if err != nil {
 				return nil, err
 			}
-			newMetric, err := metric(l, cluster)
-			cluster.RemoveVertex(Vertex{bestV})
+			consider(-1, removalGain+metricSolo)
+		}
+
+		// Option 2: bestV joins a cluster that contains one of its neighbours
+		targets := make(VertexSet)
+		for u := range l.List[bestV] {
+			if t := clusterOf[u]; t != s {
+				targets[t] = Naught{}
+			}
+		}
+		for _, t := range slices.Sorted(maps.Keys(targets)) {
+			target := clusters[t]
+			metricTarget, err := metric(l, target)
 			if err != nil {
 				return nil, err
 			}
-			if compare(newMetric, metricExisting) {
-				metricExisting = newMetric
-				existingIdx = idx
+			target[bestV] = Naught{} // temporarily add bestV
+			metricTargetWith, err := metric(l, target)
+			delete(target, bestV)
+			if err != nil {
+				return nil, err
 			}
+			consider(t, removalGain+metricTargetWith-metricTarget)
 		}
 
-		// Now perform the best move
-		if existingIdx == -1 {
-			// Consider solo move
-			if compare(metricSolo+metricChangedSourceCluster, metricSourceCluster) && len(sourceCluster) > 0 {
-				clusters = append(clusters, soloCluster)
-			} else {
-				// No improvement; restore bestV to original cluster
-				clusters[maxIdx].AddVertex(Vertex{bestV})
-				done[maxIdx] = true
-			}
-		} else {
-			if compare(metricSolo+metricChangedSourceCluster, metricExisting+metricChangedSourceCluster) && len(sourceCluster) > 0 {
-				clusters = append(clusters, soloCluster)
-			} else {
-				// Move to existing cluster
-				clusters[existingIdx].AddVertex(Vertex{bestV})
-				// (do not add back to source)
-				// No need to mark as done unless you want to avoid reprocessing
-				// done[maxIdx] = true
-			}
+		// Apply the best move
+		switch bestTarget {
+		case stay:
+			source[bestV] = Naught{} // no improvement: restore bestV
+			done[s] = true
+		case -1:
+			clusterOf[bestV] = len(clusters)
+			clusters = append(clusters, VertexSet{bestV: Naught{}})
+			done = append(done, false)
+		default:
+			clusters[bestTarget][bestV] = Naught{}
+			clusterOf[bestV] = bestTarget
 		}
 	}
 
-	// FINAL CLEANUP: Ensure every vertex is in exactly one cluster.
-	vertexInCluster := make(map[int]int)
-	for idx, cluster := range clusters {
-		for v := range cluster {
-			if _, ok := vertexInCluster[v]; ok {
-				// Duplicate! Remove from this cluster
-				clusters[idx].RemoveVertex(Vertex{v})
-			} else {
-				vertexInCluster[v] = idx
-			}
-		}
-	}
-	// Remove empty clusters
+	// Drop the clusters that became empty
 	var finalClusters []VertexSet
 	for _, c := range clusters {
 		if len(c) > 0 {

@@ -438,3 +438,62 @@ func TestClusteringIsReproducible(t *testing.T) {
 		})
 	}
 }
+
+// TestClusteringsArePartitions checks on real graphs that every heuristic puts
+// each vertex into exactly one cluster. ICEClustering used to drop vertices and
+// to return overlapping clusters, and it never terminated on the DIMACS graph.
+func TestClusteringsArePartitions(t *testing.T) {
+	type metric struct {
+		metric  func(*AdjList, VertexSet) (float64, error)
+		compare func(a, b float64) bool
+	}
+	metrics := map[string]metric{
+		"modularity":   {PartialModularityMetric, PartialModularityCompare},
+		"disagreement": {PartialDisagreementMetric, PartialDisagreementCompare},
+	}
+
+	for _, path := range []string{"../exampleGraphs/abi.edgelist", "../exampleGraphs/out.dimacs10-netscie.graph"} {
+		g, err := ReadGraphAdjList(path, false)
+		if err != nil {
+			t.Fatalf("reading %s: %v", path, err)
+		}
+		heuristics := map[string]func(metric) ([]VertexSet, error){
+			"MergeClusteringGreedyBFS": func(m metric) ([]VertexSet, error) {
+				return g.MergeClusteringGreedyBFS(m.metric, m.compare)
+			},
+			"MergeClusteringMetricWithRandomPivot": func(m metric) ([]VertexSet, error) {
+				return g.MergeClusteringMetricWithRandomPivot(rand.New(rand.NewSource(1)), m.metric, m.compare)
+			},
+			"HalveClustering": func(m metric) ([]VertexSet, error) {
+				return g.HalveClustering(m.metric, m.compare)
+			},
+			"ICEClustering": func(m metric) ([]VertexSet, error) {
+				return g.ICEClustering(m.metric, m.compare)
+			},
+		}
+		for hName, run := range heuristics {
+			for mName, m := range metrics {
+				t.Run(path[len("../exampleGraphs/"):]+"/"+hName+"/"+mName, func(t *testing.T) {
+					clusters, err := run(m)
+					if err != nil {
+						t.Fatal(err)
+					}
+					seen := make([]int, g.Size)
+					for _, c := range clusters {
+						if len(c) == 0 {
+							t.Errorf("empty cluster in result")
+						}
+						for v := range c {
+							seen[v]++
+						}
+					}
+					for v, count := range seen {
+						if count != 1 {
+							t.Errorf("vertex %d is in %d clusters, want 1", v, count)
+						}
+					}
+				})
+			}
+		}
+	}
+}
