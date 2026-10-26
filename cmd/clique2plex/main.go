@@ -140,10 +140,6 @@ func main() {
 				pg := makePGraph()
 				return pg.TwoPlexPermanent()
 			}},
-			{"TwoPlexPermanentParallelKaputt", func() (graphlib.VertexSet, error) {
-				pg := makePGraph()
-				return pg.TwoPlexPermanentParallelKaputt()
-			}},
 			{"TwoPlexDistance", func() (graphlib.VertexSet, error) {
 				pg := makePGraph()
 				return pg.TwoPlexDistance()
