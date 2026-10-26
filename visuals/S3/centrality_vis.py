@@ -165,9 +165,10 @@ def plot_network_with_color_and_size(graph_path, csv_path, output_path, measure_
     else:
         norm_scores = {v: 0.5 for v in cent}  # uniform mid-value if all equal
     
-    # Prepare visuals
-    node_sizes = [20 + 600 * norm_scores.get(node, 0) for node in G.nodes()]
-    node_colors = [norm_scores.get(node, 0) for node in G.nodes()]
+    # Prepare visuals; the most central vertices are drawn last, i.e. on top
+    nodes = sorted(G.nodes(), key=lambda node: norm_scores.get(node, 0))
+    node_sizes = [20 + 600 * norm_scores.get(node, 0) for node in nodes]
+    node_colors = [norm_scores.get(node, 0) for node in nodes]
     
     # Layout
     pos = nx.spring_layout(G, iterations=20, seed=42)  
@@ -180,8 +181,8 @@ def plot_network_with_color_and_size(graph_path, csv_path, output_path, measure_
     cmap = colormaps.get_cmap('autumn_r')
     norm = colors.Normalize(vmin=0, vmax=1)
     sc = ax.scatter(
-        [pos[n][0] for n in G.nodes()],
-        [pos[n][1] for n in G.nodes()],
+        [pos[n][0] for n in nodes],
+        [pos[n][1] for n in nodes],
         s=node_sizes,
         c=node_colors,
         cmap=cmap,
