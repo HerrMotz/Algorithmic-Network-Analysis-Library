@@ -107,6 +107,15 @@ func PartialDisagreementCompare(a, b float64) bool {
 	return true
 }
 
+// strictlyBetter reports whether a is strictly better than b, given a compare
+// function that reports whether its first argument is at least as good as its
+// second (such as PartialModularityCompare or PartialDisagreementCompare).
+// Because compare is a plain ordering of numbers, it ranks metric values and
+// metric gains alike, whether the metric is maximised or minimised.
+func strictlyBetter(compare func(a, b float64) bool, a, b float64) bool {
+	return compare(a, b) && !compare(b, a)
+}
+
 // TotalDisagreementMetric calculates the full formula d(C) as given in the worksheet
 func TotalDisagreementMetric(l *AdjList, C []VertexSet) (float64, error) {
 	sum := 0.0
@@ -209,7 +218,7 @@ func (l *AdjList) MergeClusteringGreedyBFS(
 			}
 			// Find best neighbouring cluster to merge
 			bestJ := -1
-			var bestImprovement float64
+			var bestGain float64
 			foundImprovement := false
 			// use the best improvement after at most k steps
 			branchCount := 0
@@ -239,9 +248,9 @@ func (l *AdjList) MergeClusteringGreedyBFS(
 				}
 				oldMetric := m1 + m2
 				if compare(newMetric, oldMetric) {
-					improvement := oldMetric - newMetric
-					if !foundImprovement || improvement > bestImprovement {
-						bestImprovement = improvement
+					gain := newMetric - oldMetric
+					if !foundImprovement || strictlyBetter(compare, gain, bestGain) {
+						bestGain = gain
 						bestJ = j
 						foundImprovement = true
 					}
@@ -380,7 +389,7 @@ func (l *AdjList) MergeClusteringMetricWithRandomPivot(
 
 			// Find the best neighbour according to the metric
 			bestNeighbour := -1
-			bestImprovement := 0.0
+			bestGain := 0.0
 			foundImprovement := false
 			m1, err := metric(l, cluster)
 			if err != nil {
@@ -406,9 +415,9 @@ func (l *AdjList) MergeClusteringMetricWithRandomPivot(
 
 				oldMetric := m1 + m2
 				if compare(newMetric, oldMetric) {
-					improvement := oldMetric - newMetric
-					if !foundImprovement || improvement > bestImprovement {
-						bestImprovement = improvement
+					gain := newMetric - oldMetric
+					if !foundImprovement || strictlyBetter(compare, gain, bestGain) {
+						bestGain = gain
 						bestNeighbour = j
 						foundImprovement = true
 					}
