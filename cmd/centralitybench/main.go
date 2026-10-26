@@ -1,4 +1,3 @@
-// file: centrality_benchmark.go
 package main
 
 import (
