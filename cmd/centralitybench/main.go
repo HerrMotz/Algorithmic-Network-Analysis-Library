@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/csv"
 	"flag"
-	"fmt"
 	"log"
 	"math/rand"
 	"os"
@@ -54,7 +53,7 @@ func writeRankingCSV(filename string, ranking []pair) error {
 		rec := []string{
 			strconv.Itoa(i + 1),
 			strconv.Itoa(p.v.Id),
-			fmt.Sprintf("%.6f", p.val),
+			strconv.FormatFloat(p.val, 'g', 10, 64), // significant digits: normalised scores can be tiny
 		}
 		if err := w.Write(rec); err != nil {
 			return err
