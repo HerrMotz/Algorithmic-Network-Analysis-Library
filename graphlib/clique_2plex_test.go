@@ -26,16 +26,15 @@ func setToSortedSlice(vs VertexSet) []int {
 
 func TestCliqueAnd2PlexSummary(t *testing.T) {
 	adj := []VertexSet{
-		{1: Naught{}, 2: Naught{}},          
-		{0: Naught{}, 3: Naught{}},           
-		{0: Naught{}, 3: Naught{}, 4: Naught{}}, 
-		{1: Naught{}, 2: Naught{}, 5: Naught{}}, 
-		{2: Naught{}},                       
-		{3: Naught{}},                        
-		{},                                   
+		{1: Naught{}, 2: Naught{}},
+		{0: Naught{}, 3: Naught{}},
+		{0: Naught{}, 3: Naught{}, 4: Naught{}},
+		{1: Naught{}, 2: Naught{}, 5: Naught{}},
+		{2: Naught{}},
+		{3: Naught{}},
+		{},
 	}
 	H := AdjList{List: adj, Size: len(adj)}
-	
 
 	// 1) Maximalen Cliquen mit Bron-Kerbosch (Degeneracy-Variante)
 	cliques := H.BronKerboschDegeneracy()
@@ -45,7 +44,7 @@ func TestCliqueAnd2PlexSummary(t *testing.T) {
 
 	// 2) Größten 2-Plex mit bestehenden Naive-Implementierung
 	induced := InducedGraph{
-		AdjList:     &H,
+		AdjList:      &H,
 		GoodVertices: make(VertexSet),
 	}
 	for i := 0; i < H.Size; i++ {
@@ -67,7 +66,7 @@ func TestCliqueAnd2PlexSummary(t *testing.T) {
 	if len(largest) != expectedCliqueSize {
 		t.Errorf("Größte Clique: erwartet Größe %d, erhalten %d (Knoten: %v)", expectedCliqueSize, len(largest), largest)
 	}
-	// Erwartete 2-Plex Größe 
+	// Erwartete 2-Plex Größe
 	expected2Plex := []int{0, 1, 2, 3}
 	sort.Ints(expected2Plex)
 	if len(plexNodes) != len(expected2Plex) {

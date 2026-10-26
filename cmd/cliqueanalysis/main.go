@@ -7,15 +7,15 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/HerrMotz/Algorithmic-Network-Analysis-Library/graphlib" 
+	"github.com/HerrMotz/Algorithmic-Network-Analysis-Library/graphlib"
 )
 
 // ----------------------------------------------------------------------------
-// 1.  Parameter 
+// 1.  Parameter
 // ----------------------------------------------------------------------------
 type cliqueInfo struct {
-	cliqueCount    int
-	maxCliqueSize  int
+	cliqueCount   int
+	maxCliqueSize int
 }
 
 // Liste der zu verarbeitenden Dateien – Pfade ggf. anpassen
@@ -33,7 +33,7 @@ var graphFiles = []string{
 // 2.  Mathematische Schranken
 // ----------------------------------------------------------------------------
 func worstCaseBound(n, d int) float64 {
-    return float64(n) * math.Pow(3, float64(d+1)/3)
+	return float64(n) * math.Pow(3, float64(d+1)/3)
 }
 
 // ----------------------------------------------------------------------------
@@ -90,27 +90,27 @@ func degeneracy(adj *graphlib.AdjList) int {
 // Clique-Zahl und Max-Größe dynamisch ermitteln
 // ------------------------------------------------------------
 func cliqueStats(g *graphlib.AdjList) (count, max int) {
-    cliques := g.BronKerboschDegeneracy()
-    count = len(cliques)
-    for _, c := range cliques {
-        if len(c) > max {
-            max = len(c)
-        }
-    }
-    return
+	cliques := g.BronKerboschDegeneracy()
+	count = len(cliques)
+	for _, c := range cliques {
+		if len(c) > max {
+			max = len(c)
+		}
+	}
+	return
 }
 
 // ----------------------------------------------------------------------------
 // 4.  Analyse eines Graphen
 // ----------------------------------------------------------------------------
 type stats struct {
-	graphName               string
-	nodes, edges            int
-	density                 float64
-	degen                   int
-	maxCliqueSize           int
-	cliqueCount             int
-    worstCaseBound          float64
+	graphName      string
+	nodes, edges   int
+	density        float64
+	degen          int
+	maxCliqueSize  int
+	cliqueCount    int
+	worstCaseBound float64
 }
 
 func analyze(path string) (*stats, error) {
@@ -135,16 +135,16 @@ func analyze(path string) (*stats, error) {
 
 	cliqueCount, maxClique := cliqueStats(g)
 
-    wc := worstCaseBound(n, d)
+	wc := worstCaseBound(n, d)
 
 	return &stats{
-		graphName:     name,
-		nodes:         n,
-		edges:         m,
-		density:       dens,
-		degen:         d,
-		maxCliqueSize: maxClique,
-		cliqueCount:   cliqueCount,
+		graphName:      name,
+		nodes:          n,
+		edges:          m,
+		density:        dens,
+		degen:          d,
+		maxCliqueSize:  maxClique,
+		cliqueCount:    cliqueCount,
 		worstCaseBound: wc,
 	}, nil
 }
@@ -176,7 +176,7 @@ func main() {
 			fmt.Sprintf("%d", s.degen),
 			fmt.Sprintf("%d", s.maxCliqueSize),
 			fmt.Sprintf("%d", s.cliqueCount),
-            fmt.Sprintf("%.3e", s.worstCaseBound),
+			fmt.Sprintf("%.3e", s.worstCaseBound),
 		})
 	}
 

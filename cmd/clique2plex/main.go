@@ -101,48 +101,47 @@ func main() {
 		}
 	}
 	/*
-	makeIGraph := func() *graphlib.InducedGraph {
-		ig := &graphlib.InducedGraph{
-			AdjList:      g,
-			GoodVertices: make(graphlib.VertexSet),
-		}
-		for i := 0; i < g.Size; i++ {
-			ig.GoodVertices[i] = struct{}{}
-		}
-		return ig
-	}*/
-	
+		makeIGraph := func() *graphlib.InducedGraph {
+			ig := &graphlib.InducedGraph{
+				AdjList:      g,
+				GoodVertices: make(graphlib.VertexSet),
+			}
+			for i := 0; i < g.Size; i++ {
+				ig.GoodVertices[i] = struct{}{}
+			}
+			return ig
+		}*/
 
 	// ── 2-Plex Varianten ───────────────────────────────────────────────────
 	fmt.Println("\n===== 2-Plex Varianten =====")
 	plexVariants := []struct {
 		name string
 		run  func() (graphlib.VertexSet, error)
-	}{/*
-		{"TwoPlexNaive", func() (graphlib.VertexSet, error) {
-		      pg := makeIGraph()
-		      return pg.TwoPlexNaive()
-		}},
-		{"TwoPlexNaiveMinDegree", func() (graphlib.VertexSet, error) {
-			pg := makeIGraph()
-			return pg.TwoPlexNaiveMinDegree()
-		}},
-		{"TwoPlexNaiveParallel", func() (graphlib.VertexSet, error) {
-		    pg := makeIGraph()
-		    return pg.TwoPlexNaiveParallel()
-		}},
-		{"TwoPlexPermanent", func() (graphlib.VertexSet, error) {
-			pg := makePGraph()
-			return pg.TwoPlexPermanent()
-		}}, 
-		{"TwoPlexPermanentParallelKaputt", func() (graphlib.VertexSet, error) {
-			pg := makePGraph()
-			return pg.TwoPlexPermanentParallelKaputt()
-		}},
-		{"TwoPlexDistance", func() (graphlib.VertexSet, error) {
-			pg := makePGraph()
-			return pg.TwoPlexDistance()
-		}},*/
+	}{ /*
+			{"TwoPlexNaive", func() (graphlib.VertexSet, error) {
+			      pg := makeIGraph()
+			      return pg.TwoPlexNaive()
+			}},
+			{"TwoPlexNaiveMinDegree", func() (graphlib.VertexSet, error) {
+				pg := makeIGraph()
+				return pg.TwoPlexNaiveMinDegree()
+			}},
+			{"TwoPlexNaiveParallel", func() (graphlib.VertexSet, error) {
+			    pg := makeIGraph()
+			    return pg.TwoPlexNaiveParallel()
+			}},
+			{"TwoPlexPermanent", func() (graphlib.VertexSet, error) {
+				pg := makePGraph()
+				return pg.TwoPlexPermanent()
+			}},
+			{"TwoPlexPermanentParallelKaputt", func() (graphlib.VertexSet, error) {
+				pg := makePGraph()
+				return pg.TwoPlexPermanentParallelKaputt()
+			}},
+			{"TwoPlexDistance", func() (graphlib.VertexSet, error) {
+				pg := makePGraph()
+				return pg.TwoPlexDistance()
+			}},*/
 		{"TwoPlexNStar", func() (graphlib.VertexSet, error) {
 			ig := makePGraph().IGraph
 			return ig.TwoPlexNStar()

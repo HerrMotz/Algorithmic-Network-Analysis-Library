@@ -65,7 +65,7 @@ func main() {
 
 		return []run{
 			{
-				name: tag + "_M",
+				name:       tag + "_M",
 				metricType: "M",
 				algo: func() ([]graphlib.VertexSet, error) {
 					return build(graphlib.PartialModularityMetric,
@@ -73,7 +73,7 @@ func main() {
 				},
 			},
 			{
-				name: tag + "_D",
+				name:       tag + "_D",
 				metricType: "D",
 				algo: func() ([]graphlib.VertexSet, error) {
 					conv := func(a *graphlib.AdjList, C graphlib.VertexSet) (float64, error) {

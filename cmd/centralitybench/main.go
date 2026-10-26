@@ -95,7 +95,7 @@ func main() {
 
 	// 1) Graph laden
 	g, err := graphlib.ReadGraphAdjList("exampleGraphs/jena_road_unfolded_50.metis", false)
-    g.WriteToEdgeList("exampleGraphs/jena_road_unfolded_50.edgelist", 0)
+	g.WriteToEdgeList("exampleGraphs/jena_road_unfolded_50.edgelist", 0)
 	m, err2 := graphlib.ReadGraphSparseMatrix("exampleGraphs/jena_road_unfolded_50.edgelist", false)
 
 	if err != nil {
@@ -116,16 +116,16 @@ func main() {
 		log.Fatalf("ClosenessCentralityAll: %v", err)
 	}
 
-    powerClosenessScores, err := g.PowerClosenessCentralityAll(true, 2, runtime.NumCPU())
-    if err != nil {
-        log.Fatalf("PowerClosenessCentralityAll: %v", err)
-    }
-    exponentialClosenessScores, err := g.ExponentialClosenessCentralityAll(true, 1.5, runtime.NumCPU())
-    if err != nil {
-        log.Fatalf("ExponentialClosenessCentralityAll: %v", err)
-    }
+	powerClosenessScores, err := g.PowerClosenessCentralityAll(true, 2, runtime.NumCPU())
+	if err != nil {
+		log.Fatalf("PowerClosenessCentralityAll: %v", err)
+	}
+	exponentialClosenessScores, err := g.ExponentialClosenessCentralityAll(true, 1.5, runtime.NumCPU())
+	if err != nil {
+		log.Fatalf("ExponentialClosenessCentralityAll: %v", err)
+	}
 
-    // others
+	// others
 	powerIterationScores := graphlib.Vector(make([]float64, m.Dim()))
 	for i := range powerIterationScores {
 		powerIterationScores[i] = 1.0
@@ -171,8 +171,8 @@ func main() {
 	// 3) Ranglisten erstellen
 	degRank := topKSorted(degreeScores)
 	cloRank := topKSorted(closenessScores)
-    powRank := topKSorted(powerClosenessScores)
-    expRank := topKSorted(exponentialClosenessScores)
+	powRank := topKSorted(powerClosenessScores)
+	expRank := topKSorted(exponentialClosenessScores)
 	eigRank := topKSorted(powerIterationScores)
 	katRank := topKSorted(katzCentralityScores)
 	rayRank := topKSorted(powerIterationRayleighScores2)
@@ -186,21 +186,21 @@ func main() {
 	if err := writeRankingCSV("closeness_ranking.csv", cloRank); err != nil {
 		log.Fatalf("write closeness CSV: %v", err)
 	}
-    if err := writeRankingCSV("power_closeness_ranking.csv", powRank); err != nil {
-        log.Fatalf("write power closeness CSV: %v", err)
-    }
-    if err := writeRankingCSV("exponential_closeness_ranking.csv", expRank); err != nil {
-        log.Fatalf("write exponential closeness CSV: %v", err)
-    }
-    if err := writeRankingCSV("power_iteration_ranking.csv", eigRank); err != nil {
-        log.Fatalf("write power iteration CSV: %v", err)
-    }
-    if err := writeRankingCSV("katz_centrality_ranking.csv", katRank); err != nil {
-        log.Fatalf("write katz centrality CSV: %v", err)
-    }
-    if err := writeRankingCSV("power_iteration_rayleigh_ranking.csv", rayRank); err != nil {
-        log.Fatalf("write power iteration rayleigh CSV: %v", err)
-    }
+	if err := writeRankingCSV("power_closeness_ranking.csv", powRank); err != nil {
+		log.Fatalf("write power closeness CSV: %v", err)
+	}
+	if err := writeRankingCSV("exponential_closeness_ranking.csv", expRank); err != nil {
+		log.Fatalf("write exponential closeness CSV: %v", err)
+	}
+	if err := writeRankingCSV("power_iteration_ranking.csv", eigRank); err != nil {
+		log.Fatalf("write power iteration CSV: %v", err)
+	}
+	if err := writeRankingCSV("katz_centrality_ranking.csv", katRank); err != nil {
+		log.Fatalf("write katz centrality CSV: %v", err)
+	}
+	if err := writeRankingCSV("power_iteration_rayleigh_ranking.csv", rayRank); err != nil {
+		log.Fatalf("write power iteration rayleigh CSV: %v", err)
+	}
 	// !! hier weitere CSVs hinzufügen für mehr Zentralitäten !!
 
 	// !! die CSVs dann in visuals/S3/centrality_ranking/ packen und die centrality_vis.py anpassen !!

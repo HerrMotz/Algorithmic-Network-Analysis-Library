@@ -23,7 +23,7 @@ func PrintClusters(clusters []VertexSet) {
 	fmt.Println("CLUSTERING")
 	fmt.Println(strings.Repeat("=", 40))
 
-	sizeHist := make(map[int]int) 
+	sizeHist := make(map[int]int)
 	for idx, c := range clusters {
 		// sort nodes in cluster
 		nodes := make([]int, 0, len(c))
