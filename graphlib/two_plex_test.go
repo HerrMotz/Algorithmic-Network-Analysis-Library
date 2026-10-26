@@ -147,7 +147,7 @@ func TestPermanentInducedGraph_TwoPlexPermanent(t *testing.T) {
 }
 
 func BenchmarkInducedGraph_TwoPlexNaive(b *testing.B) {
-	H, err := ReadGraphAdjList("../exampleGraphs/metis_4elt.mgraph", false)
+	H, err := ReadGraphAdjList("../exampleGraphs/4elt.mgraph", false)
 	if err != nil {
 		b.Fatalf("failed to read erdos graph: %v", err)
 	}
@@ -171,7 +171,7 @@ func BenchmarkInducedGraph_TwoPlexNaive(b *testing.B) {
 }
 
 func BenchmarkInducedGraph_TwoPlexNaiveParallel(b *testing.B) {
-	H, err := ReadGraphAdjList("../exampleGraphs/metis_4elt.mgraph", false)
+	H, err := ReadGraphAdjList("../exampleGraphs/4elt.mgraph", false)
 	if err != nil {
 		b.Fatalf("failed to read erdos graph: %v", err)
 	}
@@ -193,7 +193,7 @@ func BenchmarkInducedGraph_TwoPlexNaiveParallel(b *testing.B) {
 }
 
 func BenchmarkPermanentInducedGraph_TwoPlexPermanent(b *testing.B) {
-	H, err := ReadGraphAdjList("../exampleGraphs/metis_4elt.mgraph", false)
+	H, err := ReadGraphAdjList("../exampleGraphs/4elt.mgraph", false)
 	if err != nil {
 		b.Fatalf("failed to read erdos graph: %v", err)
 	}
