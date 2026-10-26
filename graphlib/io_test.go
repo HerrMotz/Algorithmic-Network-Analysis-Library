@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"reflect"
 	"testing"
 )
@@ -77,6 +78,68 @@ func TestReadGraph_METIS(t *testing.T) {
 		t.Fatalf("ReadGraph_AdjList(METIS) returned error: %v", err)
 	}
 	checkAdjList(t, adj)
+}
+
+func TestReadGraph_MatrixMarket(t *testing.T) {
+	g, err := ReadGraphAdjList("../exampleGraphs/soc-karate.mtx", false)
+	if err != nil {
+		t.Fatalf("ReadGraphAdjList(Matrix Market) returned error: %v", err)
+	}
+	if g.Size != 34 {
+		t.Fatalf("size = %d, want 34", g.Size)
+	}
+	if m := g.TotalDegree() / 2; m != 78 {
+		t.Errorf("edges = %d, want 78", m)
+	}
+	for v := 0; v < g.Size; v++ {
+		if g.HasArc(Arc{Vertex{v}, Vertex{v}}) {
+			t.Errorf("unexpected self-loop at vertex %d", v)
+		}
+	}
+	// vertex 34 of Zachary's karate club (index 33) has 17 neighbours; the
+	// size line "34 34 78" used to be read as an extra self-loop
+	if d, _ := g.Degree(Vertex{33}); d != 17 {
+		t.Errorf("degree of vertex 33 = %d, want 17", d)
+	}
+}
+
+func TestReadGraph_MatrixMarketDirected(t *testing.T) {
+	dir := t.TempDir()
+	write := func(name, content string) string {
+		path := filepath.Join(dir, name)
+		if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		return path
+	}
+
+	// a general matrix keeps the direction of its entries ...
+	general := write("general.mtx", "%%MatrixMarket matrix coordinate pattern general\n% comment\n3 3 2\n1 2\n3 1\n")
+	g, err := ReadGraphAdjList(general, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []VertexSet{{1: Naught{}}, {}, {0: Naught{}}}
+	if !reflect.DeepEqual(g.List, want) {
+		t.Errorf("general matrix: got %v, want %v", g.List, want)
+	}
+
+	// ... while a symmetric one stores only one triangle and is mirrored
+	symmetric := write("symmetric.mtx", "%%MatrixMarket matrix coordinate real symmetric\n3 3 2\n2 1 0.5\n3 1 1.5\n")
+	g, err = ReadGraphAdjList(symmetric, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want = []VertexSet{{1: Naught{}, 2: Naught{}}, {0: Naught{}}, {0: Naught{}}}
+	if !reflect.DeepEqual(g.List, want) {
+		t.Errorf("symmetric matrix: got %v, want %v", g.List, want)
+	}
+
+	// the size line must match the number of entries
+	truncated := write("truncated.mtx", "%%MatrixMarket matrix coordinate pattern symmetric\n3 3 2\n2 1\n")
+	if _, err := ReadGraphAdjList(truncated, false); err == nil {
+		t.Error("expected an error for a file with fewer entries than announced")
+	}
 }
 
 // ---------

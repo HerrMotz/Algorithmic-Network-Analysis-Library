@@ -11,13 +11,14 @@ import (
 )
 
 // -----------------------------------------------------------------------------
-// Loads plain edge lists or METIS files into an AdjList.
+// Loads plain edge lists, METIS or Matrix Market files into an AdjList.
 // -----------------------------------------------------------------------------
 
 // ReadGraphAdjList opens *path* and returns the graph as an *AdjList*.
 //
 // • Plain edge‑list  -> one “u v” per line
 // • METIS            -> first line “n m …”, next n lines adjacency lists
+// • Matrix Market    -> “%%MatrixMarket matrix coordinate …” banner, size line, “i j” entries
 //
 // The loader auto‑detects the format and converts any 1‑based ids to 0‑based.
 // If *directed* is true, only the arc u→v is stored; otherwise both directions are recorded.
@@ -41,6 +42,8 @@ func ReadGraphAdjList(path string, directed bool) (*AdjList, error) {
 	switch ext {
 	case ".metis", ".mgraph":
 		return readMetisToAdjList(r, directed)
+	case ".mtx":
+		return readMatrixMarketToAdjList(r, directed)
 	default:
 		return readEdgeListToAdjList(r, directed)
 	}
@@ -143,6 +146,120 @@ func readEdgeListToAdjList(r *bufio.Reader, directed bool) (*AdjList, error) {
 	} else {
 		return buildAdjFromEdges(maxID, edges, minID)
 	}
+}
+
+// -----------------------------------------------------------------------------
+// Matrix Market format
+// -----------------------------------------------------------------------------
+
+// readMatrixMarketToAdjList reads a Matrix Market file in coordinate format, as
+// distributed by the SuiteSparse Matrix Collection and Network Repository:
+//
+//	%%MatrixMarket matrix coordinate <field> <symmetry>
+//	% comment lines
+//	<rows> <cols> <entries>
+//	<i> <j> [value]          (one line per entry, 1-based indices)
+//
+// Entry values are ignored. Symmetric (and skew-symmetric or Hermitian)
+// matrices store only one triangle, so their entries are added in both
+// directions, even if *directed* is true.
+func readMatrixMarketToAdjList(r *bufio.Reader, directed bool) (*AdjList, error) {
+	scanner := bufio.NewScanner(r)
+
+	// ----- banner -----
+	if !scanner.Scan() {
+		if err := scanner.Err(); err != nil {
+			return nil, err
+		}
+		return nil, errors.New("Matrix Market: empty file")
+	}
+	banner := strings.Fields(strings.ToLower(scanner.Text()))
+	if len(banner) < 5 || banner[0] != "%%matrixmarket" || banner[1] != "matrix" {
+		return nil, fmt.Errorf("Matrix Market: invalid banner %q", scanner.Text())
+	}
+	if banner[2] != "coordinate" {
+		return nil, fmt.Errorf("Matrix Market: only the coordinate format is supported, not %q", banner[2])
+	}
+	symmetric := banner[4] != "general"
+
+	// ----- size line -----
+	n, entries := 0, 0
+	sizeFound := false
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" || strings.HasPrefix(line, "%") {
+			continue
+		}
+		fields := strings.Fields(line)
+		if len(fields) < 3 {
+			return nil, fmt.Errorf("Matrix Market: size line must contain rows, columns and entries, got %q", line)
+		}
+		rows, err1 := strconv.Atoi(fields[0])
+		cols, err2 := strconv.Atoi(fields[1])
+		nnz, err3 := strconv.Atoi(fields[2])
+		if err1 != nil || err2 != nil || err3 != nil {
+			return nil, fmt.Errorf("Matrix Market: bad size line %q", line)
+		}
+		if rows != cols {
+			return nil, fmt.Errorf("Matrix Market: an adjacency matrix must be square, got %dx%d", rows, cols)
+		}
+		n, entries = rows, nnz
+		sizeFound = true
+		break
+	}
+	if err := scanner.Err(); err != nil {
+		return nil, err
+	}
+	if !sizeFound {
+		return nil, errors.New("Matrix Market: missing size line")
+	}
+
+	adj, err := InitializeAdjList(n)
+	if err != nil {
+		return nil, err
+	}
+
+	// ----- entries -----
+	read := 0
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" || strings.HasPrefix(line, "%") {
+			continue
+		}
+		fields := strings.Fields(line)
+		if len(fields) < 2 {
+			return nil, fmt.Errorf("Matrix Market: expected at least two indices, got %q", line)
+		}
+		i, err1 := strconv.Atoi(fields[0])
+		j, err2 := strconv.Atoi(fields[1])
+		if err1 != nil || err2 != nil {
+			return nil, fmt.Errorf("Matrix Market: bad indices in %q", line)
+		}
+		if i < 1 || i > n || j < 1 || j > n {
+			return nil, fmt.Errorf("Matrix Market: entry %q is outside the %dx%d matrix", line, n, n)
+		}
+		u, v := Vertex{i - 1}, Vertex{j - 1}
+
+		if directed {
+			err = adj.AddArc(Arc{From: u, To: v})
+			if symmetric && (err == nil || errors.Is(err, EdgeOrArcExistsError)) {
+				err = adj.AddArc(Arc{From: v, To: u})
+			}
+		} else {
+			err = adj.AddEdge(Edge{U: u, V: v})
+		}
+		if err != nil && !errors.Is(err, EdgeOrArcExistsError) { // ignores duplicate entries
+			return nil, err
+		}
+		read++
+	}
+	if err := scanner.Err(); err != nil {
+		return nil, err
+	}
+	if read != entries {
+		return nil, fmt.Errorf("Matrix Market: size line announces %d entries, found %d", entries, read)
+	}
+	return adj, nil
 }
 
 // -----------------------------------------------------------------------------
