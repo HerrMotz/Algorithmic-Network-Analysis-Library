@@ -31,7 +31,7 @@ func TestBronKerboschVariants(t *testing.T) {
 	}
 	g.MakeUndirected()
 
-	truth, err := loadTruth("../truth.json")
+	truth, err := loadTruth("../truths/truth.json")
 	if err != nil {
 		t.Fatalf("truth: %v", err)
 	}
@@ -57,8 +57,9 @@ func TestBronKerboschVariants(t *testing.T) {
 		}
 
 		// 1) Zuerst reine Anzahl vergleichen
-
-		t.Errorf("%s – Anzahl: got %d, want %d", v.name, len(got), len(want))
+		if len(got) != len(want) {
+			t.Errorf("%s – Anzahl: got %d, want %d", v.name, len(got), len(want))
+		}
 
 		// 2) Danach nur noch Differenz‐Listing, falls gewünscht
 		for k := range want {
