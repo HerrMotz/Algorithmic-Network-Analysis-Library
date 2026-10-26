@@ -2,7 +2,6 @@ package graphlib
 
 import (
 	"errors"
-	"fmt"
 )
 
 // ------------------------
@@ -13,8 +12,10 @@ import (
 // 1. x(0) may not be orthogonal to v_1 -> else no convergence
 // 2. re-normalise after each vec*mat to avoid float overflow
 
-// PowerIteration Executes a von Mises iteration for start vector x
-// for a fixed number of iterations.
+// PowerIteration executes a von Mises iteration for the start vector v, which
+// is normalised to sum 1 after every step. It stops when two consecutive
+// vectors differ by less than delta (Euclidean norm) or after the given number
+// of iterations; with delta 0 it always performs all iterations.
 func (m *AdjMatSparse) PowerIteration(v *Vector, delta float64, iterations int) error {
 	n := int(m.Dim())
 
@@ -48,8 +49,7 @@ func (m *AdjMatSparse) PowerIteration(v *Vector, delta float64, iterations int) 
 			diff += d * d
 		}
 
-		if deltaSquared < delta { // spare the sqrt call
-			fmt.Println("[PowItRayleigh] delta criterion reached")
+		if diff < deltaSquared { // ‖v_k – v_{k-1}‖₂ < δ, sparing the sqrt call
 			return nil
 		}
 
@@ -97,13 +97,11 @@ func (m *AdjMatSparse) PowerIterationRayleigh(
 			diff += d * d
 		}
 
-		if deltaSquared < diff { // spare the sqrt call
-			fmt.Println("[PowItRayleigh] delta criterion reached")
+		if diff < deltaSquared { // ‖v1 – v2‖₂ < δ, sparing the sqrt call
 			return nil
 		}
 	}
 
-	fmt.Println("[PowItRayleigh] max number of iterations reached")
 	return nil // vectors were updated in-place
 }
 

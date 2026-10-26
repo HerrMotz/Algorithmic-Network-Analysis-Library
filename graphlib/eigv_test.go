@@ -14,7 +14,7 @@ func TestPowerIteration_Correctness_Against_Gonum(t *testing.T) {
 		n          = 10000 // number of nodes
 		avgDegree  = 10    // sparse connectivity
 		iterations = 100   // power iteration steps
-		tol        = 1e-5  // error tolerance
+		tol        = 1e-12 // error tolerance
 	)
 
 	// Generate a random sparse graph
@@ -47,7 +47,8 @@ func TestPowerIteration_Correctness_Against_Gonum(t *testing.T) {
 	x := make(Vector, n)
 	copy(x, start)
 
-	err = adj.PowerIteration(&x, 0.1, iterations)
+	// delta 0 never stops early, so both implementations run all iterations
+	err = adj.PowerIteration(&x, 0, iterations)
 	if err != nil {
 		t.Fatalf("PowerIteration failed: %v", err)
 	}
@@ -151,5 +152,62 @@ func TestTopKCentralities(t *testing.T) {
 	expected := Vector{2.34, 3.45, 5.67}
 	if !reflect.DeepEqual(top3, expected) {
 		t.Errorf("TopKCentralities got %v; want %v", top3, expected)
+	}
+}
+
+// pawGraph is a triangle 0-1-2 with the pendant vertex 3 at 2. It is connected
+// and not bipartite, so power iteration converges on it.
+func pawGraph(t *testing.T) AdjMatSparse {
+	t.Helper()
+	s := []uint32{0, 1, 0, 2, 1, 2, 2, 3}
+	d := []uint32{1, 0, 2, 0, 2, 1, 3, 2}
+	if err := SortIJ(&s, &d); err != nil {
+		t.Fatal(err)
+	}
+	m, err := NewFromSortedIJ(s, d)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return m
+}
+
+func TestPowerIteration_StopsWhenConverged(t *testing.T) {
+	m := pawGraph(t)
+
+	// reference: delta 0 never triggers the stop criterion
+	ref := Vector{0.25, 0.25, 0.25, 0.25}
+	if err := m.PowerIteration(&ref, 0, 1000); err != nil {
+		t.Fatal(err)
+	}
+
+	// with a small delta the iteration has to run until it has converged, too
+	// (it used to stop after the first step for every delta < 1)
+	got := Vector{0.25, 0.25, 0.25, 0.25}
+	if err := m.PowerIteration(&got, 1e-12, 1000); err != nil {
+		t.Fatal(err)
+	}
+	for i := range ref {
+		if math.Abs(got[i]-ref[i]) > 1e-9 {
+			t.Fatalf("component %d: got %v, want %v", i, got, ref)
+		}
+	}
+}
+
+func TestPowerIterationRayleigh_RunsUntilVectorsAgree(t *testing.T) {
+	m := pawGraph(t)
+	v1 := Vector{0.25, 0.25, 0.25, 0.25}
+	v2 := Vector{0.7, 0.1, 0.1, 0.1}
+	if err := m.PowerIterationRayleigh(&v1, &v2, 1e-10, 10000); err != nil {
+		t.Fatal(err)
+	}
+
+	// it used to return as soon as the vectors were *far* apart
+	var diff float64
+	for i := range v1 {
+		d := v1[i] - v2[i]
+		diff += d * d
+	}
+	if math.Sqrt(diff) >= 1e-10 {
+		t.Fatalf("the start vectors did not converge to each other: %v vs %v", v1, v2)
 	}
 }
