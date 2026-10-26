@@ -116,8 +116,8 @@ func (g *WeightedAdjList) AddEdge(edge Edge, w Weight) error {
 	return nil
 }
 
-// RemoveEdge removes *both* directions. It returns *EdgeOrArcExistsError* when
-// the edge was absent.
+// RemoveEdge removes *both* directions. It returns *EdgeOrArcNotFoundError*
+// when the edge was absent.
 func (g *WeightedAdjList) RemoveEdge(edge Edge) error {
 	removed := false
 	if _, ok := g.HasArc(Arc{edge.U, edge.V}); ok {
@@ -130,7 +130,7 @@ func (g *WeightedAdjList) RemoveEdge(edge Edge) error {
 	}
 
 	if !removed {
-		return EdgeOrArcExistsError
+		return EdgeOrArcNotFoundError
 	}
 	return nil
 }

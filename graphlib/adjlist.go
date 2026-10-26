@@ -125,22 +125,23 @@ func (l *AdjList) RemoveVertex(v Vertex) error {
 	return nil
 }
 
-func (l *AdjList) RemoveArc() error {
-	if l.Size == 0 {
-		return errors.New("graph is empty")
+// RemoveArc removes the arc (u,v). It returns EdgeOrArcNotFoundError if the arc
+// does not exist.
+func (l *AdjList) RemoveArc(arc Arc) error {
+	if !l.HasVertex(arc.From) || !l.HasVertex(arc.To) {
+		return errors.New("vertex does not exist")
 	}
 
-	for i := 0; i < l.Size; i++ {
-		for j := 0; j < l.Size; j++ {
-			if l.HasArc(Arc{From: Vertex{i}, To: Vertex{j}}) {
-				delete(l.List[i], j)
-			}
-		}
+	if !l.HasArc(arc) {
+		return EdgeOrArcNotFoundError
 	}
+	delete(l.List[arc.From.Id], arc.To.Id)
 
 	return nil
 }
 
+// RemoveEdge removes both directions of the edge {u,v}. It returns
+// EdgeOrArcNotFoundError if neither direction exists.
 func (l *AdjList) RemoveEdge(edge Edge) error {
 	if l.Size == 0 {
 		return errors.New("graph is empty")
@@ -154,7 +155,7 @@ func (l *AdjList) RemoveEdge(edge Edge) error {
 		delete(l.List[edge.U.Id], edge.V.Id)
 		delete(l.List[edge.V.Id], edge.U.Id)
 	} else {
-		return EdgeOrArcExistsError
+		return EdgeOrArcNotFoundError
 	}
 
 	return nil

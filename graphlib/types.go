@@ -22,14 +22,6 @@ const INF = math.MaxUint32 // or MaxInt64, depending on your needs
 
 var EdgeOrArcExistsError = errors.New("edge or arc already exists")
 
-type Graph interface {
-	Size() int
-	HasEdge(edge Edge) bool
-	HasArc(arc Arc) bool
-	Neighbours(u Vertex) ([]int, error)
-	Degree(u Vertex) (int, error)
-	AddEdge(edge Edge) error
-	AddArc(arc Arc) error
-	RemoveEdge(edge Edge) error
-	RemoveArc(arc Arc) error
-}
+// EdgeOrArcNotFoundError is returned when an edge or arc that should be removed
+// does not exist.
+var EdgeOrArcNotFoundError = errors.New("edge or arc does not exist")
