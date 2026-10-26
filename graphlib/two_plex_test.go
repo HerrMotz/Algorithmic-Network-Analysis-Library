@@ -147,9 +147,11 @@ func TestPermanentInducedGraph_TwoPlexPermanent(t *testing.T) {
 }
 
 func BenchmarkInducedGraph_TwoPlexNaive(b *testing.B) {
-	H, err := ReadGraphAdjList("../exampleGraphs/4elt.mgraph", false)
+	// the 2-plex searches take exponential time; on graphs much larger than this
+	// one (8 vertices) they do not finish in reasonable time
+	H, err := ReadGraphAdjList("../exampleGraphs/baboon21.edges", false)
 	if err != nil {
-		b.Fatalf("failed to read erdos graph: %v", err)
+		b.Fatalf("failed to read graph: %v", err)
 	}
 	for i := 0; i < b.N; i++ {
 		// create vertex set from H
@@ -160,9 +162,9 @@ func BenchmarkInducedGraph_TwoPlexNaive(b *testing.B) {
 		inducedGraph := InducedGraph{AdjList: H, GoodVertices: GoodVertices}
 		plex, err := inducedGraph.TwoPlexNaive()
 		if plex != nil {
-			b.Logf("PermanentInducedGraph_TwoPlexPermanent: %v", plex.Size())
+			b.Logf("InducedGraph_TwoPlexNaive: %v", plex.Size())
 		} else {
-			b.Fatalf("PermanentInducedGraph_TwoPlexPermanent: No plex returned!")
+			b.Fatalf("InducedGraph_TwoPlexNaive: No plex returned!")
 		}
 		if err != nil {
 			b.Fatalf("BenchmarkInducedGraph_TwoPlexNaive: unexpected error %v", err)
@@ -171,46 +173,54 @@ func BenchmarkInducedGraph_TwoPlexNaive(b *testing.B) {
 }
 
 func BenchmarkInducedGraph_TwoPlexNaiveParallel(b *testing.B) {
-	H, err := ReadGraphAdjList("../exampleGraphs/4elt.mgraph", false)
+	// the 2-plex searches take exponential time; on graphs much larger than this
+	// one (8 vertices) they do not finish in reasonable time
+	H, err := ReadGraphAdjList("../exampleGraphs/baboon21.edges", false)
 	if err != nil {
-		b.Fatalf("failed to read erdos graph: %v", err)
+		b.Fatalf("failed to read graph: %v", err)
 	}
-	// create vertex set from H
-	GoodVertices := make(VertexSet, H.Size)
-	for v := 0; v < H.Size; v++ {
-		GoodVertices[v] = Naught{}
-	}
-	inducedGraph := InducedGraph{AdjList: H, GoodVertices: GoodVertices}
-	plex, err := inducedGraph.TwoPlexNaiveParallel()
-	if plex != nil {
-		b.Logf("PermanentInducedGraph_TwoPlexPermanent: %v", plex.Size())
-	} else {
-		b.Fatalf("PermanentInducedGraph_TwoPlexPermanent: No plex returned!")
-	}
-	if err != nil {
-		b.Fatalf("BenchmarkInducedGraph_TwoPlexNaive: unexpected error %v", err)
+	for i := 0; i < b.N; i++ {
+		// create vertex set from H
+		GoodVertices := make(VertexSet, H.Size)
+		for v := 0; v < H.Size; v++ {
+			GoodVertices[v] = Naught{}
+		}
+		inducedGraph := InducedGraph{AdjList: H, GoodVertices: GoodVertices}
+		plex, err := inducedGraph.TwoPlexNaiveParallel()
+		if plex != nil {
+			b.Logf("InducedGraph_TwoPlexNaiveParallel: %v", plex.Size())
+		} else {
+			b.Fatalf("InducedGraph_TwoPlexNaiveParallel: No plex returned!")
+		}
+		if err != nil {
+			b.Fatalf("BenchmarkInducedGraph_TwoPlexNaiveParallel: unexpected error %v", err)
+		}
 	}
 }
 
 func BenchmarkPermanentInducedGraph_TwoPlexPermanent(b *testing.B) {
-	H, err := ReadGraphAdjList("../exampleGraphs/4elt.mgraph", false)
+	// the 2-plex searches take exponential time; on graphs much larger than this
+	// one (8 vertices) they do not finish in reasonable time
+	H, err := ReadGraphAdjList("../exampleGraphs/baboon21.edges", false)
 	if err != nil {
-		b.Fatalf("failed to read erdos graph: %v", err)
+		b.Fatalf("failed to read graph: %v", err)
 	}
-	// create vertex set from H
-	GoodVertices := make(VertexSet, H.Size)
-	for v := 0; v < H.Size; v++ {
-		GoodVertices[v] = Naught{}
-	}
-	permanentInducedGraph := PermanentInducedGraph{InducedGraph{AdjList: H, GoodVertices: GoodVertices}, VertexSet{}}
-	plex, err := permanentInducedGraph.TwoPlexPermanent()
-	// write the size of the plex to stdout
-	if plex != nil {
-		b.Logf("PermanentInducedGraph_TwoPlexPermanent: %v", plex.Size())
-	} else {
-		b.Fatalf("PermanentInducedGraph_TwoPlexPermanent: No plex returned!")
-	}
-	if err != nil {
-		b.Fatalf("BenchmarkPermanentInducedGraph_TwoPlexPermanent: unexpected error %v", err)
+	for i := 0; i < b.N; i++ {
+		// create vertex set from H
+		GoodVertices := make(VertexSet, H.Size)
+		for v := 0; v < H.Size; v++ {
+			GoodVertices[v] = Naught{}
+		}
+		permanentInducedGraph := PermanentInducedGraph{InducedGraph{AdjList: H, GoodVertices: GoodVertices}, VertexSet{}}
+		plex, err := permanentInducedGraph.TwoPlexPermanent()
+		// write the size of the plex to stdout
+		if plex != nil {
+			b.Logf("PermanentInducedGraph_TwoPlexPermanent: %v", plex.Size())
+		} else {
+			b.Fatalf("PermanentInducedGraph_TwoPlexPermanent: No plex returned!")
+		}
+		if err != nil {
+			b.Fatalf("BenchmarkPermanentInducedGraph_TwoPlexPermanent: unexpected error %v", err)
+		}
 	}
 }
