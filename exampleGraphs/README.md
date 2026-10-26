@@ -21,7 +21,7 @@ which only occur in the Facebook networks (295 and 76) and the road networks
 | `fb-pages-public-figure.edges` | 11,565 | 67,114 | The same for pages of public figures | [Network Repository][nr] `fb-pages-public-figure`, the "Public Figures" network of the [GEMSEC Facebook data][gemsec], see above | [CC BY-SA][nr-policy] |
 | `baboon21.edges` | 8 | 15 | Associations in a group of baboons, Amboseli National Park, Kenya | [Network Repository][nr] `mammalia-baboon-association-group21`, from the [Animal Social Network Repository][asnr]. M. Franz, J. Altmann, S. C. Alberts, *Knockouts of high-ranking males have limited impact on baboon social networks*, Current Zoology 61(1), 107–113 (2015) | [CC BY-SA][nr-policy] |
 | `fish-guppy-familiar-5.edges` | 6 | 15 | Interactions in a shoal of familiar guppies | [Network Repository][nr] `fish-guppy-familiar-5`, from the [Animal Social Network Repository][asnr]. M. J. Hasenjager, L. A. Dugatkin, *Familiarity affects network structure and information flow in guppy (Poecilia reticulata) shoals*, Behavioral Ecology (2016) | [CC BY-SA][nr-policy] |
-| `abi.edgelist` | 63 | 966 | Contributed by Maximilian T. Stock, a graph of students in his Abitur class and the courses they shared | — | All rights reserved. |
+| `abi.edgelist` | 63 | 966 | A graph of students in an Abitur class. There is an edge if they share a course. | Maximilian T. Stock | All rights reserved. |
 
 KONECT asks to be cited as J. Kunegis, *KONECT – The Koblenz Network
 Collection*, Proc. Int. Conf. on World Wide Web Companion, 1343–1350 (2013), and
