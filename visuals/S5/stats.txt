@@ -1,33 +1,33 @@
-go run clusterbench.go -graph exampleGraphs/abi.edgelist -out results/abi/
+go run ./cmd/clusterbench -graph exampleGraphs/abi.edgelist -out results/abi/
 Graph: |V|=63  |E|≈966
-mergeBFS_M                    k=2     Q=0.128441  t=2.273625ms
-mergeBFS_D                    k=3     Q=620.000000  t=2.303458ms
-mergeRandom_M                 k=2     Q=0.013764  t=3.761916ms
-mergeRandom_D                 k=2     Q=571.000000  t=3.197459ms
-halve_M                       k=8     Q=0.177131  t=841.041µs
-halve_D                       k=5     Q=600.000000  t=822.5µs
-ice_M                         k=13    Q=0.292124  t=2.206333ms
-ice_D                         k=11    Q=321.000000  t=1.853375ms
+mergeBFS_M                    k=4     Q=0.155119  t=3.028158ms
+mergeBFS_D                    k=6     Q=720.000000  t=2.391033ms
+halve_M                       k=5     Q=0.152471  t=732.662µs
+halve_D                       k=5     Q=622.000000  t=731.199µs
+mergeRandom_M                 k=3     Q=0.220503  t=4.039615ms
+mergeRandom_D                 k=3     Q=543.000000  t=5.175554ms
+ice_M                         k=4     Q=0.199430  t=926.85µs
+ice_D                         k=4     Q=557.000000  t=857.249µs
 
-go run clusterbench.go -graph exampleGraphs/out.dimacs10-netscie.graph -out results/dimacs10/
+go run ./cmd/clusterbench -graph exampleGraphs/out.dimacs10-netscie.graph -out results/dimacs10/
 Graph: |V|=1461  |E|≈2742
-mergeBFS_M                    k=270   Q=0.904752  t=34.272625ms
-mergeBFS_D                    k=467   Q=995.000000  t=9.271709ms
-mergeRandom_M                 k=271   Q=0.921241  t=21.559458ms
-mergeRandom_D                 k=446   Q=921.000000  t=14.700125ms
-halve_M                       k=274   Q=0.947581  t=30.914417ms
-halve_D                       k=505   Q=862.000000  t=27.693042ms
-ice_M                         k=562   Q=1.002271  t=238.051125ms
-ice_D                         k=562   Q=-28.000000  t=116.398292ms
+mergeBFS_M                    k=278   Q=0.957036  t=34.601981ms
+mergeBFS_D                    k=466   Q=997.000000  t=31.584155ms
+halve_M                       k=275   Q=0.943985  t=32.59618ms
+halve_D                       k=496   Q=888.000000  t=25.530054ms
+mergeRandom_M                 k=276   Q=0.958039  t=43.056603ms
+mergeRandom_D                 k=443   Q=945.000000  t=36.487121ms
+ice_M                         k=391   Q=0.831110  t=3.999318ms
+ice_D                         k=546   Q=729.000000  t=2.616832ms
 
-go run clusterbench.go -graph exampleGraphs/out.pajek-erdos.graph -out results/erdos/ 
+go run ./cmd/clusterbench -graph exampleGraphs/out.pajek-erdos.graph -out results/erdos/
 Graph: |V|=6927  |E|≈11850
-mergeBFS_M                    k=266   Q=0.549334  t=490.302583ms
-mergeBFS_D                    k=2080  Q=64143.000000  t=116.108083ms
-halve_M                       k=103   Q=0.590175  t=6.148258292s
-halve_D                       k=6044  Q=11391.000000  t=6.525515167s
-mergeRandom_M                 k=20    Q=0.554671  t=757.802375ms
-mergeRandom_D                 k=2081  Q=64144.000000  t=164.961417ms
-ice_M                         k=6453  Q=0.840308  t=3m2.40631125s
-ice_D                         k=6453  Q=3634.000000  t=1m1.899093958s
+mergeBFS_M                    k=175   Q=0.641113  t=430.421133ms
+mergeBFS_D                    k=2083  Q=64143.000000  t=685.239818ms
+halve_M                       k=88    Q=0.579849  t=1.750396298s
+halve_D                       k=6049  Q=11381.000000  t=1.509506662s
+mergeRandom_M                 k=28    Q=0.692142  t=628.827006ms
+mergeRandom_D                 k=2079  Q=64143.000000  t=181.134976ms
+ice_M                         k=386   Q=0.570044  t=218.091179ms
+ice_D                         k=6438  Q=11331.000000  t=60.739699ms
 
