@@ -184,3 +184,17 @@ pyrightconfig.json
 
 graphlib/write_test.graph
 graphlib/write_test.mgraph
+
+### Go ###
+# Test binaries, profiles and coverage output
+*.test
+*.prof
+*.out
+coverage.*
+
+# Binaries built from cmd/ with `go build ./cmd/<name>`
+*.exe
+/cliqueanalysis
+/clique2plex
+/clusterbench
+/centralitybench

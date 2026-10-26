@@ -1,0 +1,6 @@
+# Store LF in the repository and check out LF on every platform, regardless of
+# core.autocrlf. gofmt and the Go toolchain expect LF line endings.
+* text=auto eol=lf
+
+*.png binary
+*.pdf binary
