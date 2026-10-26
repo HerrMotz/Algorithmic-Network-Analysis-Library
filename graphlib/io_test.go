@@ -284,7 +284,7 @@ func checkAdjList(t *testing.T, got *AdjList) {
 func BenchmarkReadGraph_EDGELIST_undirected(b *testing.B) {
 	files := []string{
 		"tiny_01.graph",
-		"Wiki-Vote.txt",
+		"fb-pages-media.edges",
 	}
 
 	for _, file := range files {
