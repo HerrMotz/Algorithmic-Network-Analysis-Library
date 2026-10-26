@@ -8,7 +8,7 @@ import (
 	"os"
 	"time"
 
-	"graphlib/graphlib"
+	"github.com/HerrMotz/Algorithmic-Network-Analysis-Library/graphlib"
 )
 
 // WriteClustersTXT speichert Cluster zeilenweise – kompatibel zu plot_clusters.py

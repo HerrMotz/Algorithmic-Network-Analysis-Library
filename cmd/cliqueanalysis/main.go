@@ -7,7 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"graphlib/graphlib" 
+	"github.com/HerrMotz/Algorithmic-Network-Analysis-Library/graphlib" 
 )
 
 // ----------------------------------------------------------------------------

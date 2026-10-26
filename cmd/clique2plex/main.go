@@ -7,7 +7,7 @@ import (
 	"sort"
 	"time"
 
-	"graphlib/graphlib"
+	"github.com/HerrMotz/Algorithmic-Network-Analysis-Library/graphlib"
 )
 
 func largestClique(cliques [][]int) []int {

@@ -1,4 +1,4 @@
-module graphlib
+module github.com/HerrMotz/Algorithmic-Network-Analysis-Library
 
 go 1.24
 

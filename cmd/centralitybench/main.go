@@ -10,7 +10,7 @@ import (
 	"sort"
 	"strconv"
 
-	"graphlib/graphlib"
+	"github.com/HerrMotz/Algorithmic-Network-Analysis-Library/graphlib"
 )
 
 // pair verbindet Vertex und Score
